@@ -91,6 +91,19 @@ void print_devices(artik_bt_device *devices, int num)
 	}
 }
 
+void print_metadata(artik_bt_avrcp_track_metadata *metadata)
+{
+	if (metadata == NULL)
+		return;
+	printf("\t##Title: %s\t\t", metadata->title);
+	printf("Artist: %s\n", metadata->artist);
+	printf("\t##Album: %s\t\t", metadata->album);
+	printf("Genre: %s\n", metadata->genre);
+	printf("\t##Track #%d\t\t", metadata->number);
+	printf("duration: %d ms\n", metadata->duration);
+	printf("\t##Number of tracks: %d\n", metadata->number_of_tracks);
+}
+
 static void scan_callback(artik_bt_event event, void *data, void *user_data)
 {
 	artik_bt_device *dev = (artik_bt_device *) data;
@@ -211,20 +224,13 @@ static void prv_list_items(char *buffer, void *user_data)
 		artik_bt_avrcp_item_property *property = node->property;
 
 		if (property != NULL) {
-			printf("\n#%d  Name: %s\n", node->index, property->name);
-			if (strncmp(property->type, "folder", strlen("folder") + 1) == 0) {
-				printf("\t##Folder: %s", property->folder);
-				printf("\tNumber of tracks: %d\n", property->number_of_tracks);
-			} else {
-				printf("\t##Type: %s\t\t", property->type);
-				printf("Playable: %d\t", property->playable);
-				printf("Title: %s\n", property->title);
-				printf("\t##Artist: %s\t", property->artist);
-				printf("Album: %s\t", property->album);
-				printf("Genre: %s\n", property->genre);
-				printf("\t##Track #%d\t\t", property->number);
-				printf("duration: %d ms\n", property->duration);
-			}
+			printf("\n#%d\t##Name: %s\t\t", node->index, property->name);
+			printf("Type: %s\t\t", property->type);
+			printf("Playable: %d\n", property->playable);
+			if (strncmp(property->type, "folder", strlen("folder") + 1) == 0)
+				printf("\t##Folder Type: %s\n", property->folder);
+			else
+				print_metadata(property->metadata);
 		}
 		node = node->next_item;
 	}
@@ -371,6 +377,15 @@ static void prv_fast_forward(char *buffer, void *user_data)
 	bt->avrcp_controller_fast_forward();
 }
 
+static void prv_get_metadata(char *buffer, void *user_data)
+{
+	artik_error ret = S_OK;
+	artik_bt_avrcp_track_metadata *m_metadata = NULL;
+
+	ret = bt->avrcp_controller_get_metadata(&m_metadata);
+	if (ret == S_OK && m_metadata)
+		print_metadata(m_metadata);
+}
 static void prv_quit(char *buffer, void *user_data)
 {
 	g_quit = 1;
@@ -411,6 +426,8 @@ command_desc_t commands[] = {
 		{"rewind", "Rewind the playing music.", "rewind", prv_rewind, NULL},
 		{"fast-forward", "Fast-forward the playing music.", "fast-forward",
 			prv_fast_forward, NULL},
+		{"get-metadata", "Get the metadata of current controller.", "get-metadata",
+			prv_get_metadata, NULL},
 		{"quit", "Quit application.", "quit", prv_quit, NULL},
 
 		COMMAND_END_LIST

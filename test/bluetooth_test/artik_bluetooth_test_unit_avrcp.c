@@ -114,21 +114,10 @@ static int list_item(void)
 		artik_bt_avrcp_item_property *property = node->property;
 
 		if (property != NULL) {
-			printf("item_obj_path : %s\n", node->item_obj_path);
-			printf("#%d  Name: %s\n", num, property->name);
-			if (strncmp(property->type, "folder", strlen("folder") + 1) == 0) {
-				printf("\t##Folder: %s\n", property->folder);
-			} else {
-				printf("\t##Type: %s\t\t", property->type);
-				printf("Playable: %d\t", property->playable);
-				printf("Title: %s\n", property->title);
-				printf("\t##Artist: %s\t", property->artist);
-				printf("Album: %s\t", property->album);
-				printf("Genre: %s\n", property->genre);
-				printf("\t##Number of tracks: %d\t", property->number_of_tracks);
-				printf("track #%d\t", property->number);
-				printf("duration: %d ms\n", property->duration);
-			}
+			printf("Item object path : %s\n", node->item_obj_path);
+			printf("#%d  Name: %s\t\t", num, property->name);
+			printf("Type: %s\t\t", property->type);
+			printf("Playable: %d\n", property->playable);
 		}
 		node = node->next_item;
 		num++;
@@ -641,6 +630,20 @@ static void avrcp_get_position_test(void)
 	artik_release_api_module(bt);
 }
 
+static void avrcp_get_metadata_test(void)
+{
+	artik_error ret = S_OK;
+	artik_bt_avrcp_track_metadata *ut_metadata = NULL;
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+		artik_request_api_module("bluetooth");
+
+	ret = bt->avrcp_controller_get_metadata(&ut_metadata);
+	CU_ASSERT(ret == S_OK);
+	CU_ASSERT(ut_metadata != NULL);
+
+	artik_release_api_module(bt);
+}
+
 artik_error cunit_add_suite(CU_pSuite *psuite)
 {
 	CU_add_test(*psuite, "avrcp_is_connected_test",
@@ -685,6 +688,8 @@ artik_error cunit_add_suite(CU_pSuite *psuite)
 		avrcp_get_browsable_test);
 	CU_add_test(*psuite, "avrcp_get_position_test",
 		avrcp_get_position_test);
+	CU_add_test(*psuite, "avrcp_get_metadata_test",
+		avrcp_get_metadata_test);
 
 	return S_OK;
 

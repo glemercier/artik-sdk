@@ -675,7 +675,45 @@ extern "C" {
 	} artik_bt_avrcp_repeat_mode;
 
 	/*!
-	 * \brief Description of AVRCP item
+	 * \brief Description of AVRCP track metadata
+	 */
+	typedef struct {
+		/*!
+		 * \brief The title name of the track.
+		 */
+		char *title;
+		/*!
+		 * \brief The artist name of the track.
+		 *            This may be "Not Available" if it's not provided by player.
+		 */
+		char *artist;
+		/*!
+		 * \brief The album name of the track.
+		 */
+		char *album;
+		/*!
+		 * \brief The genre name of the track.
+		 *            This may be "Not Available" if it's not provided by player.
+		 */
+		char *genre;
+		/*!
+		 * \brief The number of tracks in total.
+		 *            This may be 0 if it's not provided by player.
+		 */
+		unsigned int number_of_tracks;
+		/*!
+		 * \brief The number of the track.
+		 *            This may be 0 if it's not provided by player.
+		 */
+		unsigned int number;
+		/*!
+		 * \brief The duration in milliseconds of the track.
+		 */
+		unsigned int duration;
+	} artik_bt_avrcp_track_metadata;
+
+	/*!
+	 * \brief Description of AVRCP item's properties
 	 */
 	typedef struct {
 		/*!
@@ -709,8 +747,14 @@ extern "C" {
 		 * True if the item can be played, false otherwise
 		 */
 		bool  playable;
+		/*!
+		 * \brief Metadata of the media
+		 *
+		 * This field is available if the property \ref type is set to "audio" or "video"
+		 */
+		artik_bt_avrcp_track_metadata *metadata;
 
-		/*metadata*/
+		/*metadata property will be used to replace below properties.*/
 		/*!
 		 * \brief Title of the media
 		 *
@@ -1684,6 +1728,16 @@ extern "C" {
 		 *
 		 */
 		artik_error(*avrcp_controller_get_position) (unsigned int *position);
+		/*!
+		 * \brief Get current track metadata from an AVRCP target.
+		 *
+		 * \param[out] metadata got from an AVRCP target \ref artik_bt_avrcp_track_metadata
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 *
+		 */
+		artik_error(*avrcp_controller_get_metadata) (
+			artik_bt_avrcp_track_metadata **data);
 		/*!
 		 * \brief register the pan services.
 		 *

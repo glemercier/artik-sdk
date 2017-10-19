@@ -395,6 +395,11 @@ artik_error artik::Bluetooth::avrcp_controller_get_position(
   return m_module->avrcp_controller_get_position(position);
 }
 
+artik_error artik::Bluetooth::avrcp_controller_get_metadata(
+    artik_bt_avrcp_track_metadata **data) {
+  return m_module->avrcp_controller_get_metadata(data);
+}
+
 artik_error artik::Bluetooth::pan_register(const char *uuid,
     const char *bridge) {
   return m_module->pan_register(uuid, bridge);

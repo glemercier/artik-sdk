@@ -68,7 +68,7 @@ static char *_get_item_from_index(int index)
 	return (char *) (l->data);
 }
 
-static void _fill_property_metadata(GVariant *metadata, artik_bt_avrcp_item_property *property);
+static void _fill_track_metadata(GVariant *metadata, artik_bt_avrcp_track_metadata *property);
 static artik_error _get_malloc_content(char **dest, GVariant *v, char *type);
 
 static artik_error _get_property(char *_path, char *_interface, char *_property,
@@ -254,7 +254,7 @@ artik_bt_avrcp_item *_parse_list(GVariant *result)
 			current_item = avrcp_item;
 		}
 
-		artik_bt_avrcp_item_property *avrcp_current_property
+		artik_bt_avrcp_item_property * avrcp_current_property
 			= malloc(sizeof(artik_bt_avrcp_item_property));
 		memset(avrcp_current_property, 0, sizeof(artik_bt_avrcp_item_property));
 
@@ -273,8 +273,13 @@ artik_bt_avrcp_item *_parse_list(GVariant *result)
 				_get_malloc_content(&(avrcp_current_property->folder), ar2, "s");
 			else if (strcmp(key, "Playable") == 0)
 				g_variant_get(ar2, "b", &(avrcp_current_property->playable));
-			else if (strcmp(key, "Metadata") == 0)
-				_fill_property_metadata(ar2, avrcp_current_property);
+			else if (strcmp(key, "Metadata") == 0) {
+				avrcp_current_property->metadata = (artik_bt_avrcp_track_metadata *)
+					malloc(sizeof(artik_bt_avrcp_track_metadata));
+				memset(avrcp_current_property->metadata, 0,
+					sizeof(artik_bt_avrcp_track_metadata));
+				_fill_track_metadata(ar2, avrcp_current_property->metadata);
+			}
 		}
 		g_variant_iter_free(iter2);
 		index++;
@@ -495,29 +500,25 @@ static artik_error _get_property_bool_content(bool *dest,
 			char *object_path, char *property_name)
 {
 	GVariant *v;
-	bool content;
 
 	if (_get_property(object_path,
 			DBUS_IF_MEDIAITEM1, property_name, &v) != S_OK) {
 		log_err("get %s property error!\n", property_name);
 		return E_BT_ERROR;
 	}
-	g_variant_get(v, "b", &content);
-
-	*dest = content;
+	g_variant_get(v, "b", dest);
 
 	g_variant_unref(v);
 	return S_OK;
 }
 
-static void _fill_property_metadata(GVariant *metadata, artik_bt_avrcp_item_property *property)
+static void _fill_track_metadata(GVariant *metadata, artik_bt_avrcp_track_metadata *property)
 {
 	GVariant *prop_dict = NULL;
 	gchar *key;
 	GVariant *value = NULL;
 
 	int property_len = 0;
-
 
 	property_len = g_variant_n_children(metadata);
 
@@ -555,7 +556,7 @@ static void _fill_property_metadata(GVariant *metadata, artik_bt_avrcp_item_prop
 }
 
 static artik_error _get_property_metadata_content(
-		artik_bt_avrcp_item_property **properties, char *object_path)
+		artik_bt_avrcp_track_metadata *properties, char *object_path)
 {
 	GVariant *v;
 
@@ -566,8 +567,11 @@ static artik_error _get_property_metadata_content(
 		log_err("get Metadata property error!\n");
 		return E_BT_ERROR;
 	}
+	properties = (artik_bt_avrcp_track_metadata *)
+				malloc(sizeof(artik_bt_avrcp_track_metadata));
+	memset(properties, 0, sizeof(artik_bt_avrcp_track_metadata));
 
-	_fill_property_metadata(v, *properties);
+	_fill_track_metadata(v, properties);
 	g_variant_unref(v);
 
 	return S_OK;
@@ -596,19 +600,18 @@ artik_error bt_avrcp_controller_get_property(int index,
 	_get_property_malloc_content(&((*properties)->type),
 					item, "Type", "s");
 
-	/*Only type is folder, FolderType & Playable is available*/
+	_get_property_bool_content(&((*properties)->playable),
+					item, "Playable");
+	/*Only type is folder, FolderType is available*/
 	if (g_strcmp0((*properties)->type, "folder") == 0) {
 		_get_property_malloc_content(&((*properties)->folder),
 					item, "FolderType", "s");
-
-		_get_property_bool_content(&((*properties)->playable),
-						item, "Playable");
 	}
 
-	/*only type is audio and video has below property*/
+	/*only type is audio or video has below property*/
 	if (g_strcmp0((*properties)->type, "audio") == 0
 		|| g_strcmp0((*properties)->type, "video") == 0) {
-		_get_property_metadata_content(properties, item);
+		_get_property_metadata_content((*properties)->metadata, item);
 	}
 
 	return S_OK;
@@ -800,6 +803,33 @@ artik_error bt_avrcp_controller_get_position(unsigned int *position)
 		free(position_path);
 		if (e == S_OK && v) {
 			g_variant_get(v, "u", position);
+			g_variant_unref(v);
+			return S_OK;
+		}
+	}
+	return E_BT_ERROR;
+}
+
+artik_error bt_avrcp_controller_get_metadata(
+		artik_bt_avrcp_track_metadata **data)
+{
+	char *player_path = NULL;
+	artik_error e = S_OK;
+	GVariant *v = NULL;
+
+	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
+
+	e = _get_player_path(&player_path);
+	if (e == S_OK && player_path) {
+		e = _get_property(player_path,
+			DBUS_IF_MEDIA_PLAYER1, "Track", &v);
+
+		free(player_path);
+		if (e == S_OK && v) {
+			*data = (artik_bt_avrcp_track_metadata *)
+					malloc(sizeof(artik_bt_avrcp_track_metadata));
+			memset(*data, 0, sizeof(artik_bt_avrcp_track_metadata));
+			_fill_track_metadata(v, *data);
 			g_variant_unref(v);
 			return S_OK;
 		}

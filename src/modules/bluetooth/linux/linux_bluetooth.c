@@ -448,6 +448,12 @@ artik_error os_bt_avrcp_controller_get_position(unsigned int *position)
 	return bt_avrcp_controller_get_position(position);
 }
 
+artik_error os_bt_avrcp_controller_get_metadata(
+		artik_bt_avrcp_track_metadata**data)
+{
+	return bt_avrcp_controller_get_metadata(data);
+}
+
 artik_error os_bt_pan_register(const char *uuid, const char *bridge)
 {
 	return bt_pan_register(uuid, bridge);
