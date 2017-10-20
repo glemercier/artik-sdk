@@ -213,6 +213,11 @@ static void prv_list_items(char *buffer, void *user_data)
 	artik_bt_avrcp_item *item_list, *node;
 
 	ret = bt->avrcp_controller_list_item(start_item, end_item, &item_list);
+	if (ret == E_NOT_SUPPORTED) {
+		printf("List item not supported !\n");
+		return;
+	}
+
 	if (ret != S_OK) {
 		printf("avrcp list item failed !\n");
 		return;
@@ -317,6 +322,10 @@ static void prv_play_item(char *buffer, void *user_data)
 	free(index);
 	if (i > 0) {
 		ret = bt->avrcp_controller_play_item(i);
+		if (ret == E_NOT_SUPPORTED) {
+			printf("Play this item not supported !\n");
+			return;
+		}
 		if (ret != S_OK)
 			printf("avrcp play_item failed !\n");
 	} else
@@ -336,6 +345,10 @@ static void prv_add_to_playing(char *buffer, void *user_data)
 	if (i > 0) {
 		printf("add to playing item:%d\n", i);
 		ret = bt->avrcp_controller_add_to_playing(i);
+		if (ret == E_NOT_SUPPORTED) {
+			printf("Add this item to playing not supported !\n");
+			return;
+		}
 		if (ret != S_OK)
 			printf("avrcp add_to_playing failed !\n");
 	} else

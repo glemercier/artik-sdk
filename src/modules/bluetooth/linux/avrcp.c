@@ -331,6 +331,9 @@ artik_error bt_avrcp_controller_list_item(int start_item, int end_item,
 		return E_BAD_ARGS;
 	}
 
+	if (!bt_avrcp_controller_is_browsable())
+		return E_NOT_SUPPORTED;
+
 	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 	e = _get_player_path(&player_path);
 
@@ -663,22 +666,26 @@ artik_error bt_avrcp_controller_free_property(
 
 artik_error bt_avrcp_controller_play_item(int index)
 {
-	artik_bt_avrcp_item temp;
 	GVariant *result = NULL;
 	GError *error = NULL;
 	char *item = NULL;
+	bool playable;
 
 	item = _get_item_from_index(index);
 	if (!item)
 		return E_BAD_ARGS;
 
-	temp.item_obj_path = item;
+	_get_property_bool_content(&playable, item, "Playable");
+
+	if (!playable)
+		return E_NOT_SUPPORTED;
+
 	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	result = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
-			temp.item_obj_path,
+			item,
 			DBUS_IF_MEDIAITEM1,
 			"Play",
 			NULL,
@@ -699,21 +706,25 @@ artik_error bt_avrcp_controller_play_item(int index)
 artik_error bt_avrcp_controller_add_to_playing(int index)
 {
 	char *item = NULL;
+	GVariant *result = NULL;
+	GError *error = NULL;
+	bool playable;
 
 	item = _get_item_from_index(index);
 	if (!item)
 		return E_BAD_ARGS;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
+	_get_property_bool_content(&playable, item, "Playable");
 
-	GVariant *result = NULL;
-	GError *error = NULL;
-	char *object_path = item;
+	if (!playable)
+		return E_NOT_SUPPORTED;
+
+	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	result = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
-			object_path,
+			item,
 			DBUS_IF_MEDIAITEM1,
 			"AddtoNowPlaying",
 			NULL,

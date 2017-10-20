@@ -1570,6 +1570,7 @@ extern "C" {
 		 * \param[out] item_list The item list
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
+		 *		E_NOT_SUPPORTED when this request is not supported by player.
 		 *
 		 */
 		artik_error(*avrcp_controller_list_item)(int start_item, int end_item,
