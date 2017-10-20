@@ -315,7 +315,7 @@ static void prv_play_item(char *buffer, void *user_data)
 	index[strlen(buffer) - 1] = '\0';
 	i = index_to_int(index);
 	free(index);
-	if (i >= 0) {
+	if (i > 0) {
 		ret = bt->avrcp_controller_play_item(i);
 		if (ret != S_OK)
 			printf("avrcp play_item failed !\n");
@@ -333,7 +333,7 @@ static void prv_add_to_playing(char *buffer, void *user_data)
 	index[strlen(buffer) - 1] = '\0';
 	i = index_to_int(index);
 	free(index);
-	if (i >= 0) {
+	if (i > 0) {
 		printf("add to playing item:%d\n", i);
 		ret = bt->avrcp_controller_add_to_playing(i);
 		if (ret != S_OK)
@@ -404,21 +404,20 @@ command_desc_t commands[] = {
 			"connect 54:40:AD:E2:BE:35", prv_connect, NULL},
 		{"disconnect", "Connect to certain device address.",
 			"disconnect 54:40:AD:E2:BE:35", prv_disconnect, NULL},
-		{"list-item", "List item indexs of current folder.",
-			"list-item or list-item 1 2", prv_list_items, NULL},
-		{"change-folder", "Change to the specified index folder",
-			"change-folder 0", prv_change_folder, NULL},
+		{"ls", "List item indexs of current folder.",
+			"ls or ls 1 2", prv_list_items, NULL},
+		{"cd", "Change to the specified index folder",
+			"cd 1", prv_change_folder, NULL},
 		{"get-repeat", "Get the repeat mode", "get-repeat",
 			prv_get_repeat_mode, NULL},
 		{"set-repeat", "Set the repeat mode",
 			"set-repeat single/set-repeat all/set-repeat group/set-repeat off",
 			prv_set_repeat_mode, NULL},
 		{"play-item", "Play the specified index of item",
-			"play-item 0",
+			"play-item 1",
 			prv_play_item, NULL},
 		{"addtoplay", "Add the specified index of item to playlist.",
-			"addtoplay 0",
-			prv_add_to_playing, NULL},
+			"addtoplay 1", prv_add_to_playing, NULL},
 		{"resume-play", "Resume play.", "resume-play", prv_resume_play, NULL},
 		{"next", "Play the next music.", "next", prv_next, NULL},
 		{"previous", "Play the previous music.", "previous",

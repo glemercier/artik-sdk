@@ -252,6 +252,9 @@ static void avrcp_change_folder_test(void)
 	ret = bt->avrcp_controller_change_folder(-1);
 	CU_ASSERT(ret == E_BAD_ARGS);
 
+	ret = bt->avrcp_controller_change_folder(0);
+	CU_ASSERT(ret == S_OK);
+
 	ret = _item_search(&item, NULL, type_folder);
 	CU_ASSERT(ret == S_OK);
 
@@ -541,7 +544,7 @@ static void avrcp_get_property_test(void)
 	CU_ASSERT(ret == E_BAD_ARGS);
 	ret = bt->avrcp_controller_get_property(99999, &ut_property);
 	CU_ASSERT(ret == E_BAD_ARGS);
-	ret = bt->avrcp_controller_get_property(0, &ut_property);
+	ret = bt->avrcp_controller_get_property(1, &ut_property);
 	CU_ASSERT(ret == S_OK);
 	CU_ASSERT(ut_property != NULL);
 	ret = bt->avrcp_controller_free_property(&ut_property);

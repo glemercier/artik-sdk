@@ -37,7 +37,7 @@ static char *_get_item_from_index(int index)
 {
 	GSList *l;
 
-	if (index < 0) {
+	if (index <= 0) {
 		log_err("get item from index error: wrong index.\n");
 		return NULL;
 	}
@@ -52,12 +52,13 @@ static char *_get_item_from_index(int index)
 		return NULL;
 	}
 	l = items;
-	while (index--) {
+	while (index-1) {
 		if (!l->next) {
 			log_err("get item from index error: Index too large\n");
 			return NULL;
 		}
 		l = l->next;
+		index--;
 	}
 
 	if (!l->data) {
@@ -180,6 +181,24 @@ static artik_error _get_player_path(char **path)
 	return E_BT_ERROR;
 }
 
+char *_get_playlist(void)
+{
+	char *path = NULL;
+	char *playlist = NULL;
+	GVariant *v = NULL;
+
+	_get_player_path(&path);
+	if (path) {
+		_get_property(path, DBUS_IF_MEDIA_PLAYER1, "Playlist", &v);
+		free(path);
+		if (v) {
+			g_variant_get(v, "o", &playlist);
+			g_variant_unref(v);
+		}
+	}
+	return playlist;
+}
+
 artik_error bt_avrcp_controller_change_folder(int index)
 {
 	GVariant *result;
@@ -188,7 +207,11 @@ artik_error bt_avrcp_controller_change_folder(int index)
 	char *player_path = NULL;
 	char *folder = NULL;
 
-	folder = _get_item_from_index(index);
+	if (index == 0)
+		folder = _get_playlist();
+	else
+		folder = _get_item_from_index(index);
+
 	if (!folder)
 		return E_BAD_ARGS;
 
@@ -219,7 +242,7 @@ artik_bt_avrcp_item *_parse_list(GVariant *result)
 	GVariant *ar1, *ar2;
 	GVariantIter *iter1, *iter2;
 	gchar *path, *key;
-	int index = 0;
+	int index = 1;
 
 	g_variant_get(result, "(a{oa{sv}})", &iter1);
 

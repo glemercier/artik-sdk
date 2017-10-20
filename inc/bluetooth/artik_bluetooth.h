@@ -1551,9 +1551,11 @@ extern "C" {
 		artik_error(*gatt_notify) (int svc_id, int char_id, unsigned char *byte,
 				int len);
 		/*!
-		 * \brief Change to the specified folder
+		 * \brief Change to the specified folder.
+		 *		 Index 0 to change to now playing folder.
+		 *		 Returned index from list item to change to other folders.
 		 *
-		 * \param[in] index The index of folder it will change to
+		 * \param[in] index The index of folder it will be changed to.
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
 		 *
