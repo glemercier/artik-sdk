@@ -836,3 +836,22 @@ artik_error bt_avrcp_controller_get_metadata(
 	}
 	return E_BT_ERROR;
 }
+
+artik_error bt_avrcp_controller_free_metadata(
+		artik_bt_avrcp_track_metadata **data)
+{
+	if (*data) {
+		if ((*data)->title)
+			free((*data)->title);
+		if ((*data)->artist)
+			free((*data)->artist);
+		if ((*data)->album)
+			free((*data)->album);
+		if ((*data)->genre)
+			free((*data)->genre);
+		free(*data);
+		*data = NULL;
+		return S_OK;
+	} else
+		return E_BAD_ARGS;
+}

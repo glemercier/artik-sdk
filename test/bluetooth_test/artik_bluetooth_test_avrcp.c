@@ -383,8 +383,10 @@ static void prv_get_metadata(char *buffer, void *user_data)
 	artik_bt_avrcp_track_metadata *m_metadata = NULL;
 
 	ret = bt->avrcp_controller_get_metadata(&m_metadata);
-	if (ret == S_OK && m_metadata)
+	if (ret == S_OK && m_metadata) {
 		print_metadata(m_metadata);
+		ret = bt->avrcp_controller_free_metadata(&m_metadata);
+	}
 }
 static void prv_quit(char *buffer, void *user_data)
 {

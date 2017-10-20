@@ -1739,6 +1739,16 @@ extern "C" {
 		artik_error(*avrcp_controller_get_metadata) (
 			artik_bt_avrcp_track_metadata **data);
 		/*!
+		 * \brief Free a metadata.
+		 *
+		 * \param[in] metadata needed to be free \ref artik_bt_avrcp_track_metadata
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 *
+		 */
+		artik_error(*avrcp_controller_free_metadata) (
+			artik_bt_avrcp_track_metadata **data);
+		/*!
 		 * \brief register the pan services.
 		 *
 		 * \param[in] uuid To be register service uuid.

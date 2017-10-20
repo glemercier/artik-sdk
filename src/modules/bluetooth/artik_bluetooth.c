@@ -140,6 +140,8 @@ static artik_error artik_bluetooth_avrcp_controller_get_position(
 		unsigned int *position);
 static artik_error artik_bluetooth_avrcp_controller_get_metadata(
 		artik_bt_avrcp_track_metadata**data);
+static artik_error artik_bluetooth_avrcp_controller_free_metadata(
+		artik_bt_avrcp_track_metadata**data);
 static artik_error artik_bluetooth_pan_register(const char *uuid,
 		const char *bridge);
 static artik_error artik_bluetooth_pan_unregister(const char *uuid);
@@ -255,6 +257,7 @@ const artik_bluetooth_module bluetooth_module = {
 	artik_bluetooth_avrcp_controller_is_browsable,
 	artik_bluetooth_avrcp_controller_get_position,
 	artik_bluetooth_avrcp_controller_get_metadata,
+	artik_bluetooth_avrcp_controller_free_metadata,
 	artik_bluetooth_pan_register,
 	artik_bluetooth_pan_unregister,
 	artik_bluetooth_pan_connect,
@@ -861,6 +864,12 @@ artik_error artik_bluetooth_avrcp_controller_get_metadata(
 		artik_bt_avrcp_track_metadata**data)
 {
 	return os_bt_avrcp_controller_get_metadata(data);
+}
+
+artik_error artik_bluetooth_avrcp_controller_free_metadata(
+		artik_bt_avrcp_track_metadata**data)
+{
+	return os_bt_avrcp_controller_free_metadata(data);
 }
 
 artik_error artik_bluetooth_pan_register(const char *uuid, const char *bridge)

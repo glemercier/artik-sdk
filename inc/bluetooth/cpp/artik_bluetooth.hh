@@ -151,6 +151,8 @@ class Bluetooth {
   artik_error avrcp_controller_get_position(unsigned int *position);
   artik_error avrcp_controller_get_metadata(
       artik_bt_avrcp_track_metadata **data);
+  artik_error avrcp_controller_free_metadata(
+      artik_bt_avrcp_track_metadata **data);
   artik_error pan_register(const char *uuid, const char *bridge);
   artik_error pan_unregister(const char *uuid);
   artik_error pan_connect(const char *mac_addr, const char *uuid,

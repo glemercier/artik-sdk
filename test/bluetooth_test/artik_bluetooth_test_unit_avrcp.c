@@ -641,6 +641,9 @@ static void avrcp_get_metadata_test(void)
 	CU_ASSERT(ret == S_OK);
 	CU_ASSERT(ut_metadata != NULL);
 
+	ret = bt->avrcp_controller_free_metadata(&ut_metadata);
+	CU_ASSERT(ret == S_OK);
+
 	artik_release_api_module(bt);
 }
 

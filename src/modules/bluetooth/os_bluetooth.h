@@ -130,6 +130,8 @@ bool os_bt_avrcp_controller_is_browsable(void);
 artik_error os_bt_avrcp_controller_get_position(unsigned int *position);
 artik_error os_bt_avrcp_controller_get_metadata(
 		artik_bt_avrcp_track_metadata**data);
+artik_error os_bt_avrcp_controller_free_metadata(
+		artik_bt_avrcp_track_metadata**data);
 artik_error os_bt_pan_register(const char *uuid, const char *bridge);
 artik_error os_bt_pan_unregister(const char *uuid);
 artik_error os_bt_pan_connect(const char *mac_addr,

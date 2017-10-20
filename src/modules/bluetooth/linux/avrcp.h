@@ -55,6 +55,8 @@ bool bt_avrcp_controller_is_browsable(void);
 artik_error bt_avrcp_controller_get_position(unsigned int *position);
 artik_error bt_avrcp_controller_get_metadata(
 		artik_bt_avrcp_track_metadata**data);
+artik_error bt_avrcp_controller_free_metadata(
+		artik_bt_avrcp_track_metadata**data);
 #ifdef __cplusplus
 }
 #endif
