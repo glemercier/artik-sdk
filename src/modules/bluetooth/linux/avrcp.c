@@ -617,6 +617,27 @@ artik_error bt_avrcp_controller_get_property(int index,
 	return S_OK;
 }
 
+artik_error bt_avrcp_controller_free_property(
+		artik_bt_avrcp_item_property **properties)
+{
+	if (*properties) {
+		if ((*properties)->player)
+			free((*properties)->player);
+		if ((*properties)->name)
+			free((*properties)->name);
+		if ((*properties)->type)
+			free((*properties)->type);
+		if ((*properties)->folder)
+			free((*properties)->folder);
+		if ((*properties)->metadata)
+			bt_avrcp_controller_free_metadata(&((*properties)->metadata));
+		free(*properties);
+		*properties = NULL;
+		return S_OK;
+	} else
+		return E_BAD_ARGS;
+}
+
 artik_error bt_avrcp_controller_play_item(int index)
 {
 	artik_bt_avrcp_item temp;

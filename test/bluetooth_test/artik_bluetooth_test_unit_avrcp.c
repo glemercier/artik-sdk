@@ -544,6 +544,8 @@ static void avrcp_get_property_test(void)
 	ret = bt->avrcp_controller_get_property(0, &ut_property);
 	CU_ASSERT(ret == S_OK);
 	CU_ASSERT(ut_property != NULL);
+	ret = bt->avrcp_controller_free_property(&ut_property);
+	CU_ASSERT(ret == S_OK);
 
 	free(ut_property);
 	artik_release_api_module(bt);

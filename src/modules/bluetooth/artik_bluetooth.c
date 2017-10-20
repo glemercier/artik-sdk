@@ -128,6 +128,8 @@ static artik_error artik_bluetooth_avrcp_controller_fast_forward(void);
 static artik_error artik_bluetooth_avrcp_controller_rewind(void);
 static artik_error artik_bluetooth_avrcp_controller_get_property(int index,
 		artik_bt_avrcp_item_property **properties);
+static artik_error artik_bluetooth_avrcp_controller_free_property(
+		artik_bt_avrcp_item_property **properties);
 static artik_error artik_bluetooth_avrcp_controller_play_item(int index);
 static artik_error artik_bluetooth_avrcp_controller_add_to_playing(int index);
 static artik_error artik_bluetooth_avrcp_controller_get_name(char **name);
@@ -248,6 +250,7 @@ const artik_bluetooth_module bluetooth_module = {
 	artik_bluetooth_avrcp_controller_fast_forward,
 	artik_bluetooth_avrcp_controller_rewind,
 	artik_bluetooth_avrcp_controller_get_property,
+	artik_bluetooth_avrcp_controller_free_property,
 	artik_bluetooth_avrcp_controller_play_item,
 	artik_bluetooth_avrcp_controller_add_to_playing,
 	artik_bluetooth_avrcp_controller_get_name,
@@ -817,6 +820,12 @@ artik_error artik_bluetooth_avrcp_controller_get_property(int index,
 		artik_bt_avrcp_item_property **properties)
 {
 	return os_bt_avrcp_controller_get_property(index, properties);
+}
+
+artik_error artik_bluetooth_avrcp_controller_free_property(
+		artik_bt_avrcp_item_property **properties)
+{
+	return os_bt_avrcp_controller_free_property(properties);
 }
 
 artik_error artik_bluetooth_avrcp_controller_play_item(int index)

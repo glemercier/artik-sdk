@@ -1650,13 +1650,23 @@ extern "C" {
 		/*!
 		 * \brief Get the item property
 		 *
-		 * \param[in] index To be get property
-		 * \param[in] properties index's property be sorted
+		 * \param[in] index to be get property
+		 * \param[out] properties index's property be sorted \ref artik_bt_avrcp_item_property
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
 		 *
 		 */
 		artik_error(*avrcp_controller_get_property)(int index,
+				artik_bt_avrcp_item_property **properties);
+		/*!
+		 * \brief Free an item property.
+		 *
+		 * \param[in] Item property needed to be free \ref artik_bt_avrcp_item_property
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 *
+		 */
+		artik_error(*avrcp_controller_free_property)(
 				artik_bt_avrcp_item_property **properties);
 		/*!
 		 * \brief Play the item

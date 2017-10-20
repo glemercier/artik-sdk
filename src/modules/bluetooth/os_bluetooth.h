@@ -120,6 +120,8 @@ artik_error os_bt_avrcp_controller_fast_forward(void);
 artik_error os_bt_avrcp_controller_rewind(void);
 artik_error os_bt_avrcp_controller_get_property(int index,
 		artik_bt_avrcp_item_property **properties);
+artik_error os_bt_avrcp_controller_free_property(
+		artik_bt_avrcp_item_property **properties);
 artik_error os_bt_avrcp_controller_play_item(int index);
 artik_error os_bt_avrcp_controller_add_to_playing(int index);
 artik_error os_bt_avrcp_controller_get_name(char **name);

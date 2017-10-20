@@ -362,6 +362,11 @@ artik_error artik::Bluetooth::avrcp_controller_get_property(
   return m_module->avrcp_controller_get_property(index, properties);
 }
 
+artik_error artik::Bluetooth::avrcp_controller_free_property(
+    artik_bt_avrcp_item_property **properties) {
+  return m_module->avrcp_controller_free_property(properties);
+}
+
 artik_error artik::Bluetooth::avrcp_controller_play_item(int index) {
   return m_module->avrcp_controller_play_item(index);
 }
