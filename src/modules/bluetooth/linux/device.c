@@ -528,6 +528,8 @@ artik_error bt_free_devices(artik_bt_device **device_list, int count)
 		g_free((*device_list)[i].uuid_list);
 		g_free((*device_list)[i].remote_address);
 		g_free((*device_list)[i].remote_name);
+		g_free((*device_list)[i].manufacturer_data);
+		g_free((*device_list)[i].svc_data);
 	}
 	g_free(*device_list);
 	*device_list = NULL;

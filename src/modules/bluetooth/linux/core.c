@@ -475,11 +475,15 @@ void _get_object_path(const char *addr, char **path)
 	GVariant *obj1, *ar1, *ar2;
 	GVariantIter *iter1, *iter2;
 	gchar *dev_path, *itf;
-	artik_bt_device device;
+	artik_bt_device *device;
 
 	*path = NULL;
 
 	if (_get_managed_objects(&obj1) != S_OK)
+		return;
+
+	device = g_try_new0(artik_bt_device, 1);
+	if (!device)
 		return;
 
 	g_variant_get(obj1, "(a{oa{sa{sv}}})", &iter1);
@@ -496,8 +500,8 @@ void _get_object_path(const char *addr, char **path)
 			if (strcasecmp(itf, DBUS_IF_DEVICE1) != 0)
 				continue;
 
-			_get_device_properties(ar2, &device);
-			if (strcasecmp(device.remote_address, addr) == 0) {
+			_get_device_properties(ar2, device);
+			if (strcasecmp(device->remote_address, addr) == 0) {
 				*path = g_strdup(dev_path);
 				g_variant_unref(ar2);
 				break;
@@ -505,6 +509,8 @@ void _get_object_path(const char *addr, char **path)
 		}
 		g_variant_iter_free(iter2);
 	}
+
+	bt_free_device(device);
 	g_variant_iter_free(iter1);
 	g_variant_unref(obj1);
 }
