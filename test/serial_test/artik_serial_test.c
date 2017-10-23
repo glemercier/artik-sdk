@@ -112,8 +112,11 @@ static artik_error test_serial_loopback(int platid)
 	} else if (platid == ARTIK710) {
 		config.port_num = ARTIK_A710_UART0;
 		config.name = "UART4";
-	} else {
+	} else if (platid == ARTIK530) {
 		config.port_num = ARTIK_A530_UART0;
+		config.name = "UART4";
+	} else if (platid == ARTIK305) {
+		config.port_num = ARTIK_A305_UART0;
 		config.name = "UART4";
 	}
 
@@ -182,7 +185,8 @@ int main(void)
 	}
 
 	if ((platid == ARTIK520) || (platid == ARTIK1020) ||
-				(platid == ARTIK710) || (platid == ARTIK530)) {
+		(platid == ARTIK710) || (platid == ARTIK530) ||
+		(platid == ARTIK305)) {
 		ret = test_serial_loopback(platid);
 	}
 

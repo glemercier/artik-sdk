@@ -104,6 +104,14 @@ int main(int argc, char *argv[]) {
     config.port_num = ARTIK_A710_UART0;
     config.name = const_cast<char*>("UART0");
     break;
+  case ARTIK530:
+    config.port_num = ARTIK_A530_UART0;
+    config.name = const_cast<char*>("UART0");
+    break;
+  case ARTIK305:
+    config.port_num = ARTIK_A305_UART0;
+    config.name = const_cast<char*>("UART0");
+    break;
   default:
     goto exit;
   }

@@ -32,6 +32,7 @@
 #include "platform/artik_a710_platform_sensors.h"
 #include "platform/artik_a1020_platform_sensors.h"
 #include "platform/artik_a530_platform_sensors.h"
+#include "platform/artik_a305_platform_sensors.h"
 #include "platform/artik_generic_platform_sensors.h"
 
 /*!
@@ -42,7 +43,9 @@ static artik_sensor_config *artik_api_sensors[] = {
 	artik_api_a520_sensors,
 	artik_api_a1020_sensors,
 	artik_api_a710_sensors,
-	artik_api_a530_sensors
+	artik_api_a530_sensors,
+	NULL,
+	artik_api_a305_sensors
 };
 
 #endif /* ARTIK_PLATFORM_SENSORS_H_ */

@@ -67,7 +67,11 @@ static artik_error test_rgb_led(int platid)
 		leds[0].config.id = ARTIK_A710_GPIO0;
 		leds[1].config.id = ARTIK_A710_GPIO1;
 		leds[2].config.id = ARTIK_A710_GPIO2;
-	} else {
+	} else if (platid == ARTIK530) {
+		leds[0].config.id = ARTIK_A530_GPIO0;
+		leds[1].config.id = ARTIK_A530_GPIO2;
+		leds[2].config.id = ARTIK_A530_GPIO3;
+	} else if (platid == ARTIK305) {
 		leds[0].config.id = ARTIK_A530_GPIO0;
 		leds[1].config.id = ARTIK_A530_GPIO2;
 		leds[2].config.id = ARTIK_A530_GPIO3;
@@ -205,7 +209,7 @@ int main(void)
 	int platid = artik_get_platform();
 
 	if ((platid == ARTIK520) || (platid == ARTIK1020) ||
-			(platid == ARTIK710) || (platid == ARTIK530)) {
+			(platid == ARTIK710) || (platid == ARTIK530) || (platid == ARTIK305)) {
 		ret = test_button_interrupt(platid);
 		if (ret != S_OK)
 			goto exit;

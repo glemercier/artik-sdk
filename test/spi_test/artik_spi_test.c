@@ -59,7 +59,7 @@ static artik_error spi_test(int platid)
 	fprintf(stdout, "TEST: %s starting\n", __func__);
 
     /* Do platform specific configuration */
-	if (ARTIK710 == platid || ARTIK530 == platid)
+	if (ARTIK710 == platid || ARTIK530 == platid || ARTIK305 == platid)
 		config.bus = 2;
 
 	ret = spi->request(&handle, &config);

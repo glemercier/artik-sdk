@@ -52,7 +52,9 @@ static char *const plat_port[] = {
 	"/dev/ttySAC%d",	/* ARTIK520 */
 	"/dev/ttySAC%d",	/* ARTIK1020 */
 	"/dev/ttySAC%d",	/* ARTIK710 */
-	"/dev/ttyAMA%d",        /* ARTIK530 */
+	"/dev/ttyAMA%d",	/* ARTIK530 */
+	NULL,			/* ARTIK05x */
+	"/dev/ttyAMA%d",	/* ARTIK305 */
 };
 
 /* Must strictly follow enum artik_serial_baudrate_t in artik_serial.h */

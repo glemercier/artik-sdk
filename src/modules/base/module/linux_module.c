@@ -74,7 +74,9 @@ static const artik_api_module *artik_api_modules[] = {
 	artik_api_a520_modules,
 	artik_api_a1020_modules,
 	artik_api_a710_modules,
-	artik_api_a530_modules
+	artik_api_a530_modules,
+	NULL,
+	artik_api_a305_modules
 };
 
 artik_error os_get_api_version(artik_api_version *version)
@@ -263,6 +265,8 @@ int os_get_platform(void)
 			artik_platform_id = ARTIK710;
 		else if (strstr(line, "artik530"))
 			artik_platform_id = ARTIK530;
+		else if (strstr(line, "artik305"))
+			artik_platform_id = ARTIK305;
 		else
 			artik_platform_id = GENERIC;
 	}

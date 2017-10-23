@@ -52,7 +52,11 @@ enum {
 	/*!
 	 *  \brief Samsung's ARTIK 05x Development platform
 	 */
-	ARTIK05x = 5
+	ARTIK05x = 5,
+	/*!
+	 * \brief Samsung's ARTIK 305 Raptor Development platform
+	 */
+	ARTIK305 = 6
 };
 
 #include "platform/artik_a520_platform.h"
@@ -60,6 +64,7 @@ enum {
 #include "platform/artik_a1020_platform.h"
 #include "platform/artik_a710_platform.h"
 #include "platform/artik_a05x_platform.h"
+#include "platform/artik_a305_platform.h"
 #include "platform/artik_generic_platform.h"
 
 /*!
@@ -71,7 +76,8 @@ static const char artik_platform_name[][MAX_PLATFORM_NAME] = {
 	"ARTIK 1020",
 	"ARTIK 710",
 	"ARTIK 530",
-	"ARTIK 05x"
+	"ARTIK 05x",
+	"ARTIK 305"
 };
 
 #endif /* INCLUDE_ARTIK_PLATFORM_H_ */
