@@ -291,7 +291,7 @@ int wifi_connect(const char *ssid, const char *psk, int save_profile)
 			|| (os_strchr(ssid, ' ')))
 		return WIFI_ERROR_CONNECT_INVALID_SSID;
 
-	if (psk && ((os_strlen(psk) < MIN_AP_WPA2PASS_LEN) ||
+	if (psk && (os_strlen(psk) > 0) && ((os_strlen(psk) < MIN_AP_WPA2PASS_LEN) ||
 			(os_strlen(psk) > MAX_AP_WPA2PASS_LEN) ||
 			(os_strchr(psk, ' '))))
 		return WIFI_ERROR_CONNECT_INVALID_PSK;
