@@ -161,6 +161,8 @@ int main(int argc, char *argv[])
 	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
 
+	bt->init();
+
 	set_user_callbacks();
 
 	printf("> remove paired devices\n");
@@ -181,6 +183,8 @@ int main(int argc, char *argv[])
 	bt->disconnect(addr);
 
 	free(filter.uuid_list);
+
+	bt->deinit();
 
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);

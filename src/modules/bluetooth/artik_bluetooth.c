@@ -36,6 +36,8 @@ static artik_error artik_bluetooth_disconnect(const char *addr);
 static artik_error artik_bluetooth_free_device(artik_bt_device *device);
 static artik_error artik_bluetooth_free_devices(artik_bt_device **device_list,
 		int count);
+static artik_error artik_bluetooth_init(void);
+static artik_error artik_bluetooth_deinit(void);
 static artik_error artik_bluetooth_set_callback(artik_bt_event event,
 		artik_bt_callback user_callback, void *user_data);
 static artik_error artik_bluetooth_set_callbacks(artik_bt_callback_property
@@ -189,6 +191,8 @@ const artik_bluetooth_module bluetooth_module = {
 	artik_bluetooth_disconnect,
 	artik_bluetooth_free_device,
 	artik_bluetooth_free_devices,
+	artik_bluetooth_init,
+	artik_bluetooth_deinit,
 	artik_bluetooth_set_callback,
 	artik_bluetooth_set_callbacks,
 	artik_bluetooth_unset_callback,
@@ -410,6 +414,16 @@ artik_error artik_bluetooth_free_devices(artik_bt_device **device_list,
 		return E_BAD_ARGS;
 
 	return os_bt_free_devices(device_list, count);
+}
+
+artik_error artik_bluetooth_init(void)
+{
+	return os_bt_init();
+}
+
+artik_error artik_bluetooth_deinit(void)
+{
+	return os_bt_deinit();
 }
 
 artik_error artik_bluetooth_set_callback(artik_bt_event event,

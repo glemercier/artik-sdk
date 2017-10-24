@@ -32,6 +32,7 @@
 
 const gchar *A2DP_SOURCE_UUID = "0000110A-0000-1000-8000-00805F9B34FB";
 artik_bt_a2dp_source *_endpoint;
+static guint registration_id;
 
 /* Introspection data for the service we are exporting */
 static const gchar _introspection_xml[] =
@@ -227,15 +228,12 @@ artik_error bt_a2dp_source_register(unsigned char codec,
 		bool delay_reporting, const char *path,
 		const unsigned char *capabilities, int cap_size)
 {
-	guint registration_id;
 	GError *error = NULL;
 	GVariantBuilder *builder = NULL;
 	GVariantBuilder *cap_builder = NULL;
 	int i = 0;
 
 	bt_a2dp_source_create(codec, delay_reporting, path, capabilities, cap_size);
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	cap_builder = g_variant_builder_new(G_VARIANT_TYPE("ay"));
@@ -285,16 +283,12 @@ artik_error bt_a2dp_source_register(unsigned char codec,
 
 	log_dbg("registration id : %d\n", registration_id);
 
-	g_hash_table_insert(hci.registration_ids,
-			g_strdup("ObjectRegistered"), GUINT_TO_POINTER(registration_id));
 	return S_OK;
 }
 
 artik_error bt_a2dp_source_unregister(void)
 {
 	GError *error = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	/*TODO:unregister the object path */
 	g_dbus_connection_call_sync(hci.conn,
@@ -310,6 +304,7 @@ artik_error bt_a2dp_source_unregister(void)
 		return E_BT_ERROR;
 	}
 	bt_a2dp_source_destroy();
+	g_dbus_connection_unregister_object(hci.conn, registration_id);
 	g_dbus_node_info_unref(_introspection_data);
 	return S_OK;
 }
@@ -321,8 +316,6 @@ artik_error bt_a2dp_source_acquire(int *fd,
 	GVariant *v;
 	GError *error = NULL;
 	char *state;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (_endpoint->transport_path) {
 		result = g_dbus_connection_call_sync(
@@ -379,8 +372,6 @@ artik_error bt_a2dp_source_acquire(int *fd,
 artik_error bt_a2dp_source_get_properties(
 		artik_bt_a2dp_source_property **properties)
 {
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	(*properties) = (artik_bt_a2dp_source_property *) malloc(
 				sizeof(artik_bt_a2dp_source_property));
 	memset(*properties, 0, sizeof(artik_bt_a2dp_source_property));
@@ -493,8 +484,6 @@ artik_error bt_a2dp_source_get_properties(
 artik_error bt_a2dp_source_release(void)
 {
 	GError *error = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (_endpoint->transport_path) {
 		g_dbus_connection_call_sync(hci.conn,

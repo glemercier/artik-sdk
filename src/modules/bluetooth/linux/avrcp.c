@@ -78,8 +78,6 @@ static artik_error _get_property(char *_path, char *_interface, char *_property,
 	GVariant *result = NULL;
 	GError *error = NULL;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	result = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
@@ -108,7 +106,6 @@ static artik_error _get_control_path(char **path)
 	char *dev_path = NULL, *itf = NULL;
 	bool is_find = false, is_connected = false;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 	artik_error err = _get_managed_objects(&obj1);
 
 	if (err != S_OK)
@@ -215,7 +212,6 @@ artik_error bt_avrcp_controller_change_folder(int index)
 	if (!folder)
 		return E_BAD_ARGS;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 	e = _get_player_path(&player_path);
 
 	if (e == S_OK && player_path) {
@@ -334,7 +330,6 @@ artik_error bt_avrcp_controller_list_item(int start_item, int end_item,
 	if (!bt_avrcp_controller_is_browsable())
 		return E_NOT_SUPPORTED;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 	e = _get_player_path(&player_path);
 
 	if (e != S_OK || player_path == NULL) {
@@ -371,7 +366,6 @@ artik_error bt_avrcp_controller_set_repeat(const char *repeat_mode)
 	artik_error e = S_OK;
 	char *player_path = NULL;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 	e = _get_player_path(&player_path);
 
 	if (e == S_OK && player_path) {
@@ -442,7 +436,6 @@ static artik_error _invoke_remote_control(const char *command)
 	char *player_path = NULL;
 	artik_error e = S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 	e = _get_player_path(&player_path);
 	if (e == S_OK && player_path) {
 		g_dbus_connection_call_sync(hci.conn,
@@ -612,7 +605,6 @@ artik_error bt_avrcp_controller_get_property(int index,
 	if (!item)
 		return E_BAD_ARGS;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 	*properties = (artik_bt_avrcp_item_property *)
 			malloc(sizeof(artik_bt_avrcp_item_property));
 	memset(*properties, 0, sizeof(artik_bt_avrcp_item_property));
@@ -680,8 +672,6 @@ artik_error bt_avrcp_controller_play_item(int index)
 	if (!playable)
 		return E_NOT_SUPPORTED;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	result = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
@@ -718,8 +708,6 @@ artik_error bt_avrcp_controller_add_to_playing(int index)
 
 	if (!playable)
 		return E_NOT_SUPPORTED;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	result = g_dbus_connection_call_sync(
 			hci.conn,
@@ -871,8 +859,6 @@ artik_error bt_avrcp_controller_get_metadata(
 	char *player_path = NULL;
 	artik_error e = S_OK;
 	GVariant *v = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	e = _get_player_path(&player_path);
 	if (e == S_OK && player_path) {

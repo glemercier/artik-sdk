@@ -33,7 +33,7 @@
 #define MAX_PACKET_SIZE        1024
 #define SCAN_TIME_MILLISECONDS (20*1000)
 
-static artik_bluetooth_module *bt_main;
+static artik_bluetooth_module *bt;
 static artik_loop_module *loop_main;
 static bool bt_bond_status;
 static bool bt_connect_status;
@@ -249,25 +249,17 @@ void callback_on_agent_authorize_service(artik_bt_event event,
 static artik_error agent_register(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-			artik_request_api_module("bluetooth");
-	artik_loop_module *loop = (artik_loop_module *)
-			artik_request_api_module("loop");
 	artik_bt_agent_capability g_capa = BT_CAPA_KEYBOARDDISPLAY;
 
 	ret = bt->set_discoverable(true);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
 	ret = bt->agent_register_capability(g_capa);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
 	ret = bt->agent_set_default();
-
-exit:
-	artik_release_api_module(loop);
-	artik_release_api_module(bt);
 
 	return ret;
 }
@@ -275,8 +267,6 @@ exit:
 static artik_error set_callback(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-					artik_request_api_module("bluetooth");
 
 	artik_bt_callback_property callback_property[] = {
 		{BT_EVENT_SCAN, callback_on_scan, NULL},
@@ -296,7 +286,7 @@ static artik_error set_callback(void)
 	};
 
 	ret = bt->set_callbacks(callback_property, 11);
-	artik_release_api_module(bt);
+
 	return ret;
 }
 
@@ -304,8 +294,6 @@ artik_error bluetooth_scan(void)
 {
 	artik_loop_module *loop = (artik_loop_module *)
 					artik_request_api_module("loop");
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-					artik_request_api_module("bluetooth");
 	artik_error ret = S_OK;
 	int timeout_id = 0;
 
@@ -330,7 +318,7 @@ exit:
 		(ret == S_OK) ? "succeeded" : "failed");
 
 	artik_release_api_module(loop);
-	artik_release_api_module(bt);
+
 	return ret;
 }
 
@@ -359,9 +347,7 @@ artik_error get_addr(char *remote_addr)
 static artik_error spp_profile_register(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt =
-		(artik_bluetooth_module *)artik_request_api_module("bluetooth");
-	static artik_bt_spp_profile_option profile_option;
+	artik_bt_spp_profile_option profile_option;
 
 	profile_option.name = "Artik SPP Loopback";
 	profile_option.service = "spp char loopback";
@@ -374,7 +360,7 @@ static artik_error spp_profile_register(void)
 	profile_option.features = 20;
 
 	ret = bt->spp_register_profile(&profile_option);
-	artik_release_api_module(bt);
+
 	return ret;
 }
 
@@ -388,11 +374,12 @@ int main(void)
 		goto loop_quit;
 	}
 
-	bt_main = (artik_bluetooth_module *)
-			artik_request_api_module("bluetooth");
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	loop_main = (artik_loop_module *)artik_request_api_module("loop");
-	if (!bt_main || !loop_main)
+	if (!bt || !loop_main)
 		goto loop_quit;
+
+	bt->init();
 
 	ret = spp_profile_register();
 	if (ret != S_OK) {
@@ -428,13 +415,13 @@ int main(void)
 	}
 	fprintf(stdout, "<SPP>: get remote addr: %s\n", remote_address);
 
-	bt_main->start_bond(remote_address);
+	bt->start_bond(remote_address);
 	loop_main->run();
 	if (!bt_bond_status)
 		goto spp_quit;
 	fprintf(stdout, "<SPP>: SPP paired success!\n");
 
-	bt_main->connect(remote_address);
+	bt->connect(remote_address);
 	loop_main->run();
 	if (!bt_connect_status)
 		goto spp_quit;
@@ -444,21 +431,23 @@ int main(void)
 	loop_main->run();
 
 spp_quit:
-	bt_main->spp_unregister_profile();
-	bt_main->agent_unregister();
-	bt_main->unset_callback(BT_EVENT_SCAN);
-	bt_main->unset_callback(BT_EVENT_BOND);
-	bt_main->unset_callback(BT_EVENT_CONNECT);
-	bt_main->unset_callback(BT_EVENT_SPP_CONNECT);
-	bt_main->unset_callback(BT_EVENT_SPP_RELEASE);
-	bt_main->unset_callback(BT_EVENT_SPP_DISCONNECT);
+	bt->spp_unregister_profile();
+	bt->agent_unregister();
+	bt->unset_callback(BT_EVENT_SCAN);
+	bt->unset_callback(BT_EVENT_BOND);
+	bt->unset_callback(BT_EVENT_CONNECT);
+	bt->unset_callback(BT_EVENT_SPP_CONNECT);
+	bt->unset_callback(BT_EVENT_SPP_RELEASE);
+	bt->unset_callback(BT_EVENT_SPP_DISCONNECT);
 
-	bt_main->disconnect(remote_address);
+	bt->disconnect(remote_address);
 	fprintf(stdout, "<SPP>: SPP quit!\n");
 
 loop_quit:
-	if (bt_main)
-		artik_release_api_module(bt_main);
+	if (bt) {
+		bt->deinit();
+		artik_release_api_module(bt);
+	}
 	if (loop_main)
 		artik_release_api_module(loop_main);
 

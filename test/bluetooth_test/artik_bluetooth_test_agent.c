@@ -175,6 +175,8 @@ static artik_error test_bluetooth_agent(void)
 		{BT_EVENT_AGENT_AUTHORIZE_SERVICE, callback_on_authorize_service, NULL}
 	};
 
+	bt->init();
+
 	ret = bt->set_callbacks(agent_callback, 7);
 	if (ret != S_OK)
 		goto exit;
@@ -194,8 +196,11 @@ static artik_error test_bluetooth_agent(void)
 	loop->run();
 
 exit:
+	bt->deinit();
+
 	artik_release_api_module(loop);
 	artik_release_api_module(bt);
+
 	return ret;
 }
 
@@ -210,6 +215,8 @@ void uninit(int signal)
 	printf("Invoke unregister...\n");
 	bt->agent_unregister();
 	loop->quit();
+
+	bt->deinit();
 
 	artik_release_api_module(loop);
 	artik_release_api_module(bt);

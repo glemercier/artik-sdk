@@ -59,8 +59,6 @@ static artik_error _get_pan_property(char *_property, GVariant **variant)
 	if (_is_network_path_valid() == 0)
 		return E_NOT_INITIALIZED;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	result = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
@@ -108,8 +106,6 @@ artik_error bt_pan_register(const char *uuid, const char *bridge)
 	if (_pan_parameter_check(NULL, uuid) != S_OK)
 		return E_INVALID_VALUE;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
@@ -133,8 +129,6 @@ artik_error bt_pan_unregister(const char *uuid)
 	if (_pan_parameter_check(NULL, uuid) != S_OK)
 		return E_INVALID_VALUE;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
@@ -156,8 +150,6 @@ static artik_error _pan_connect(char *_path, const char *_role,
 {
 	GError *error = NULL;
 	GVariant *v;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	v = g_dbus_connection_call_sync(
 			hci.conn,
@@ -245,8 +237,6 @@ artik_error bt_pan_connect(const char *mac_addr,
 artik_error bt_pan_disconnect(void)
 {
 	GError *error = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (_is_network_path_valid() == 0)
 		return E_NOT_INITIALIZED;

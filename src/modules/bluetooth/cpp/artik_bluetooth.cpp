@@ -21,9 +21,11 @@
 artik::Bluetooth::Bluetooth() {
   m_module = reinterpret_cast<artik_bluetooth_module*>(
       artik_request_api_module("bluetooth"));
+  m_module->init();
 }
 
 artik::Bluetooth::~Bluetooth() {
+  m_module->deinit();
   artik_release_api_module(reinterpret_cast<void*>(this->m_module));
 }
 
@@ -68,6 +70,14 @@ artik_error artik::Bluetooth::free_device(artik_bt_device *device) {
 artik_error artik::Bluetooth::free_devices(artik_bt_device **device_list,
     int count) {
   return m_module->free_devices(device_list, count);
+}
+
+artik_error artik::Bluetooth::init() {
+  return m_module->init();
+}
+
+artik_error artik::Bluetooth::deinit() {
+  return m_module->deinit();
 }
 
 artik_error artik::Bluetooth::set_callback(artik_bt_event event,

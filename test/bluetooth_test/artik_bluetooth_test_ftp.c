@@ -40,6 +40,7 @@
 #define BUFFER_LEN				128
 
 static artik_loop_module *loop_main;
+static artik_bluetooth_module *bt;
 
 static int uninit(void *user_data)
 {
@@ -364,8 +365,6 @@ artik_error bluetooth_scan(void)
 	int timeout_id = 0;
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 
 	fprintf(stdout, "<FTP>: %s - starting\n", __func__);
 
@@ -391,7 +390,7 @@ exit:
 	bt->unset_callback(BT_EVENT_SCAN);
 
 	artik_release_api_module(loop);
-	artik_release_api_module(bt);
+
 	return ret;
 }
 
@@ -413,35 +412,27 @@ artik_error get_addr(char *remote_addr)
 static artik_error set_callback(char *remote_addr)
 {
 	artik_error ret;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 
 	ret = bt->set_callback(BT_EVENT_BOND, user_callback,
 		(void *)remote_addr);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
 	ret = bt->set_callback(BT_EVENT_CONNECT, user_callback,
 			     (void *)remote_addr);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
 	ret = bt->set_callback(BT_EVENT_FTP, prop_callback, NULL);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
-exit:
-	artik_release_api_module(bt);
 	return ret;
 }
 
 static artik_error agent_register(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-			artik_request_api_module("bluetooth");
-	artik_loop_module *loop = (artik_loop_module *)
-			artik_request_api_module("loop");
 
 	artik_bt_agent_capability g_capa = BT_CAPA_KEYBOARDDISPLAY;
 
@@ -451,18 +442,13 @@ static artik_error agent_register(void)
 	bt->agent_register_capability(g_capa);
 	bt->agent_set_default();
 
-	artik_release_api_module(loop);
-	artik_release_api_module(bt);
-
 	return ret;
-
 }
 
 int main(int argc, char *argv[])
 {
 	artik_error ret = S_OK;
 	char remote_address[MAX_BDADDR_LEN] = "";
-	artik_bluetooth_module *bt_main = NULL;
 
 	if (!artik_is_module_available(ARTIK_MODULE_BLUETOOTH)) {
 		fprintf(stdout,
@@ -475,10 +461,12 @@ int main(int argc, char *argv[])
 			"<FTP>:Loop module is not available\n");
 		goto loop_quit;
 	}
-	bt_main = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
+	bt = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
 	loop_main = (artik_loop_module *) artik_request_api_module("loop");
-	if (!bt_main || !loop_main)
+	if (!bt || !loop_main)
 		goto loop_quit;
+
+	bt->init();
 
 	ret = agent_register();
 	if (ret != S_OK) {
@@ -505,16 +493,19 @@ int main(int argc, char *argv[])
 		goto loop_quit;
 	}
 
-	bt_main->start_bond(remote_address);
+	bt->start_bond(remote_address);
 	loop_main->add_signal_watch(SIGINT, uninit, NULL, NULL);
 	loop_main->run();
 
 loop_quit:
-	if (bt_main)
-		artik_release_api_module(bt_main);
+	if (bt) {
+		bt->deinit();
+		artik_release_api_module(bt);
+	}
 	if (loop_main)
 		artik_release_api_module(loop_main);
 
 	fprintf(stdout, "<FTP>: Quit FTP session ...!\n");
+
 	return S_OK;
 }

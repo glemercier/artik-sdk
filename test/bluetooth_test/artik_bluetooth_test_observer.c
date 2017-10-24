@@ -73,6 +73,8 @@ int main(int argc, char *argv[])
 	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
 
+	bt->init();
+
 	filter.type = BT_SCAN_LE;
 	filter.rssi = -90;
 
@@ -99,6 +101,8 @@ int main(int argc, char *argv[])
 
 	loop->add_signal_watch(SIGINT, on_signal, NULL, NULL);
 	loop->run();
+
+	bt->deinit();
 
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);

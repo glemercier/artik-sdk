@@ -33,6 +33,7 @@
 
 static char remote_mac_addr[BT_ADDRESS_LEN];
 static artik_error err;
+static artik_bluetooth_module *bt;
 
 static int init_suite1(void)
 {
@@ -69,8 +70,6 @@ static void spp_register_profile_test(void)
 	static artik_bt_spp_profile_option profile_option = {
 		NULL, NULL, NULL, 0, 0,
 		false, false, false, 0, 0};
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-					artik_request_api_module("bluetooth");
 
 	ret = bt->spp_register_profile(&profile_option);
 	CU_ASSERT(ret != S_OK);
@@ -84,8 +83,6 @@ static void spp_register_profile_test(void)
 
 	ret = bt->spp_unregister_profile();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 static void spp_unregister_profile_test(void)
@@ -93,9 +90,6 @@ static void spp_unregister_profile_test(void)
 	artik_error ret = S_OK;
 	static artik_bt_spp_profile_option profile_option;
 
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-					artik_request_api_module("bluetooth");
-
 	ret = bt->spp_unregister_profile();
 	CU_ASSERT(ret != S_OK);
 
@@ -105,8 +99,6 @@ static void spp_unregister_profile_test(void)
 
 	ret = bt->spp_unregister_profile();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 static void on_spp_release(artik_bt_event event,
@@ -159,9 +151,6 @@ static void spp_set_callback_test(void)
 	err = S_OK;
 	int watch_id = 0;
 	static artik_bt_spp_profile_option profile_option;
-
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-					artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 					artik_request_api_module("loop");
 
@@ -199,7 +188,7 @@ static void spp_set_callback_test(void)
 	CU_ASSERT(err == S_OK);
 
 	loop->remove_fd_watch(watch_id);
-	artik_release_api_module(bt);
+
 	artik_release_api_module(loop);
 }
 
@@ -252,7 +241,6 @@ int main(void)
 {
 	artik_error ret = S_OK;
 	CU_pSuite pSuite = NULL;
-	artik_bluetooth_module *bt_main = NULL;
 	artik_loop_module *loop_main = NULL;
 
 	if (!artik_is_module_available(ARTIK_MODULE_BLUETOOTH)) {
@@ -260,11 +248,9 @@ int main(void)
 		goto loop_quit;
 	}
 
-	bt_main = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
-	loop_main = (artik_loop_module *)
-		artik_request_api_module("loop");
-	if (!bt_main || !loop_main)
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
+	loop_main = (artik_loop_module *)artik_request_api_module("loop");
+	if (!bt || !loop_main)
 		goto loop_quit;
 
 	ret = cunit_init(&pSuite);
@@ -281,8 +267,10 @@ int main(void)
 
 loop_quit:
 	CU_cleanup_registry();
-	if (bt_main)
-		artik_release_api_module(bt_main);
+	if (bt) {
+		bt->deinit();
+		artik_release_api_module(bt);
+	}
 	if (loop_main)
 		artik_release_api_module(loop_main);
 

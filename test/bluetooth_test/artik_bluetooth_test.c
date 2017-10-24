@@ -347,6 +347,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	bt->init();
 
 	ret = test_bluetooth_scan();
 	if (ret != S_OK)
@@ -372,6 +373,9 @@ int main(int argc, char *argv[])
 		goto exit;
 
 exit:
+	bt->deinit();
+
 	artik_release_api_module(bt);
+
 	return (ret == S_OK) ? 0 : -1;
 }

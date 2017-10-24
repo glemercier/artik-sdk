@@ -36,8 +36,6 @@ artik_error bt_set_scan_filter(artik_bt_scan_filter * filter)
 	gchar *type;
 	guint i;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	if (filter != NULL) {
 		log_dbg("bt_set_scan_filter");
 
@@ -99,8 +97,6 @@ artik_error bt_set_alias(const char *alias)
 	if (alias == NULL)
 		return S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	v = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
@@ -119,8 +115,6 @@ artik_error bt_set_alias(const char *alias)
 artik_error bt_set_powered(bool powered)
 {
 	GError *e = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	g_dbus_connection_call_sync(
 			hci.conn,
@@ -145,8 +139,6 @@ artik_error bt_set_discoverable(bool discoverable)
 	GVariant *v;
 	GError *e = NULL;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	v = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
@@ -166,8 +158,6 @@ artik_error bt_set_pairable(bool pairable)
 {
 	GVariant *v;
 	GError *e = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	v = g_dbus_connection_call_sync(
 			hci.conn,
@@ -189,8 +179,6 @@ artik_error bt_set_pairableTimeout(unsigned int timeout)
 	GVariant *v;
 	GError *e = NULL;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	v = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
@@ -211,8 +199,6 @@ artik_error bt_set_discoverableTimeout(unsigned int timeout)
 	GVariant *v;
 	GError *e = NULL;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	v = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
@@ -231,8 +217,6 @@ artik_error bt_set_discoverableTimeout(unsigned int timeout)
 artik_error bt_start_scan(void)
 {
 	GError *e = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	log_dbg("");
 
@@ -255,8 +239,6 @@ artik_error bt_stop_scan(void)
 {
 	GError *e = NULL;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	log_dbg("");
 
 	if (!bt_is_scanning())
@@ -273,9 +255,6 @@ artik_error bt_stop_scan(void)
 bool bt_is_scanning(void)
 {
 	GError *e = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	GVariant *rst, *v;
 	gboolean b;
 
@@ -298,8 +277,6 @@ bool bt_is_scanning(void)
 artik_error bt_get_adapter_info(artik_bt_adapter *adapter)
 {
 	GVariant *r, *v;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (adapter == NULL)
 		return E_BT_ERROR;

@@ -175,7 +175,7 @@ artik_error bt_ftp_create_session(char *dest_addr)
 		return E_BT_ERROR;
 	}
 
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
+	_bt_init_session();
 
 	args = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(args, "{sv}", "Target", g_variant_new_string("ftp"));
@@ -210,8 +210,6 @@ artik_error bt_ftp_remove_session(void)
 	if (strlen(session_path) == 0)
 		return E_NOT_INITIALIZED;
 
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
-
 	g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS,
 		DBUS_BLUEZ_OBEX_PATH,
@@ -232,6 +230,9 @@ artik_error bt_ftp_remove_session(void)
 		return E_BT_ERROR;
 	}
 	memset(session_path, 0, SESSION_PATH_LEN);
+
+	_bt_deinit_session();
+
 	return S_OK;
 }
 
@@ -249,8 +250,6 @@ artik_error bt_ftp_change_folder(char *folder)
 
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
-
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
 
 	g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
@@ -283,8 +282,6 @@ artik_error bt_ftp_create_folder(char *folder)
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
 
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
-
 	g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "CreateFolder",
@@ -315,8 +312,6 @@ artik_error bt_ftp_delete_file(char *file)
 
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
-
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
 
 	g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
@@ -428,8 +423,6 @@ artik_error bt_ftp_list_folder(artik_bt_ftp_file **file_list)
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
 
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
-
 	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "ListFolder",
@@ -478,8 +471,6 @@ artik_error bt_ftp_get_file(char *target_file, char *source_file)
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
 
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
-
 	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "GetFile",
@@ -516,8 +507,6 @@ artik_error bt_ftp_put_file(char *source_file, char *target_file)
 
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
-
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
 
 	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
@@ -614,8 +603,6 @@ artik_error bt_ftp_resume_transfer(void)
 	if (ret != S_OK)
 		return ret;
 
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
-
 	if (transfer_property.object_path == NULL)
 		return E_BUSY;
 
@@ -643,8 +630,6 @@ artik_error bt_ftp_suspend_transfer(void)
 	if (transfer_property.object_path == NULL)
 		return E_BUSY;
 
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
-
 	g_dbus_connection_call(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS,
 		transfer_property.object_path,
@@ -670,8 +655,6 @@ artik_error bt_ftp_cancel_transfer(void)
 		log_err("transfer path is NULL");
 		return E_BUSY;
 	}
-
-	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
 
 	if (ftp_req == BT_FTP_REQ_PUT
 		&& ftp_state == BT_FTP_STATE_SUSPENDED)

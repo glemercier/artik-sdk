@@ -168,9 +168,6 @@ static int _register_spp_object(void)
 	}
 	log_dbg("registration id : %d\n", registration_id);
 
-	g_hash_table_insert(hci.registration_ids, g_strdup("ObjectRegistered"),
-			GUINT_TO_POINTER(registration_id));
-
 	return S_OK;
 }
 
@@ -179,8 +176,6 @@ artik_error bt_spp_register_profile(artik_bt_spp_profile_option *opt)
 	GError *error = NULL;
 	GVariantBuilder *option = NULL;
 	int ret = -1;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (opt == NULL)
 		return E_INVALID_VALUE;
@@ -240,8 +235,6 @@ artik_error bt_spp_unregister_profile(void)
 {
 	GError *error = NULL;
 	gboolean status;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,

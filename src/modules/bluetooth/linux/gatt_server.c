@@ -599,8 +599,6 @@ int bt_gatt_add_service(artik_bt_gatt_service svc, int *id)
 	bt_gatt_service *serv_info = NULL;
 	artik_error ret = S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	log_dbg("bt_gatt_add_service");
 
 	node_info = g_dbus_node_info_new_for_xml(service_introspection_xml, &error);
@@ -646,8 +644,6 @@ int bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr, int *id)
 	bt_gatt_service *service = NULL;
 	bt_gatt_char *characteristic = NULL;
 	artik_error ret = S_OK;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (chr.uuid == NULL)
 		return E_BT_ERROR;
@@ -764,8 +760,6 @@ int bt_gatt_add_descriptor(int service_id, int char_id, artik_bt_gatt_desc desc,
 	bt_gatt_char *characteristic = NULL;
 	bt_gatt_desc *descriptor = NULL;
 	artik_error ret = S_OK;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	log_dbg("bt_gatt_add_descriptor");
 
@@ -1025,8 +1019,6 @@ int bt_gatt_unregister_service(int id)
 	GError *e = NULL;
 	gchar *path = NULL;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	log_dbg("%s id:%d", __func__, id);
 
 	path = g_strdup_printf("%s%d", GATT_SERVICE_PREFIX, id);
@@ -1048,6 +1040,7 @@ int bt_gatt_unregister_service(int id)
 	}
 
 	_free_service(id);
+
 	return S_OK;
 }
 
@@ -1055,8 +1048,6 @@ int bt_gatt_notify(int service_id, int char_id, unsigned char *byte, int len)
 {
 	GVariantBuilder *b1, *b11;
 	int i = 0;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (len <= 0)
 		return E_BT_ERROR;

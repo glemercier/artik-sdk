@@ -199,25 +199,17 @@ void callback_on_agent_authorize_service(artik_bt_event event,
 static artik_error agent_register(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-			artik_request_api_module("bluetooth");
-	artik_loop_module *loop = (artik_loop_module *)
-			artik_request_api_module("loop");
 	artik_bt_agent_capability g_capa = BT_CAPA_KEYBOARDDISPLAY;
 
 	ret = bt->set_discoverable(true);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
 	ret = bt->agent_register_capability(g_capa);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
 	ret = bt->agent_set_default();
-
-exit:
-	artik_release_api_module(loop);
-	artik_release_api_module(bt);
 
 	return ret;
 }
@@ -225,8 +217,6 @@ exit:
 static artik_error set_callback(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-					artik_request_api_module("bluetooth");
 
 	artik_bt_callback_property callback_property[] = {
 		{BT_EVENT_SPP_CONNECT, callback_on_spp_connect, NULL},
@@ -244,15 +234,12 @@ static artik_error set_callback(void)
 
 	ret = bt->set_callbacks(callback_property, 8);
 
-	artik_release_api_module(bt);
 	return ret;
 }
 
 static artik_error spp_profile_register(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt =
-		(artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	artik_bt_spp_profile_option profile_option;
 
 	profile_option.name = "Artik SPP Loopback";
@@ -266,7 +253,7 @@ static artik_error spp_profile_register(void)
 	profile_option.features = 20;
 
 	ret = bt->spp_register_profile(&profile_option);
-	artik_release_api_module(bt);
+
 	return ret;
 }
 
@@ -283,6 +270,8 @@ int main(int argc, char *argv[])
 	loop = (artik_loop_module *) artik_request_api_module("loop");
 	if (!bt || !loop)
 		goto loop_quit;
+
+	bt->init();
 
 	ret = spp_profile_register();
 	if (ret != S_OK) {
@@ -317,8 +306,10 @@ spp_quit:
 		fprintf(stdout, "<SPP>: Unregister agent error!\n");
 
 loop_quit:
-	if (bt)
+	if (bt) {
+		bt->deinit();
 		artik_release_api_module(bt);
+	}
 	if (loop)
 		artik_release_api_module(loop);
 	fprintf(stdout, "<SPP>: SPP profile quit!\n");

@@ -385,7 +385,6 @@ artik_error bt_agent_register_capability(artik_bt_agent_capability e)
 		capa = g_strdup(capability[BT_CAPA_KEYBOARDDISPLAY]);
 	else
 		capa = g_strdup(capability[e]);
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_introspection_data = g_dbus_node_info_new_for_xml(_introspection_xml,
 			NULL);
@@ -405,10 +404,6 @@ artik_error bt_agent_register_capability(artik_bt_agent_capability e)
 		return E_BT_ERROR;
 	}
 	log_dbg("registration id : %d\n", agent_registration_id);
-
-	g_hash_table_insert(hci.registration_ids,
-			g_strdup("AgentObjectRegistered"),
-			GUINT_TO_POINTER(agent_registration_id));
 
 	log_dbg("Register Agent [%s]\n", capa);
 
@@ -436,8 +431,6 @@ artik_error bt_agent_set_default(void)
 	GVariant *result = NULL;
 	artik_error ret = S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	log_dbg("Request Default Agent\n");
 	result = g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
 			DBUS_BLUEZ_OBJECT_PATH,
@@ -461,8 +454,6 @@ artik_error bt_agent_unregister(void)
 	GVariant *result = NULL;
 	artik_error ret = S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	log_dbg("UnRegister Agent.......\n");
 	result = g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
 			DBUS_BLUEZ_OBJECT_PATH,
@@ -474,8 +465,6 @@ artik_error bt_agent_unregister(void)
 	if (ret != S_OK)
 		goto exit;
 
-	g_hash_table_remove(hci.registration_ids,
-			g_strdup("AgentObjectRegistered"));
 	g_dbus_connection_unregister_object(hci.conn, agent_registration_id);
 	g_dbus_node_info_unref(_introspection_data);
 	log_dbg("UnRegister Agent success\n");

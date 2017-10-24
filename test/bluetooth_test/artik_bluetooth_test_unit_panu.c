@@ -34,7 +34,7 @@
 
 static char remote_mac_addr[BT_ADDRESS_LEN];
 static artik_error connect_status = S_OK;
-
+static artik_bluetooth_module *bt;
 
 static int init_suite1(void)
 {
@@ -91,8 +91,6 @@ static artik_error _pan_start_connect(void)
 	artik_error ret = S_OK;
 	int watch_id = 0;
 	char *network_interface = NULL;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -121,8 +119,9 @@ static artik_error _pan_start_connect(void)
 quit:
 	if (watch_id)
 		loop->remove_fd_watch(watch_id);
-	artik_release_api_module(bt);
+
 	artik_release_api_module(loop);
+
 	return ret;
 }
 
@@ -130,8 +129,6 @@ static void pan_connect_test(void)
 {
 	artik_error ret = S_OK;
 	char *network_interface = NULL;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	const char *test_uuid = "test_uuid";
 
 	ret = bt->pan_connect(remote_mac_addr,
@@ -148,15 +145,11 @@ static void pan_connect_test(void)
 
 	ret = bt->pan_disconnect();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 static void pan_disconnect_test(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 
 	ret = bt->pan_disconnect();
 	CU_ASSERT(ret != S_OK);
@@ -167,16 +160,12 @@ static void pan_disconnect_test(void)
 
 	ret = bt->pan_disconnect();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 static void pan_get_connected_test(void)
 {
 	artik_error ret = S_OK;
 	bool connected;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 
 	connected = bt->pan_is_connected();
 	CU_ASSERT(connected == false);
@@ -190,16 +179,12 @@ static void pan_get_connected_test(void)
 
 	ret = bt->pan_disconnect();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 static void pan_get_interface_test(void)
 {
 	artik_error ret = S_OK;
 	char *network_interface = NULL;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 
 	ret = bt->pan_get_interface(&network_interface);
 	CU_ASSERT(ret != S_OK);
@@ -213,16 +198,12 @@ static void pan_get_interface_test(void)
 
 	ret = bt->pan_disconnect();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 static void pan_get_uuid_test(void)
 {
 	artik_error ret = S_OK;
 	char *network_uuid = NULL;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 
 	ret = bt->pan_get_UUID(&network_uuid);
 	CU_ASSERT(ret != S_OK);
@@ -236,8 +217,6 @@ static void pan_get_uuid_test(void)
 
 	ret = bt->pan_disconnect();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 artik_error cunit_add_suite(CU_pSuite *psuite)
@@ -298,6 +277,9 @@ int main(void)
 		goto loop_quit;
 	}
 
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
+	bt->init();
+
 	ret = cunit_init(&pSuite);
 	if (ret != S_OK) {
 		fprintf(stdout, "cunit init error!\n");
@@ -311,6 +293,8 @@ int main(void)
 	CU_basic_run_tests();
 
 loop_quit:
+	bt->deinit();
+
 	CU_cleanup_registry();
 	return S_OK;
 }

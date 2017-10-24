@@ -24,6 +24,10 @@
 #include <agent.h>
 #include <gatt.h>
 
+artik_error bt_init(void);
+
+artik_error bt_deinit(void);
+
 artik_error bt_set_callback(artik_bt_event event,
 		artik_bt_callback user_callback, void *user_data);
 

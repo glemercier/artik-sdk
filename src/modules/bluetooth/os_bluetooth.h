@@ -45,6 +45,8 @@ artik_error os_bt_connect(const char *addr);
 artik_error os_bt_disconnect(const char *addr);
 artik_error os_bt_free_device(artik_bt_device *device);
 artik_error os_bt_free_devices(artik_bt_device **device_list, int count);
+artik_error os_bt_init(void);
+artik_error os_bt_deinit(void);
 artik_error os_bt_set_callback(artik_bt_event event,
 		artik_bt_callback user_callback, void *user_data);
 artik_error os_bt_set_callbacks(artik_bt_callback_property

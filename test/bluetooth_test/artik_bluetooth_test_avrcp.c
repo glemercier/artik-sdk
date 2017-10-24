@@ -404,8 +404,10 @@ static void prv_get_metadata(char *buffer, void *user_data)
 static void prv_quit(char *buffer, void *user_data)
 {
 	g_quit = 1;
-	if (bt)
+	if (bt) {
+		bt->deinit();
 		artik_release_api_module(bt);
+	}
 	if (loop)
 		artik_release_api_module(loop);
 }
@@ -459,6 +461,8 @@ int main(void)
 
 	bt = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
+
+	bt->init();
 
 	for (i = 0; commands[i].name != NULL; i++)
 		printf("Command:[%s]\tDescription: %s\tExample: %s\n",

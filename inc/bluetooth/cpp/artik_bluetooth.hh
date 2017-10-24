@@ -37,6 +37,8 @@ namespace artik {
 class Bluetooth {
  private:
   artik_bluetooth_module* m_module;
+  artik_error init(void);
+  artik_error deinit(void);
 
  public:
   Bluetooth();

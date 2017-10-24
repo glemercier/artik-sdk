@@ -34,6 +34,7 @@
 static char remote_mac_addr[BT_ADDRESS_LEN];
 static artik_error property_status;
 static int suspended;
+static artik_bluetooth_module *bt;
 
 static int init_suite1(void)
 {
@@ -53,8 +54,6 @@ artik_error _ftp_object_search(const char *object_name,
 	artik_error ret;
 	artik_bt_ftp_file *file_list = NULL;
 	artik_bt_ftp_file *list = NULL;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 
 	ret = bt->ftp_list_folder(&file_list);
 	if (ret != S_OK)
@@ -102,7 +101,7 @@ quit:
 			free(list);
 		}
 	}
-	artik_release_api_module(bt);
+
 	return ret;
 }
 
@@ -154,8 +153,6 @@ static void ftp_create_session_test(void)
 {
 	artik_error ret;
 	int timeout_id = 0;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -171,7 +168,6 @@ static void ftp_create_session_test(void)
 	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
 	loop->run();
 
-	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
 
@@ -179,8 +175,6 @@ static void ftp_remove_session_test(void)
 {
 	artik_error ret;
 	int timeout_id = 0;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -196,7 +190,6 @@ static void ftp_remove_session_test(void)
 	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
 	loop->run();
 
-	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
 
@@ -208,8 +201,6 @@ static void ftp_change_foler_test(void)
 	const char *test_object = "ut_test";
 	const char *object_type = "folder";
 	const char *parent_folder = "..";
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -250,7 +241,6 @@ static void ftp_change_foler_test(void)
 	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
 	loop->run();
 
-	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
 
@@ -261,8 +251,6 @@ static void ftp_create_foler_test(void)
 	const char *object_name = "ut_test";
 	const char *object_type = "folder";
 	const char *parent_folder = "..";
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -299,7 +287,6 @@ static void ftp_create_foler_test(void)
 	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
 	loop->run();
 
-	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
 
@@ -310,8 +297,6 @@ static void ftp_delete_foler_test(void)
 	const char *object_name = "ut_test";
 	const char *object_type = "folder";
 	const char *parent_folder = "..";
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -343,7 +328,6 @@ static void ftp_delete_foler_test(void)
 	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
 	loop->run();
 
-	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
 
@@ -352,8 +336,6 @@ static void ftp_list_foler_test(void)
 	artik_error ret;
 	int timeout_id = 0;
 	artik_bt_ftp_file *file_list = NULL;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -375,7 +357,6 @@ static void ftp_list_foler_test(void)
 	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
 	loop->run();
 
-	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
 
@@ -388,8 +369,6 @@ static void ftp_get_file_test(void)
 	const char *object_type = "file";
 	const char *target_object = "/root/target_file.c";
 	const char *test_object = "test_file.c";
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -433,7 +412,6 @@ static void ftp_get_file_test(void)
 	loop->run();
 
 	ret = bt->unset_callback(BT_EVENT_FTP);
-	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
 
@@ -446,8 +424,6 @@ static void ftp_put_file_test(void)
 	const char *object_type = "file";
 	const char *target_object = "/root/target_file";
 	const char *test_object = "/root/test_file";
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -492,7 +468,7 @@ static void ftp_put_file_test(void)
 		free(object_name);
 	loop->remove_fd_watch(watch_id);
 	ret = bt->unset_callback(BT_EVENT_FTP);
-	artik_release_api_module(bt);
+
 	artik_release_api_module(loop);
 }
 
@@ -505,8 +481,6 @@ static void ftp_suspend_resume_transfer_test(void)
 	const char *object_type = "file";
 	const char *target_object = "/root/test_file";
 	const char *target_put = "put_file";
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
@@ -570,7 +544,7 @@ static void ftp_suspend_resume_transfer_test(void)
 	if (object_name)
 		free(object_name);
 	loop->remove_fd_watch(watch_id);
-	artik_release_api_module(bt);
+
 	artik_release_api_module(loop);
 }
 
@@ -643,6 +617,9 @@ int main(void)
 		goto loop_quit;
 	}
 
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
+	bt->init();
+
 	ret = cunit_init(&pSuite);
 	if (ret != S_OK) {
 		fprintf(stdout, "cunit init error!\n");
@@ -656,6 +633,8 @@ int main(void)
 	CU_basic_run_tests();
 
 loop_quit:
+	bt->deinit();
+
 	CU_cleanup_registry();
 	return S_OK;
 }

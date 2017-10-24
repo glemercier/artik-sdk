@@ -44,6 +44,7 @@ static bool bt_bond_status;
 static bool bt_connect_status;
 
 static artik_loop_module *loop_main;
+static artik_bluetooth_module *bt;
 
 static int uninit(void *user_data)
 {
@@ -211,25 +212,17 @@ void callback_on_agent_authorize_service(artik_bt_event event,
 static artik_error agent_register(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-			artik_request_api_module("bluetooth");
-	artik_loop_module *loop = (artik_loop_module *)
-			artik_request_api_module("loop");
 	artik_bt_agent_capability g_capa = BT_CAPA_KEYBOARDDISPLAY;
 
 	ret = bt->set_discoverable(true);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
 	ret = bt->agent_register_capability(g_capa);
 	if (ret != S_OK)
-		goto exit;
+		return ret;
 
 	ret = bt->agent_set_default();
-
-exit:
-	artik_release_api_module(loop);
-	artik_release_api_module(bt);
 
 	return ret;
 }
@@ -246,8 +239,6 @@ artik_error bluetooth_scan(void)
 {
 	artik_loop_module *loop = (artik_loop_module *)
 					artik_request_api_module("loop");
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-					artik_request_api_module("bluetooth");
 	artik_error ret = S_OK;
 	int timeout_id = 0;
 
@@ -272,7 +263,7 @@ exit:
 		(ret == S_OK) ? "succeeded" : "failed");
 
 	artik_release_api_module(loop);
-	artik_release_api_module(bt);
+
 	return ret;
 }
 
@@ -295,8 +286,6 @@ artik_error get_addr(char *remote_addr)
 static artik_error set_callback(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-					artik_request_api_module("bluetooth");
 
 	artik_bt_callback_property callback_property[] = {
 		{BT_EVENT_SCAN, callback_on_scan, NULL},
@@ -313,14 +302,12 @@ static artik_error set_callback(void)
 	};
 
 	ret = bt->set_callbacks(callback_property, 8);
-	artik_release_api_module(bt);
+
 	return ret;
 }
 
 static artik_error panu_test(void)
 {
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	char buf[BUFFER_LEN];
 	char *interface = NULL;
 	artik_error ret = S_OK;
@@ -329,28 +316,28 @@ static artik_error panu_test(void)
 	ret = bt->pan_get_interface(&interface);
 	if (ret != S_OK) {
 		fprintf(stdout, "get interface error\n");
-		goto exit;
+		return ret;
 	}
 
 	snprintf(buf, BUFFER_LEN, "dhclient -r %s", interface);
 	system_status = system(buf);
 	if ((system_status < 0) || (system_status == SYSTEM_ERR_STATUS)) {
 		fprintf(stdout, "cmd system error\n");
-		goto exit;
+		return ret;
 	}
 
 	snprintf(buf, BUFFER_LEN, "dhclient %s", interface);
 	system_status = system(buf);
 	if ((system_status < 0) || (system_status == SYSTEM_ERR_STATUS)) {
 		fprintf(stdout, "cmd system error\n");
-		goto exit;
+		return ret;
 	}
 
 	snprintf(buf, BUFFER_LEN, "ifconfig eth0 down");
 	system_status = system(buf);
 	if ((system_status < 0) || (system_status == SYSTEM_ERR_STATUS)) {
 		fprintf(stdout, "cmd system error\n");
-		goto exit;
+		return ret;
 	}
 
 	fprintf(stdout, "Please input test command(max length is 127) or 'q' to exit\n");
@@ -372,15 +359,12 @@ static artik_error panu_test(void)
 		}
 	}
 
-exit:
-	artik_release_api_module(bt);
 	return ret;
 }
 
 int main(int argc, char *argv[])
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt_main = NULL;
 	char remote_address[MAX_BDADDR_LEN] = "";
 	char *network_interface = NULL;
 	int status = -1;
@@ -396,12 +380,12 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	bt_main = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
-	loop_main = (artik_loop_module *)
-		artik_request_api_module("loop");
-	if (!bt_main || !loop_main)
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
+	loop_main = (artik_loop_module *)artik_request_api_module("loop");
+	if (!bt || !loop_main)
 		goto loop_quit;
+
+	bt->init();
 
 	ret = agent_register();
 	if (ret != S_OK) {
@@ -428,14 +412,13 @@ int main(int argc, char *argv[])
 		goto loop_quit;
 	}
 
-	bt_main->start_bond(remote_address);
+	bt->start_bond(remote_address);
 	loop_main->run();
 	if (!bt_bond_status)
 		goto loop_quit;
 	fprintf(stdout, "<PANU>: Paired success!\n");
 
-	ret = bt_main->pan_connect(remote_address,
-		UUID, &network_interface);
+	ret = bt->pan_connect(remote_address, UUID, &network_interface);
 	if (ret != S_OK || !network_interface)
 		goto panu_quit;
 
@@ -452,15 +435,18 @@ int main(int argc, char *argv[])
 	loop_main->run();
 
 panu_quit:
-	ret = bt_main->pan_disconnect();
+	ret = bt->pan_disconnect();
 	if (ret != S_OK)
 		fprintf(stdout, "<PANU>: Disconnected error!\n");
-	ret = bt_main->agent_unregister();
+	ret = bt->agent_unregister();
 	if (ret != S_OK)
 		fprintf(stdout, "<PANU>: Unregister agent error!\n");
 loop_quit:
-	if (bt_main)
-		artik_release_api_module(bt_main);
+
+	if (bt) {
+		bt->deinit();
+		artik_release_api_module(bt);
+	}
 	if (loop_main)
 		artik_release_api_module(loop_main);
 	fprintf(stdout, "<PANU>: Profile quit!\n");

@@ -220,6 +220,8 @@ int main(int argc, char *argv[])
 		.rssi = -100
 	};
 
+	bt->init();
+
 	set_user_callbacks();
 
 	filter.type = BT_SCAN_LE;
@@ -241,6 +243,8 @@ int main(int argc, char *argv[])
 	loop->add_timeout_callback(&id, 50000, on_timeout, NULL);
 	loop->add_signal_watch(SIGINT, on_signal, NULL, NULL);
 	loop->run();
+
+	bt->deinit();
 
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);

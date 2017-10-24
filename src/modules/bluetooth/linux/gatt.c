@@ -31,8 +31,6 @@ artik_error bt_gatt_get_service_list(const char *addr, artik_bt_uuid * *uuid_lis
 {
 	gchar *dev_path;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	_get_object_path(addr, &dev_path);
 	if (dev_path == NULL)
 		return E_BT_ERROR;
@@ -48,8 +46,6 @@ artik_error bt_gatt_get_chracteristic_list(const char *addr, const char *srv_uui
 		artik_bt_uuid **uuid_list, int *len)
 {
 	gchar *srv_path;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 
@@ -69,8 +65,6 @@ artik_error bt_gatt_get_descriptor_list(const char *addr,
 {
 	gchar *char_path = NULL;
 	gchar *srv_path = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)

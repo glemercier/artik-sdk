@@ -201,6 +201,7 @@ typedef struct {
 	GDBusConnection *conn;
 	GDBusConnection *session_conn;
 	GHashTable *subscribe_ids;
+	GHashTable *ses_subscribe_ids;
 	GHashTable *registration_ids;
 	bt_event_callback callback[BT_EVENT_END];
 	GSList *gatt_services;
@@ -216,9 +217,9 @@ extern bt_event_callback internal_callback[BT_EVENT_END];
 extern char session_path[SESSION_PATH_LEN];
 extern artik_bt_ftp_property transfer_property;
 
-artik_error bt_init(GBusType dbus_type, GDBusConnection **connection);
+artik_error _bt_init_session(void);
 
-artik_error bt_deinit(void);
+artik_error _bt_deinit_session(void);
 
 void _user_callback(artik_bt_event event, void *data);
 

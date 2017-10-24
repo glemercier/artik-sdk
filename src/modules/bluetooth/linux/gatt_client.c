@@ -89,9 +89,6 @@ artik_error _write_value(const char *itf, const char *path,
 	GError *e = NULL;
 	gint i = 0;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
-
 	b = g_variant_builder_new(G_VARIANT_TYPE("ay"));
 	for (i = 0; i < byte_len; i++)
 		g_variant_builder_add(b, "y", byte[i]);
@@ -209,8 +206,6 @@ artik_error bt_gatt_start_notify(const char *addr, const char *srv_uuid, const c
 	gchar *srv_path = NULL;
 	bt_gatt_client *client;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
@@ -245,8 +240,6 @@ artik_error bt_gatt_stop_notify(const char *addr, const char *srv_uuid, const ch
 	gchar *path = NULL;
 	gchar *srv_path = NULL;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
@@ -279,8 +272,6 @@ artik_error bt_gatt_get_char_properties(const char *addr, const char *srv_uuid,
 	GVariantIter *iter;
 	GError *e = NULL;
 	gchar *path = NULL, *str, *srv_path = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
@@ -344,8 +335,6 @@ artik_error bt_gatt_get_desc_properties(const char *addr, const char *srv_uuid,
 	GVariantIter *iter;
 	GError *e = NULL;
 	gchar *srv_path, *char_path, *desc_path, *str;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)

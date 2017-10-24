@@ -63,6 +63,8 @@ int main(void)
 	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
 
+	bt->init();
+
 	set_advertisement(&adv);
 
 	bt->register_advertisement(&adv, &adv_id);
@@ -74,6 +76,8 @@ int main(void)
 	bt->unregister_advertisement(adv_id);
 
 	free(adv.mfr_data);
+
+	bt->deinit();
 
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);

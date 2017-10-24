@@ -250,6 +250,9 @@ int main(int argc, char *argv[])
 			artik_request_api_module("loop");
 	if (!bt || !loop)
 		goto out;
+
+	bt->init();
+
 	err = test_bluetooth_nap(bridge);
 	if (err != S_OK) {
 		printf("Register return with error: %d!\r\n", err);
@@ -263,6 +266,8 @@ int main(int argc, char *argv[])
 
 	loop->run();
 out:
+	bt->deinit();
+
 	if (bt)
 		artik_release_api_module(bt);
 	if (loop)

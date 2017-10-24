@@ -448,12 +448,16 @@ int main(int argc, char *argv[])
 
 	bt = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
 
+	bt->init();
+
 	create_test_file();
 	read_remote_mac("BT/EDR");
 
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();
 	CU_cleanup_registry();
+
+	bt->deinit();
 
 	artik_release_api_module(bt);
 

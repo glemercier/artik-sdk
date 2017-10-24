@@ -100,8 +100,6 @@ artik_error bt_remove_devices(void)
 
 	log_dbg("");
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	ret = _get_devices(BT_DEVICE_STATE_IDLE, &device_list, &count);
 	if (ret != S_OK)
 		return ret;
@@ -122,8 +120,6 @@ artik_error bt_remove_device(const char *remote_address)
 	artik_error ret = S_OK;
 
 	log_dbg("");
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_object_path(remote_address, &path);
 
@@ -173,8 +169,6 @@ static void bt_bond_callback(GObject *source_object,
 artik_error bt_start_bond(const char *remote_address)
 {
 	gchar *path;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (hci.state == BT_DEVICE_STATE_PAIRING)
 		return E_IN_PROGRESS;
@@ -230,8 +224,6 @@ artik_error bt_connect(const char *remote_address)
 
 	log_dbg("%s %s", __func__, remote_address);
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	if (hci.state == BT_DEVICE_STATE_CONNECTING)
 		return E_IN_PROGRESS;
 
@@ -266,8 +258,6 @@ artik_error bt_connect_profile(const char *remote_address, const char *uuid)
 	gchar *path;
 
 	log_dbg("%s[%s]", __func__, uuid);
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (hci.state == BT_DEVICE_STATE_CONNECTING)
 		return E_IN_PROGRESS;
@@ -306,8 +296,6 @@ artik_error bt_disconnect(const char *remote_address)
 	gchar *path;
 	artik_error ret = S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	_get_object_path(remote_address, &path);
 
 	if (path == NULL)
@@ -340,8 +328,6 @@ artik_error bt_stop_bond(const char *remote_address)
 	gchar *path;
 	artik_error ret = S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	_get_object_path(remote_address, &path);
 
 	if (path == NULL)
@@ -372,8 +358,6 @@ artik_error bt_set_trust(const char *remote_address)
 {
 	gchar *path;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	_get_object_path(remote_address, &path);
 
 	if (path == NULL)
@@ -389,8 +373,6 @@ artik_error bt_set_trust(const char *remote_address)
 artik_error bt_unset_trust(const char *remote_address)
 {
 	gchar *path;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_object_path(remote_address, &path);
 
@@ -408,8 +390,6 @@ artik_error bt_set_block(const char *remote_address)
 {
 	gchar *path;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	_get_object_path(remote_address, &path);
 
 	if (path == NULL)
@@ -425,8 +405,6 @@ artik_error bt_set_block(const char *remote_address)
 artik_error bt_unset_block(const char *remote_address)
 {
 	gchar *path;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_object_path(remote_address, &path);
 
@@ -448,8 +426,6 @@ artik_error bt_get_device(const char *addr, artik_bt_device *device)
 	gchar *path = NULL;
 
 	log_dbg("%s addr: %s", __func__, addr);
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_object_path(addr, &path);
 
@@ -483,7 +459,6 @@ artik_error bt_get_devices(artik_bt_device_type device_type,
 	artik_bt_device *tmp_list;
 	artik_error ret = S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 	switch (device_type) {
 	case BT_DEVICE_PARIED:
 		ret = _get_devices(BT_DEVICE_STATE_PAIRED, &tmp_list, &cnt);
@@ -542,8 +517,6 @@ bool bt_is_paired(const char *remote_address)
 	gchar *path;
 	bool paired = false;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	_get_object_path(remote_address, &path);
 
 	if (path == NULL)
@@ -560,8 +533,6 @@ bool bt_is_connected(const char *remote_address)
 {
 	gchar *path;
 	bool connected = false;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_object_path(remote_address, &path);
 
@@ -582,8 +553,6 @@ bool bt_is_trusted(const char *remote_address)
 	GVariant *v = NULL;
 	GError *error = NULL;
 	bool trusted = false;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_object_path(remote_address, &path);
 
@@ -617,8 +586,6 @@ bool bt_is_blocked(const char *remote_address)
 	GVariant *v = NULL;
 	GError *error = NULL;
 	bool blocked = false;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	_get_object_path(remote_address, &path);
 

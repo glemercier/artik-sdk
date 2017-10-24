@@ -201,6 +201,8 @@ int main(void)
 	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
 
+	bt->init();
+
 	set_callbacks();
 
 	set_advertisement(&adv);
@@ -246,6 +248,8 @@ int main(void)
 
 	bt->unregister_advertisement(adv_id);
 	bt->gatt_unregister_service(svc_id);
+
+	bt->deinit();
 
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);

@@ -37,6 +37,7 @@ static char *nap_ip;
 static char *nap_netmask;
 static char *dhcp_begin_ip;
 static char *dhcp_end_ip;
+static artik_bluetooth_module *bt;
 
 static int init_suite1(void)
 {
@@ -196,8 +197,6 @@ static artik_error _pan_init(void)
 static void pan_register_test(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 	const char *test_uuid = "test_uuid";
 
 	ret = bt->pan_register(test_uuid, bridge);
@@ -214,15 +213,11 @@ static void pan_register_test(void)
 
 	ret = _pan_uinit();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 static void pan_unregister_test(void)
 {
 	artik_error ret = S_OK;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
 
 	ret = _pan_init();
 	CU_ASSERT(ret == S_OK);
@@ -238,8 +233,6 @@ static void pan_unregister_test(void)
 
 	ret = _pan_uinit();
 	CU_ASSERT(ret == S_OK);
-
-	artik_release_api_module(bt);
 }
 
 artik_error cunit_add_suite(CU_pSuite *psuite)
@@ -326,6 +319,9 @@ int main(void)
 	artik_error ret = S_OK;
 	CU_pSuite pSuite = NULL;
 
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
+	bt->init();
+
 	ret = cunit_init(&pSuite);
 	if (ret != S_OK) {
 		fprintf(stdout, "cunit init error!\n");
@@ -339,6 +335,8 @@ int main(void)
 	CU_basic_run_tests();
 
 loop_quit:
+	bt->deinit();
+
 	CU_cleanup_registry();
 	if (_pan_uinit() != S_OK)
 		fprintf(stdout, "pan unit err!\n");

@@ -119,6 +119,16 @@ artik_error os_bt_free_devices(artik_bt_device **device_list, int count)
 	return bt_free_devices(device_list, count);
 }
 
+artik_error os_bt_init(void)
+{
+	return bt_init();
+}
+
+artik_error os_bt_deinit(void)
+{
+	return bt_deinit();
+}
+
 artik_error os_bt_set_callback(artik_bt_event event,
 		artik_bt_callback user_callback, void *user_data)
 {

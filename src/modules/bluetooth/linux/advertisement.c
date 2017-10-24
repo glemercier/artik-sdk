@@ -154,8 +154,6 @@ artik_error bt_register_advertisement(artik_bt_advertisement *user_adv, int *id)
 	bt_advertisement *adv_info;
 	artik_error ret = S_OK;
 
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
 	log_dbg("%s", __func__);
 
 	node_info = g_dbus_node_info_new_for_xml(adv_introspection_xml, NULL);
@@ -202,8 +200,6 @@ exit:
 artik_error bt_unregister_advertisement(int id)
 {
 	bt_advertisement *adv_info;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	log_dbg("%s", __func__);
 

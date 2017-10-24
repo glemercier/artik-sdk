@@ -1077,6 +1077,21 @@ extern "C" {
 		 */
 		artik_error(*free_devices) (artik_bt_device**device_list, int count);
 		/*!
+		 * \brief initialize Bluetooth APIs to be ready to use
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 *
+		 */
+		artik_error(*init) (void);
+		/*!
+		 * \brief deinitialize Bluetooth APIs. This should be called when APIs
+		 * are no longer used.
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 *
+		 */
+		artik_error(*deinit) (void);
+		/*!
 		 * \brief Register a callback function to be invoked when the device
 		 *        discovery state changes.
 		 *
