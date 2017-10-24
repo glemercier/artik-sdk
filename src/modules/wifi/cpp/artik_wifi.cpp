@@ -33,6 +33,9 @@ artik::Wifi::~Wifi() {
 }
 
 artik::Wifi &artik::Wifi::operator=(Wifi const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_module = val.m_module;
   return *this;
 }

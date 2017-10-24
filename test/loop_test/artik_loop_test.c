@@ -39,15 +39,16 @@ artik_error test_loop_timeout(void)
 	int id = 0;
 
 	fprintf(stdout, "TEST: %s starting\n", __func__);
-	loop->add_timeout_callback(&id, 5000, on_timeout_callback,
+	ret = loop->add_timeout_callback(&id, 5000, on_timeout_callback,
 				   (void *)loop);
+	if (ret != S_OK)
+		goto exit;
 	loop->run();
 
-	fprintf(stdout, "TEST: %s %s\n", __func__, (ret == S_OK) ? "succeeded" :
-								"failed");
-
+exit:
+	fprintf(stdout, "TEST: %s %s\n", __func__, (ret == S_OK) ?
+			"succeeded" : "failed");
 	artik_release_api_module(loop);
-
 	return ret;
 }
 
@@ -75,15 +76,17 @@ artik_error test_loop_periodic(void)
 	int id = 0;
 
 	fprintf(stdout, "TEST: %s starting\n", __func__);
-	loop->add_periodic_callback(&id, 1000, on_periodic_callback,
+	ret = loop->add_periodic_callback(&id, 1000, on_periodic_callback,
 				   (void *)loop);
+	if (ret != S_OK)
+		goto exit;
+
 	loop->run();
 
-	fprintf(stdout, "TEST: %s %s\n", __func__, (ret == S_OK) ? "succeeded" :
-								"failed");
-
+exit:
+	fprintf(stdout, "TEST: %s %s\n", __func__, (ret == S_OK) ?
+			"succeeded" : "failed");
 	artik_release_api_module(loop);
-
 	return ret;
 }
 

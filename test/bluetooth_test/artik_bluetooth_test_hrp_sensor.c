@@ -78,6 +78,7 @@ int main(void)
 	artik_bt_advertisement adv = {0};
 	artik_bt_gatt_service svc = {0};
 	artik_bt_gatt_chr chr = {0};
+	unsigned char loc_char;
 
 	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
@@ -99,7 +100,7 @@ int main(void)
 	chr.uuid = HEART_RATE_SNSR_LOC_CHAR;
 	chr.property = snsr_loc_char_props;
 	chr.length = 1;
-	chr.value = (unsigned char *)malloc(chr.length);
+	chr.value = &loc_char;
 	chr.value[0] = 0x06; // sensor location: foot
 	bt->gatt_add_characteristic(svc_id, chr, &char_id2);
 	bt->gatt_set_char_on_notify_request(svc_id, char_id1, on_gatt_notify, NULL);
@@ -121,8 +122,6 @@ int main(void)
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 
-	if (chr.value)
-		free(chr.value);
 	if (adv.svc_uuid)
 		free(adv.svc_uuid);
 

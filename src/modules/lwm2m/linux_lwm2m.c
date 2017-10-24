@@ -207,10 +207,21 @@ artik_error os_lwm2m_client_request(artik_lwm2m_handle *handle,
 		return E_BAD_ARGS;
 
 	node = (lwm2m_node *) artik_list_add(&nodes, 0, sizeof(lwm2m_node));
-	objects = malloc(sizeof(object_container_t));
-	server = malloc(sizeof(object_security_server_t));
-	if (!node || !objects || !server)
+	if (!node)
 		return E_NO_MEM;
+
+	objects = malloc(sizeof(object_container_t));
+	if (!objects) {
+		artik_list_delete_node(&nodes, (artik_list *)node);
+		return E_NO_MEM;
+	}
+
+	server = malloc(sizeof(object_security_server_t));
+	if (!server) {
+		artik_list_delete_node(&nodes, (artik_list *)node);
+		free(objects);
+		return E_NO_MEM;
+	}
 
 	node->loop_module =  (artik_loop_module *)
 					artik_request_api_module("loop");
@@ -219,8 +230,8 @@ artik_error os_lwm2m_client_request(artik_lwm2m_handle *handle,
 	memset(objects, 0, sizeof(object_container_t));
 	memset(server, 0, sizeof(object_security_server_t));
 
-	strncpy(server->serverUri, config->server_uri, LWM2M_MAX_STR_LEN);
-	strncpy(server->client_name, config->name, LWM2M_MAX_STR_LEN);
+	strncpy(server->serverUri, config->server_uri, LWM2M_MAX_STR_LEN - 1);
+	strncpy(server->client_name, config->name, LWM2M_MAX_STR_LEN - 1);
 	server->securityMode = LWM2M_SEC_MODE_PSK;
 
 	if (config->ssl_config) {
@@ -289,14 +300,14 @@ artik_error os_lwm2m_client_request(artik_lwm2m_handle *handle,
 			goto exit;
 		}
 
-		strncpy(server->token, config->tls_psk_key, LWM2M_MAX_STR_LEN);
+		strncpy(server->token, config->tls_psk_key, LWM2M_MAX_STR_LEN - 1);
 
 		if (config->ssl_config->ca_cert.data)
 			server->serverCertificate = strdup(config->ssl_config->ca_cert.data);
 
 	} else if (config->tls_psk_identity && config->tls_psk_key) {
 		server->clientCertificateOrPskId = strdup(config->tls_psk_identity);
-		strncpy(server->token, config->tls_psk_key, LWM2M_MAX_STR_LEN);
+		strncpy(server->token, config->tls_psk_key, LWM2M_MAX_STR_LEN - 1);
 		log_dbg("Copy PSK parameters (%s/%s)", config->tls_psk_identity,
 							config->tls_psk_key);
 	}
@@ -504,7 +515,7 @@ artik_error os_lwm2m_client_write_resource(artik_lwm2m_handle handle,
 	if (!node->client)
 		return E_NOT_CONNECTED;
 
-	strncpy(res.uri, uri, LWM2M_MAX_URI_LEN);
+	strncpy(res.uri, uri, LWM2M_MAX_URI_LEN - 1);
 	res.length = length;
 	res.buffer = buffer;
 
@@ -535,7 +546,7 @@ artik_error os_lwm2m_client_read_resource(artik_lwm2m_handle handle,
 		return E_NOT_CONNECTED;
 
 	memset(&res, 0, sizeof(res));
-	strncpy(res.uri, uri, LWM2M_MAX_URI_LEN);
+	strncpy(res.uri, uri, LWM2M_MAX_URI_LEN - 1);
 
 	if (lwm2m_read_resource(node->client, &res)) {
 		log_err("Failed to read resource %s", res.uri);
@@ -625,28 +636,28 @@ artik_lwm2m_object *os_lwm2m_create_device_object(const char *manufacturer,
 	memset(content, 0, sizeof(*content));
 
 	if (manufacturer)
-		strncpy(content->manufacturer, manufacturer, LWM2M_MAX_STR_LEN);
+		strncpy(content->manufacturer, manufacturer, LWM2M_MAX_STR_LEN - 1);
 
 	if (model)
-		strncpy(content->model_number, model, LWM2M_MAX_STR_LEN);
+		strncpy(content->model_number, model, LWM2M_MAX_STR_LEN - 1);
 
 	if (serial)
-		strncpy(content->serial_number, serial, LWM2M_MAX_STR_LEN);
+		strncpy(content->serial_number, serial, LWM2M_MAX_STR_LEN - 1);
 
 	if (fw_version)
 		strncpy(content->firmware_version, fw_version,
-			LWM2M_MAX_STR_LEN);
+			LWM2M_MAX_STR_LEN - 1);
 
 	if (hw_version)
 		strncpy(content->hardware_version, hw_version,
-			LWM2M_MAX_STR_LEN);
+			LWM2M_MAX_STR_LEN - 1);
 
 	if (sw_version)
 		strncpy(content->software_version, sw_version,
-			LWM2M_MAX_STR_LEN);
+			LWM2M_MAX_STR_LEN - 1);
 
 	if (device_type)
-		strncpy(content->device_type, device_type, LWM2M_MAX_STR_LEN);
+		strncpy(content->device_type, device_type, LWM2M_MAX_STR_LEN - 1);
 
 	content->power_source_1 = power_source;
 	content->power_voltage_1 = power_volt;
@@ -656,13 +667,13 @@ artik_lwm2m_object *os_lwm2m_create_device_object(const char *manufacturer,
 	content->memory_free = memory_free;
 
 	if (time_zone)
-		strncpy(content->time_zone, time_zone, LWM2M_MAX_STR_LEN);
+		strncpy(content->time_zone, time_zone, LWM2M_MAX_STR_LEN - 1);
 
 	if (utc_offset)
-		strncpy(content->utc_offset, utc_offset, LWM2M_MAX_STR_LEN);
+		strncpy(content->utc_offset, utc_offset, LWM2M_MAX_STR_LEN - 1);
 
 	if (binding)
-		strncpy(content->binding_mode, binding, LWM2M_MAX_STR_LEN);
+		strncpy(content->binding_mode, binding, LWM2M_MAX_STR_LEN - 1);
 
 	obj->content = (void *)content;
 
@@ -695,10 +706,10 @@ artik_lwm2m_object *os_lwm2m_create_firmware_object(bool supported,
 	content->supported = supported;
 
 	if (pkg_name)
-		strncpy(content->pkg_name, pkg_name, LWM2M_MAX_STR_LEN);
+		strncpy(content->pkg_name, pkg_name, LWM2M_MAX_STR_LEN - 1);
 
 	if (pkg_version)
-		strncpy(content->pkg_version, pkg_version, LWM2M_MAX_STR_LEN);
+		strncpy(content->pkg_version, pkg_version, LWM2M_MAX_STR_LEN - 1);
 
 	obj->content = (void *)content;
 	return obj;
@@ -743,17 +754,17 @@ artik_lwm2m_object *os_lwm2m_create_connectivity_monitoring_object(
 	content->smnc = smnc;
 	content->smcc = smcc;
 	if (ipaddr && lenip >= 1 && ipaddr[0])
-		strncpy(content->ip_addr2, ipaddr[0], LWM2M_MAX_STR_LEN);
+		strncpy(content->ip_addr2, ipaddr[0], LWM2M_MAX_STR_LEN - 1);
 	if (ipaddr && lenip >= 2 && ipaddr[1])
-		strncpy(content->ip_addr2, ipaddr[1], LWM2M_MAX_STR_LEN);
+		strncpy(content->ip_addr2, ipaddr[1], LWM2M_MAX_STR_LEN - 1);
 	if (routeaddr && lenroute >= 1 && routeaddr[0])
 		strncpy(content->router_ip_addr, routeaddr[0],
-							LWM2M_MAX_STR_LEN);
+							LWM2M_MAX_STR_LEN - 1);
 	if (routeaddr && lenroute >= 2 && routeaddr[1])
 		strncpy(content->router_ip_addr2, routeaddr[1],
-							LWM2M_MAX_STR_LEN);
+							LWM2M_MAX_STR_LEN - 1);
 	if (apn)
-		strncpy(content->apn, apn, LWM2M_MAX_STR_LEN);
+		strncpy(content->apn, apn, LWM2M_MAX_STR_LEN - 1);
 
 	obj->content = (void *)content;
 	return obj;

@@ -18,9 +18,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
 
 #include <artik_module.h>
 #include <artik_loop.h>
@@ -103,7 +105,7 @@ int main(int argc, char *argv[]) {
   artik_loop_module *loop = reinterpret_cast<artik_loop_module*>(
       artik_request_api_module("loop"));
   FILE *f;
-  int32_t fsize;
+  struct stat st;
   char *root_ca = NULL;
 
   ssl_config.se_config.use_se = false;
@@ -132,11 +134,21 @@ int main(int argc, char *argv[]) {
         printf("File not found for parameter -r\n");
         return -1;
       }
-      fseek(f, 0, SEEK_END);
-      fsize = ftell(f);
-      fseek(f, 0, SEEK_SET);
-      root_ca = reinterpret_cast<char*>(malloc(fsize + 1));
-      fread(root_ca, fsize, 1, f);
+
+      if (fstat(fileno(f), &st) < 0) {
+        printf("Failed get file size\n");
+        return -1;
+      }
+
+      if (root_ca)
+        free(root_ca);
+
+      root_ca = reinterpret_cast<char*>(malloc(st.st_size + 1));
+      if (!fread(root_ca, st.st_size, 1, f)) {
+        printf("Failed to read root CA file\n");
+        free(root_ca);
+        return -1;
+      }
       fclose(f);
       break;
     default:
@@ -151,6 +163,7 @@ int main(int argc, char *argv[]) {
   if (root_ca) {
     ssl_config.ca_cert.data = strdup(root_ca);
     ssl_config.ca_cert.len = strlen(root_ca);
+    free(root_ca);
   }
 
   artik::Cloud* cloud = new artik::Cloud(access_token);
@@ -192,6 +205,9 @@ int main(int argc, char *argv[]) {
   cloud->websocket_close_stream();
 
 exit:
+  if (ssl_config.ca_cert.data)
+    free(ssl_config.ca_cert.data);
+
   printf("TEST FINISHED: CLOUD_CPP_TEST\n");
 
   return (ret == S_OK) ? 0 : -1;

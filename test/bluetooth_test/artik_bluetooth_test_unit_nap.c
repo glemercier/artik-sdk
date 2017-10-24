@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
@@ -100,12 +101,12 @@ static artik_error _pan_uinit(void)
 {
 	char buf[BUFFER_LEN];
 
-	sprintf(buf, "ifconfig %s down", bridge);
+	snprintf(buf, BUFFER_LEN, "ifconfig %s down", bridge);
 	if (system(buf) < 0) {
 		printf("cmd system error\n");
 		return E_BT_ERROR;
 	}
-	sprintf(buf, "brctl delbr %s", bridge);
+	snprintf(buf, BUFFER_LEN, "brctl delbr %s", bridge);
 	if (system(buf) < 0) {
 		printf("cmd system error\n");
 		return E_BT_ERROR;
@@ -114,7 +115,8 @@ static artik_error _pan_uinit(void)
 		printf("cmd system error\n");
 		return E_BT_ERROR;
 	}
-	strcpy(buf, "iptables -t nat -D POSTROUTING -s 10.0.0.1/255.255.255.0 -j MASQUERADE");
+	strncpy(buf, "iptables -t nat -D POSTROUTING -s 10.0.0.1/255.255.255.0 -j MASQUERADE",
+			BUFFER_LEN - 1);
 	if (system(buf) < 0) {
 		printf("cmd system error\n");
 		return E_BT_ERROR;
@@ -127,68 +129,75 @@ static artik_error _pan_init(void)
 {
 	int status = -1;
 	char buf[BUFFER_LEN];
+	char dhcp_cmd[256] = "";
 
 	if (_check_interface_from_proc(bridge) > 0) {
-		sprintf(buf, "brctl delbr %s", bridge);
+		snprintf(buf, BUFFER_LEN, "brctl delbr %s", bridge);
 		if (system(buf) < 0)
 			return E_BT_ERROR;
 	}
 
-	sprintf(buf, "brctl addbr %s", bridge);
+	snprintf(buf, BUFFER_LEN, "brctl addbr %s", bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
-	sprintf(buf, "ip addr add %s dev %s", nap_ip, bridge);
+	snprintf(buf, BUFFER_LEN, "ip addr add %s dev %s", nap_ip, bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
-	sprintf(buf, "ip link set %s up", bridge);
+	snprintf(buf, BUFFER_LEN, "ip link set %s up", bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
 	status = system("echo 1 > /proc/sys/net/ipv4/ip_forward");
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
-	sprintf(buf, "ifconfig %s netmask %s up", bridge, nap_netmask);
+	snprintf(buf, BUFFER_LEN, "ifconfig %s netmask %s up", bridge, nap_netmask);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
-	sprintf(buf, "iptables -t nat -A POSTROUTING -s %s/%s -j MASQUERADE",
-		nap_ip, nap_netmask);
+	snprintf(buf, BUFFER_LEN,
+			"iptables -t nat -A POSTROUTING -s %s/%s -j MASQUERADE",
+			nap_ip, nap_netmask);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
-	sprintf(buf, "iptables -t filter -A FORWARD -i %s -j ACCEPT", bridge);
+	snprintf(buf, BUFFER_LEN, "iptables -t filter -A FORWARD -i %s -j ACCEPT",
+			bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
-	sprintf(buf, "iptables -t filter -A FORWARD -o %s -j ACCEPT", bridge);
+	snprintf(buf, BUFFER_LEN, "iptables -t filter -A FORWARD -o %s -j ACCEPT",
+			bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
-	sprintf(buf, "iptables -t filter -A FORWARD -i %s -j ACCEPT", bridge);
+	snprintf(buf, BUFFER_LEN, "iptables -t filter -A FORWARD -i %s -j ACCEPT",
+			bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
-	char dhcp_cmd[256] = {0};
-
-	strcat(dhcp_cmd, "/usr/sbin/dnsmasq --pid-file=/var/run/dnsmasq.%s.pid ");
-	strcat(dhcp_cmd, "--bind-interfaces --dhcp-range=%s,%s,60m ");
-	strcat(dhcp_cmd, "--except-interface=lo --interface=%s ");
-	strcat(dhcp_cmd, "--dhcp-option=option:router,%s");
-	sprintf(buf, dhcp_cmd, bridge, dhcp_begin_ip,
-		dhcp_end_ip, bridge, nap_ip);
+	strncat(dhcp_cmd, "/usr/sbin/dnsmasq --pid-file=/var/run/dnsmasq.%s.pid ",
+			sizeof(dhcp_cmd) - strlen(dhcp_cmd) - 1);
+	strncat(dhcp_cmd, "--bind-interfaces --dhcp-range=%s,%s,60m ",
+			sizeof(dhcp_cmd) - strlen(dhcp_cmd) - 1);
+	strncat(dhcp_cmd, "--except-interface=lo --interface=%s ",
+			sizeof(dhcp_cmd) - strlen(dhcp_cmd) - 1);
+	strncat(dhcp_cmd, "--dhcp-option=option:router,%s",
+			sizeof(dhcp_cmd) - strlen(dhcp_cmd) - 1);
+	snprintf(buf, BUFFER_LEN, dhcp_cmd, bridge, dhcp_begin_ip, dhcp_end_ip,
+			bridge, nap_ip);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status))
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status))
 		return E_BT_ERROR;
 
 	return S_OK;
@@ -267,11 +276,14 @@ artik_error cunit_init(CU_pSuite *psuite)
 artik_error nap_info_get(void)
 {
 	char input[BUFFER_LEN];
+	char format[32];
 	int ret = 0;
 
+	snprintf(format, sizeof(format), "%%%ds", (int)(BUFFER_LEN - 1));
+
 	fprintf(stdout, "bridge: ");
-	ret = fscanf(stdin, "%s", input);
-	if (ret == -1)
+	ret = fscanf(stdin, format, input);
+	if ((ret == -1) || (strlen(input) >= SIZE_MAX))
 		return E_INVALID_VALUE;
 	fprintf(stdout, "remote address: %s-%zd\n",
 		input, strlen(input));
@@ -280,32 +292,32 @@ artik_error nap_info_get(void)
 	bridge[strlen(input)] = '\0';
 
 	fprintf(stdout, "NAP IP addr: ");
-	ret = fscanf(stdin, "%s", input);
-	if (ret == -1)
+	ret = fscanf(stdin, format, input);
+	if ((ret == -1) || (strlen(input) >= SIZE_MAX))
 		return E_INVALID_VALUE;
 	nap_ip = (char *)malloc(strlen(input) + 1);
 	strncpy(nap_ip, input, strlen(input));
 	nap_ip[strlen(input)] = '\0';
 
 	fprintf(stdout, "NAP netmask: ");
-	ret = fscanf(stdin, "%s", input);
-	if (ret == -1)
+	ret = fscanf(stdin, format, input);
+	if ((ret == -1) || (strlen(input) >= SIZE_MAX))
 		return E_INVALID_VALUE;
 	nap_netmask = (char *)malloc(strlen(input) + 1);
 	strncpy(nap_netmask, input, strlen(input));
 	nap_netmask[strlen(input)] = '\0';
 
 	fprintf(stdout, "DHCP begin IP: ");
-	ret = fscanf(stdin, "%s", input);
-	if (ret == -1)
+	ret = fscanf(stdin, format, input);
+	if ((ret == -1) || (strlen(input) >= SIZE_MAX))
 		return E_INVALID_VALUE;
 	dhcp_begin_ip = (char *)malloc(strlen(input) + 1);
 	strncpy(dhcp_begin_ip, input, strlen(input));
 	dhcp_begin_ip[strlen(input)] = '\0';
 
 	fprintf(stdout, "DHCP end IP: ");
-	ret = fscanf(stdin, "%s", input);
-	if (ret == -1)
+	ret = fscanf(stdin, format, input);
+	if ((ret == -1) || (strlen(input) >= SIZE_MAX))
 		return E_INVALID_VALUE;
 	dhcp_end_ip = (char *)malloc(strlen(input) + 1);
 	strncpy(dhcp_end_ip, input, strlen(input));

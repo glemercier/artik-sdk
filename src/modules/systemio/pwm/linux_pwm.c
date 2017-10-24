@@ -70,13 +70,10 @@ static char *const tab_value_path[] = {
 #define OS_PWM_ON	'1'
 #define OS_PWM_OFF	'0'
 
-static char *os_pwm_itoa(unsigned int nb)
+static char *itoa(int n, char *s)
 {
-	char *tmp_str = NULL;
-
-	tmp_str = malloc(sizeof(*tmp_str) * MAX_SIZE);
-	snprintf(tmp_str, MAX_SIZE, "%u", nb);
-	return tmp_str;
+	snprintf(s, 17, "%d", n);
+	return s;
 }
 
 static artik_error os_pwm_ioctl(artik_pwm_user_data_t *user_data,
@@ -120,8 +117,7 @@ static artik_error os_pwm_ioctl(artik_pwm_user_data_t *user_data,
 		}
 
 	}
-	if (ifd != ARTIK_PWM_POLR && ifd != ARTIK_PWM_ENB)
-		free(value);
+
 	return (res >= S_OK) ? S_OK : res;
 }
 
@@ -129,6 +125,8 @@ static int os_pwm_open(artik_pwm_user_data_t *user_data,
 						artik_pwm_path_index_t ifd)
 {
 	char tmp_str[MAX_SIZE];
+
+	log_dbg("");
 
 	if (ifd != ARTIK_PWM_UEXP)
 		snprintf(tmp_str, MAX_SIZE, tab_value_path[ifd],
@@ -144,12 +142,20 @@ static artik_error os_pwm_uexport(artik_pwm_user_data_t *user_data,
 						artik_pwm_path_index_t ifd)
 {
 	artik_error res = S_OK;
-	int fd = -1;
+	char port[17];
 
-	fd = os_pwm_open(user_data, ifd);
-	res = (fd >= S_OK ? os_pwm_ioctl(user_data, ifd,
-					os_pwm_itoa(user_data->port)) : res);
-	res = (res == S_OK ? close(user_data->fd[ifd]) : res);
+	log_dbg("");
+
+	if (os_pwm_open(user_data, ifd) < 0)
+		return E_BUSY;
+
+	res = os_pwm_ioctl(user_data, ifd, itoa(user_data->port, port));
+	if (res != S_OK)
+		goto exit;
+
+exit:
+	close(user_data->fd[ifd]);
+	user_data->fd[ifd] = -1;
 	return res;
 }
 
@@ -157,8 +163,11 @@ static artik_error os_pwm_uexport(artik_pwm_user_data_t *user_data,
 static artik_error os_pwm_init(artik_pwm_config *config,
 					artik_pwm_user_data_t *user_data)
 {
+	artik_error ret = S_OK;
 	int len = TAB_SIZE(tab_value_path);
 	int i = ARTIK_PWM_ENB;
+
+	log_dbg("");
 
 	config->user_data = malloc(sizeof(artik_pwm_user_data_t));
 	user_data = config->user_data;
@@ -168,15 +177,26 @@ static artik_error os_pwm_init(artik_pwm_config *config,
 	user_data->chip >>= 8;
 	user_data->chip &= 0xff;
 	user_data->port &= 0xff;
-	if (os_pwm_uexport(user_data, ARTIK_PWM_EXP) != S_OK)
-		return E_BUSY;
+	ret = os_pwm_uexport(user_data, ARTIK_PWM_EXP);
+	if (ret != S_OK)
+		goto exit;
+
 	while (i < len) {
-		os_pwm_open(user_data, i);
-		if (user_data->fd[i] < S_OK)
-			return E_BAD_ARGS;
+		if (os_pwm_open(user_data, i) < 0) {
+			ret = E_BAD_ARGS;
+			goto exit;
+		}
 		++i;
 	}
-	return S_OK;
+
+exit:
+	if (ret != S_OK) {
+		free(user_data->fd);
+		free(user_data);
+		config->user_data = NULL;
+	}
+
+	return ret;
 }
 
 static artik_error os_pwm_clean(artik_pwm_user_data_t *user_data)
@@ -184,12 +204,14 @@ static artik_error os_pwm_clean(artik_pwm_user_data_t *user_data)
 	int len = TAB_SIZE(tab_value_path) - 1;
 	int i = ARTIK_PWM_ENB;
 
+	log_dbg("");
+
 	if (user_data) {
 		if (user_data->fd) {
 			while (i < len) {
 				if (user_data->fd[i] != -1)
 					close(user_data->fd[i]);
-			  ++i;
+				++i;
 			}
 			free(user_data->fd);
 		}
@@ -204,19 +226,35 @@ artik_error os_pwm_request(artik_pwm_config *config)
 	artik_pwm_user_data_t *user_data = NULL;
 	artik_error res = S_OK;
 
+	log_dbg("");
+
 	if (config->duty_cycle == 0)
 		config->duty_cycle = config->period / 2;
+
 	res = os_pwm_init(config, user_data);
-	res = (res == S_OK ? os_pwm_enable(config, OS_PWM_ON) : res);
-	res = (res == S_OK ? os_pwm_set_polarity(config, config->polarity) :
-									res);
-	res = (res == S_OK ? os_pwm_set_period(config, config->period) : res);
-	res = (res == S_OK ? os_pwm_set_duty_cycle(config, config->duty_cycle) :
-									res);
-	if (res != S_OK) {
+	if (res != S_OK)
+		return res;
+
+	res = os_pwm_enable(config, OS_PWM_ON);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_set_polarity(config, config->polarity);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_set_period(config, config->period);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_set_duty_cycle(config, config->duty_cycle);
+	if (res != S_OK)
+		goto exit;
+
+exit:
+	if (res != S_OK)
 		os_pwm_release(config);
-		return E_BAD_ARGS;
-	}
+
 	return res;
 }
 
@@ -224,52 +262,104 @@ artik_error os_pwm_release(artik_pwm_config *config)
 {
 	artik_error res = S_OK;
 
-	res = (res == S_OK ? os_pwm_set_duty_cycle(config, 0) : res);
-	res = (res == S_OK ? os_pwm_enable(config, OS_PWM_OFF) : res);
-	res = (res == S_OK ? os_pwm_uexport(config->user_data, ARTIK_PWM_UEXP) :
-									res);
-	return os_pwm_clean(config->user_data);
+	log_dbg("");
+
+	res = os_pwm_set_duty_cycle(config, 0);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_enable(config, OS_PWM_OFF);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_uexport(config->user_data, ARTIK_PWM_UEXP);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_clean(config->user_data);
+	if (res != S_OK)
+		goto exit;
+
+exit:
+	return res;
 }
 
 artik_error os_pwm_enable(artik_pwm_config *config, char value)
 {
+	log_dbg("");
+
 	return os_pwm_ioctl(config->user_data, ARTIK_PWM_ENB, &value);
 }
 
 artik_error os_pwm_set_period(artik_pwm_config *config, unsigned int value)
 {
-	artik_error res = E_BUSY;
+	artik_error res = S_OK;
+	char val[17];
 
-	if (os_pwm_enable(config, OS_PWM_OFF) == S_OK) {
-		res = os_pwm_ioctl(config->user_data, ARTIK_PWM_PERD,
-				os_pwm_itoa(value));
-		os_pwm_enable(config, OS_PWM_ON);
-	}
+	log_dbg("");
+
+	res = os_pwm_enable(config, OS_PWM_OFF);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_ioctl(config->user_data, ARTIK_PWM_PERD, itoa(value, val));
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_enable(config, OS_PWM_ON);
+	if (res != S_OK)
+		goto exit;
+
+exit:
 	return res;
 }
 
 artik_error os_pwm_set_polarity(artik_pwm_config *config,
 				artik_pwm_polarity_t value)
 {
-	artik_error res = E_BUSY;
+	artik_error res = S_OK;
 
-	if ((value == ARTIK_PWM_POLR_NORMAL || value == ARTIK_PWM_POLR_INVERT)
-		&& os_pwm_enable(config, OS_PWM_OFF) == S_OK) {
-		res = os_pwm_ioctl(config->user_data, ARTIK_PWM_POLR,
-				tab_value_polarity[value]);
-		os_pwm_enable(config, OS_PWM_ON);
-	}
+	log_dbg("");
+
+	if ((value != ARTIK_PWM_POLR_NORMAL) && (value != ARTIK_PWM_POLR_INVERT))
+		return E_BAD_ARGS;
+
+	res = os_pwm_enable(config, OS_PWM_OFF);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_ioctl(config->user_data, ARTIK_PWM_POLR,
+			tab_value_polarity[value]);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_enable(config, OS_PWM_ON);
+	if (res != S_OK)
+		goto exit;
+
+exit:
 	return res;
 }
 
 artik_error os_pwm_set_duty_cycle(artik_pwm_config *config, unsigned int value)
 {
-	artik_error res = E_BUSY;
+	artik_error res = S_OK;
+	char val[17];
 
-	if (os_pwm_enable(config, OS_PWM_OFF) == S_OK) {
-		res = os_pwm_ioctl(config->user_data, ARTIK_PWM_CYCL,
-							os_pwm_itoa(value));
-		os_pwm_enable(config, OS_PWM_ON);
-	}
+	log_dbg("");
+
+	res = os_pwm_enable(config, OS_PWM_OFF);
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_ioctl(config->user_data, ARTIK_PWM_CYCL, itoa(value, val));
+	if (res != S_OK)
+		goto exit;
+
+	res = os_pwm_enable(config, OS_PWM_ON);
+	if (res != S_OK)
+		goto exit;
+
+exit:
 	return res;
 }

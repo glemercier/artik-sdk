@@ -66,6 +66,9 @@ static artik_error artik_adc_request(artik_adc_handle *handle,
 		return res;
 	node =
 	    (adc_node *) artik_list_add(&requested_node, 0, sizeof(adc_node));
+	if (!node)
+		return E_NO_MEM;
+
 	node->node.handle = (ARTIK_LIST_HANDLE) node;
 	memcpy(&node->config, config, sizeof(node->config));
 	*handle = (artik_adc_handle) node;

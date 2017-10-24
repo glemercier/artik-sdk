@@ -28,11 +28,11 @@
 
 #include <CUnit/Basic.h>
 
-#define BT_ADDRESS_LEN	18
+#define BT_ADDRESS_LEN	17
 #define BUFFER_LEN		128
 #define UUID			"nap"
 
-static char remote_mac_addr[BT_ADDRESS_LEN];
+static char remote_mac_addr[BT_ADDRESS_LEN + 1];
 static artik_error connect_status = S_OK;
 static artik_bluetooth_module *bt;
 
@@ -256,9 +256,11 @@ artik_error cunit_init(CU_pSuite *psuite)
 artik_error remote_info_get(void)
 {
 	int ret = 0;
+	char format[32];
 
 	fprintf(stdout, "remote device mac address: ");
-	ret = fscanf(stdin, "%s", remote_mac_addr);
+	snprintf(format, sizeof(format), "%%%ds", (int)BT_ADDRESS_LEN);
+	ret = fscanf(stdin, format, remote_mac_addr);
 	if (ret == -1)
 		return E_INVALID_VALUE;
 	fprintf(stdout, "remote address: %s-%zd\n",

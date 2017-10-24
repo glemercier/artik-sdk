@@ -294,7 +294,7 @@ void _get_adapter_properties(GVariant *prop_array, artik_bt_adapter *adapter)
 			uuid_len = g_variant_n_children(v);
 			adapter->uuid_length = uuid_len;
 
-			if (uuid_len > 0) {
+			if ((uuid_len > 0) && !adapter->uuid_list) {
 				adapter->uuid_list = g_try_new0(artik_bt_uuid, uuid_len);
 				if (!adapter->uuid_list) {
 					g_variant_unref(v);

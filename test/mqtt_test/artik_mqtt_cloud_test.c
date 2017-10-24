@@ -28,9 +28,9 @@
 static artik_mqtt_module *mqtt = NULL;
 static artik_loop_module *loop = NULL;
 
-static char device_id[MAX_UUID_LEN] = "< fill up with AKC device ID >";
-static char token[MAX_UUID_LEN] = "< fill up with AKC token >";
-static char pub_msg[MAX_MSG_LEN] = "< fill up with message to send >";
+#define DEFAULT_DID    "< fill up with AKC device ID >"
+#define DEFAULT_TOKEN  "< fill up with AKC token >"
+#define DEFAULT_MSG    "< fill up with message to send >"
 
 static const char *akc_root_ca =
 	"-----BEGIN CERTIFICATE-----\n"
@@ -67,23 +67,21 @@ void on_connect_subscribe(artik_mqtt_config *client_config,
 {
 	artik_mqtt_handle *client_data = (artik_mqtt_handle *)
 							client_config->handle;
-	artik_mqtt_msg *msg = (artik_mqtt_msg *)user_data;
-	char pub_topic[MAX_UUID_LEN + 128];
+	artik_mqtt_msg *msgs = (artik_mqtt_msg *)user_data;
 	artik_error ret;
 
 	if (result == S_OK && client_data) {
 		/* Subscribe to receive actions */
-		ret = mqtt->subscribe(client_data, msg->qos, msg->topic);
+		ret = mqtt->subscribe(client_data, msgs[0].qos, msgs[0].topic);
 		if (ret == S_OK)
 			fprintf(stdout, "subscribe success\n");
 		else
 			fprintf(stderr, "subscribe err: %s\n", error_msg(ret));
 
 		/* Publish message */
-		snprintf(pub_topic, sizeof(pub_topic), "/v1.1/messages/%s",
-								device_id);
-		ret = mqtt->publish(client_data, 0, false, pub_topic,
-						strlen(pub_msg), pub_msg);
+		ret = mqtt->publish(client_data, msgs[1].qos, msgs[1].retain,
+				msgs[1].topic, msgs[1].payload_len,
+				(const char *)msgs[1].payload);
 		if (ret == S_OK)
 			fprintf(stdout, "publish success\n");
 		else
@@ -128,21 +126,26 @@ int main(int argc, char *argv[])
 {
 	int broker_port = 8883;
 	char sub_topic[MAX_UUID_LEN + 128];
+	char pub_topic[MAX_UUID_LEN + 128];
+	char *device_id = DEFAULT_DID;
+	char *token = DEFAULT_TOKEN;
+	char *pub_msg = DEFAULT_MSG;
 	artik_mqtt_config config;
-	artik_mqtt_msg subscribe_msg;
+	artik_mqtt_msg msgs[2];
 	artik_mqtt_handle client;
 	artik_ssl_config ssl;
 
 	/* Use parameters if provided, keep defaults otherwise */
 	if (argc > 2) {
-		memset(device_id, 0, MAX_UUID_LEN);
-		strncpy(device_id, argv[1], MAX_UUID_LEN);
-		memset(token, 0, MAX_UUID_LEN);
-		strncpy(token, argv[2], MAX_UUID_LEN);
+		if (strlen(argv[1]) < MAX_UUID_LEN)
+			device_id = argv[1];
+
+		if (strlen(argv[2]) < MAX_UUID_LEN)
+			token = argv[2];
 
 		if (argc > 3) {
-			memset(pub_msg, 0, MAX_MSG_LEN);
-			strncpy(pub_msg, argv[3], MAX_MSG_LEN);
+			if (strlen(argv[3]) < MAX_MSG_LEN)
+				pub_msg = argv[3];
 		}
 	}
 
@@ -153,10 +156,15 @@ int main(int argc, char *argv[])
 	mqtt = (artik_mqtt_module *)artik_request_api_module("mqtt");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
 
-	memset(&subscribe_msg, 0, sizeof(artik_mqtt_msg));
+	memset(msgs, 0, sizeof(msgs));
 	snprintf(sub_topic, sizeof(sub_topic), "/v1.1/actions/%s", device_id);
-	subscribe_msg.topic = sub_topic;
-	subscribe_msg.qos = 0;
+	msgs[0].topic = sub_topic;
+	msgs[0].qos = 0;
+	snprintf(pub_topic, sizeof(pub_topic), "/v1.1/messages/%s", device_id);
+	msgs[1].topic = pub_topic;
+	msgs[1].qos = 0;
+	msgs[1].payload = (void *)pub_msg;
+	msgs[1].payload_len = strlen(pub_msg);
 
 	memset(&config, 0, sizeof(artik_mqtt_config));
 	config.client_id = "sub_client";
@@ -173,7 +181,7 @@ int main(int argc, char *argv[])
 
 	/* Connect to server */
 	mqtt->create_client(&client, &config);
-	mqtt->set_connect(client, on_connect_subscribe, &subscribe_msg);
+	mqtt->set_connect(client, on_connect_subscribe, msgs);
 	mqtt->set_disconnect(client, on_disconnect, mqtt);
 	mqtt->set_publish(client, on_publish, mqtt);
 	mqtt->set_message(client, on_message_disconnect, mqtt);

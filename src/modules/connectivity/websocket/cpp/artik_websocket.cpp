@@ -19,8 +19,10 @@
 #include "artik_websocket.hh"
 
 artik::Websocket::Websocket() {
-  m_module = reinterpret_cast<artik_websocket_module*>(
+  this->m_module = reinterpret_cast<artik_websocket_module*>(
       artik_request_api_module("websocket"));
+  this->m_handle = NULL;
+  memset(&this->m_config, 0, sizeof(this->m_config));
 }
 
 artik::Websocket::Websocket(const char* uri, artik_ssl_config *ssl_config) {

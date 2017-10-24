@@ -56,10 +56,12 @@ artik::Alarm::Alarm(artik_time_zone gmt, artik_msecond second,
 
 artik::Alarm::Alarm() {
   this->m_handle = NULL;
+  this->m_module = NULL;
 }
 
 artik::Alarm::~Alarm() {
-  this->m_module->delete_alarm(this->m_handle);
+  if (this->m_module)
+    this->m_module->delete_alarm(this->m_handle);
 }
 
 artik_error  artik::Alarm::get_delay(artik_msecond *msecond) {
@@ -67,6 +69,9 @@ artik_error  artik::Alarm::get_delay(artik_msecond *msecond) {
 }
 
 artik::Alarm &artik::Alarm::operator=(artik::Alarm const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_module = val.m_module;
   this->m_handle = val.m_handle;
   return *this;
@@ -86,6 +91,9 @@ artik::Time::~Time() {
 }
 
 artik::Time &artik::Time::operator=(Time const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_module = val.m_module;
   return *this;
 }

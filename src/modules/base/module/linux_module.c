@@ -126,7 +126,7 @@ artik_module_ops os_request_api_module(const char *name)
 	unsigned int i = 0, len = 0;
 	int platid = os_get_platform();
 
-	if (!name)
+	if (!name || (platid < 0))
 		return INVALID_MODULE;
 
 	while (artik_api_modules[platid][i].object != NULL) {
@@ -173,6 +173,7 @@ artik_module_ops os_request_api_module(const char *name)
 			dl_symbol = dlsym(dl_handle, str_buf);
 			error_msg = dlerror();
 			if (error_msg != NULL) {
+				dlclose(dl_handle);
 				mutex_unlock();
 				return INVALID_MODULE;
 			}
@@ -182,6 +183,7 @@ exit:
 				len = strlen(name) + 1;
 				module_name = malloc(len);
 				if (module_name == NULL) {
+					dlclose(dl_handle);
 					mutex_unlock();
 					return INVALID_MODULE;
 				}
@@ -280,6 +282,9 @@ artik_error os_get_platform_name(char *name)
 {
 	int platid = artik_get_platform();
 
+	if (platid < 0)
+		return E_NOT_SUPPORTED;
+
 	if (!name)
 		return E_BAD_ARGS;
 
@@ -293,6 +298,9 @@ artik_error os_get_available_modules(artik_api_module **modules, int
 {
 	unsigned int i = 0;
 	int platid = artik_get_platform();
+
+	if (platid < 0)
+		return E_NOT_SUPPORTED;
 
 	if (!modules || !num_modules)
 		return E_BAD_ARGS;
@@ -312,6 +320,9 @@ bool os_is_module_available(artik_module_id_t id)
 	unsigned int i = 0;
 	bool found = false;
 	int platid = artik_get_platform();
+
+	if (platid < 0)
+		return false;
 
 	while (artik_api_modules[platid][i].object != NULL) {
 		if (artik_api_modules[platid][i].id == id) {

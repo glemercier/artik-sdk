@@ -83,7 +83,7 @@ static artik_error i2c_test_cw2015(int platid)
 			"%s: Wrong chip version read,\n"
 			"expected 0x6f, got 0x%02x\n",
 			__func__, version);
-		ret = E_BAD_ARGS;
+		goto exit;
 	} else
 		fprintf(stdout, "CW2015 version: 0x%02x\n", version);
 	fprintf(stdout, "Reading configuration register...");
@@ -149,8 +149,9 @@ int main(void)
 	else
 		cmd = cmd_artik1020;
 
-	/* Unbound the driver */
-	system(cmd);
+	/* Unbind the driver */
+	if (system(cmd))
+		fprintf(stdout, "Failed to unbind the CW2015 driver\n");
 
 	if ((platid == ARTIK520) || (platid == ARTIK1020) ||
 			(platid == ARTIK710) || (platid == ARTIK530) || (platid == ARTIK305)) {

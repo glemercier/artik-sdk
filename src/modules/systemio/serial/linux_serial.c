@@ -89,6 +89,9 @@ artik_error os_serial_request(artik_serial_config *config)
 	struct termios tty;
 	char entry[MAX_PATH];
 
+	if (platid < 0)
+		return E_NOT_SUPPORTED;
+
 	data_user = malloc(sizeof(os_serial_data));
 	if (!data_user)
 		return -E_NO_MEM;
@@ -133,8 +136,10 @@ artik_error os_serial_request(artik_serial_config *config)
 	switch (config->flowctrl) {
 	case ARTIK_SERIAL_FLOWCTRL_HARD:
 		tty.c_cflag |= CRTSCTS;
+		break;
 	case ARTIK_SERIAL_FLOWCTRL_SOFT:
 		tty.c_cflag |= (IXON | IXOFF | IXANY);
+		break;
 	default:
 		break;
 	}
@@ -143,8 +148,10 @@ artik_error os_serial_request(artik_serial_config *config)
 	switch (config->parity) {
 	case ARTIK_SERIAL_PARITY_ODD:
 		tty.c_cflag |= (PARENB | PARODD);
+		break;
 	case ARTIK_SERIAL_PARITY_EVEN:
 		tty.c_cflag |= PARENB;
+		break;
 	default:
 		break;
 	}
@@ -156,8 +163,10 @@ artik_error os_serial_request(artik_serial_config *config)
 	switch (config->data_bits) {
 	case ARTIK_SERIAL_DATA_7BIT:
 		tty.c_cflag |= CS7;
+		break;
 	case ARTIK_SERIAL_DATA_8BIT:
 		tty.c_cflag |= CS8;
+		break;
 	default:
 		break;
 	}

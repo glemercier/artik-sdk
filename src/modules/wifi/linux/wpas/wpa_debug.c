@@ -743,13 +743,16 @@ void hostapd_logger(void *ctx, const u8 *addr, unsigned int module, int level,
 	va_start(ap, fmt);
 	len = vsnprintf(buf, buflen, fmt, ap);
 	va_end(ap);
-	if (hostapd_logger_cb)
+	if (hostapd_logger_cb) {
 		hostapd_logger_cb(ctx, addr, module, level, buf, len);
-	else if (addr)
-		wpa_printf(MSG_DEBUG, "hostapd_logger: STA %s - %s",
-			   MAC2STR(addr), buf);
-	else
+	} else if (addr) {
+		char *addr_s = MAC2STR(addr);
+
+		wpa_printf(MSG_DEBUG, "hostapd_logger: STA %s - %s", addr_s, buf);
+		free(addr_s);
+	} else {
 		wpa_printf(MSG_DEBUG, "hostapd_logger: %s", buf);
+	}
 	bin_clear_free(buf, buflen);
 }
 #endif /* CONFIG_NO_HOSTAPD_LOGGER */

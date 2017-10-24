@@ -465,34 +465,33 @@ static void _char_method_call(GDBusConnection *connection, const gchar *sender,
 	chr = g_slist_nth_data(l, 0);
 
 	if (g_strcmp0(method_name, "ReadValue") == 0) {
-		bt_gatt_req_handle *handle = malloc(sizeof(bt_gatt_req_handle));
+		bt_gatt_req_handle handle;
 
-		memset(handle, 0, sizeof(bt_gatt_req_handle));
-		handle->chr = chr;
-		handle->invocation = invocation;
-		handle->type = BT_GATT_REQ_TYPE_READ;
+		memset(&handle, 0, sizeof(bt_gatt_req_handle));
+		handle.chr = chr;
+		handle.invocation = invocation;
+		handle.type = BT_GATT_REQ_TYPE_READ;
 
 		if (chr->read_callback)
-			chr->read_callback(handle, chr->read_user_data);
-		else {
-			_send_request(handle, chr->value_length, chr->char_value);
-			free(handle);
-		}
+			chr->read_callback(&handle, chr->read_user_data);
+		else
+			_send_request(&handle, chr->value_length, chr->char_value);
+
 	} else if (g_strcmp0(method_name, "WriteValue") == 0) {
-		bt_gatt_req_handle *handle = malloc(sizeof(bt_gatt_req_handle));
+		bt_gatt_req_handle handle;
 
-		memset(handle, 0, sizeof(bt_gatt_req_handle));
-		handle->chr = chr;
-		handle->type = BT_GATT_REQ_TYPE_WRITE;
-		handle->invocation = invocation;
+		memset(&handle, 0, sizeof(bt_gatt_req_handle));
+		handle.chr = chr;
+		handle.type = BT_GATT_REQ_TYPE_WRITE;
+		handle.invocation = invocation;
 
-		_extract_value_parameter(parameters, &handle->len, &handle->value);
+		_extract_value_parameter(parameters, &handle.len, &handle.value);
 
 		if (chr->write_callback)
-			chr->write_callback(handle, handle->value,
-				handle->len, chr->write_user_data);
+			chr->write_callback(&handle, handle.value,
+				handle.len, chr->write_user_data);
 		else
-			bt_gatt_req_set_result(handle, BT_GATT_REQ_STATE_TYPE_OK, NULL);
+			bt_gatt_req_set_result(&handle, BT_GATT_REQ_STATE_TYPE_OK, NULL);
 
 	} else if (g_strcmp0(method_name, "StartNotify") == 0) {
 		if (chr->notify_callback) {
@@ -524,6 +523,7 @@ static void _desc_method_call(GDBusConnection *connection,
 {
 	bt_gatt_desc *desc;
 	GSList *l;
+	bt_gatt_req_handle handle;
 
 	log_dbg("%s", method_name);
 
@@ -535,33 +535,28 @@ static void _desc_method_call(GDBusConnection *connection,
 	}
 	desc = g_slist_nth_data(l, 0);
 
-	bt_gatt_req_handle *handle = malloc(sizeof(bt_gatt_req_handle));
-
-	memset(handle, 0, sizeof(bt_gatt_req_handle));
-	handle->chr = NULL;
-	handle->desc = desc;
-	handle->invocation = invocation;
+	memset(&handle, 0, sizeof(bt_gatt_req_handle));
+	handle.chr = NULL;
+	handle.desc = desc;
+	handle.invocation = invocation;
 
 	if (g_strcmp0(method_name, "ReadValue") == 0) {
-		handle->type = BT_GATT_REQ_TYPE_READ;
+		handle.type = BT_GATT_REQ_TYPE_READ;
 
 		if (desc->read_callback)
-			desc->read_callback(handle, desc->read_user_data);
-		else {
-			_send_request(handle, desc->value_length, desc->desc_value);
-			free(handle);
-		}
-
+			desc->read_callback(&handle, desc->read_user_data);
+		else
+			_send_request(&handle, desc->value_length, desc->desc_value);
 	} else if (g_strcmp0(method_name, "WriteValue") == 0) {
-		handle->type = BT_GATT_REQ_TYPE_WRITE;
+		handle.type = BT_GATT_REQ_TYPE_WRITE;
 
-		_extract_value_parameter(parameters, &handle->len, &handle->value);
+		_extract_value_parameter(parameters, &handle.len, &handle.value);
 
 		if (desc->write_callback)
-			desc->write_callback(handle, handle->value, handle->len,
+			desc->write_callback(&handle, handle.value, handle.len,
 					desc->write_user_data);
 		else
-			bt_gatt_req_set_result(handle, BT_GATT_REQ_STATE_TYPE_OK, NULL);
+			bt_gatt_req_set_result(&handle, BT_GATT_REQ_STATE_TYPE_OK, NULL);
 	}
 }
 
@@ -1066,6 +1061,9 @@ artik_error bt_gatt_req_set_value(artik_bt_gatt_req request, int len,
 		ptr_len = &desc->value_length;
 	}
 
+	if (!val)
+		return E_BAD_ARGS;
+
 	if (*val)
 		free(*val);
 
@@ -1146,10 +1144,8 @@ artik_error bt_gatt_req_set_result(artik_bt_gatt_req request,
 	if (err != S_OK)
 		return err;
 
-	if (state != BT_GATT_REQ_STATE_TYPE_OK)
-		g_free(handle->value);
-
-	g_free(handle);
+	if (state != BT_GATT_REQ_STATE_TYPE_OK && handle->value)
+		free(handle->value);
 
 	return S_OK;
 }

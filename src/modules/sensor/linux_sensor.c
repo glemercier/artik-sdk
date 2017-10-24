@@ -73,18 +73,21 @@ artik_error os_sensor_request(artik_sensor_config *config,
 artik_sensor_config *os_sensor_get(unsigned int nb, artik_sensor_device_t type)
 {
 	int pos = 0, ref = 0;
+	int platid = artik_get_platform();
 
-	while ((unsigned int)ref <= nb &&
-			artik_api_sensors[artik_get_platform()][pos].type) {
-		if ((unsigned int)ref < nb
-		    && artik_api_sensors[artik_get_platform()][pos].type ==
-		    type)
+	if (platid < 0)
+		return NULL;
+
+	while ((unsigned int)ref <= nb && artik_api_sensors[platid][pos].type) {
+		if ((unsigned int)ref < nb &&
+				artik_api_sensors[platid][pos].type == type) {
 			ref++;
-		else if ((unsigned int)ref == nb
-		    && artik_api_sensors[artik_get_platform()][pos].type ==
-		    type)
-			return &artik_api_sensors[artik_get_platform()][pos];
+		} else if ((unsigned int)ref == nb &&
+				artik_api_sensors[platid][pos].type == type) {
+			return &artik_api_sensors[platid][pos];
+		}
 		pos++;
 	}
+
 	return NULL;
 }

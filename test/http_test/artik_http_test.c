@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 #include <openssl/md5.h>
 
 #include <artik_module.h>
@@ -88,8 +89,7 @@ void http_stream_response_callback(artik_error ret, int status, char *response,
 	MD5_CTX mdContext;
 	unsigned char c[MD5_DIGEST_LENGTH];
 	unsigned char data[1024];
-	char file_MD5[32];
-	char *target = file_MD5;
+	char file_MD5[(MD5_DIGEST_LENGTH*2)+1];
 
 	if (ret != S_OK) {
 		fprintf(stderr, "error = %s\n", error_msg(ret));
@@ -102,6 +102,11 @@ void http_stream_response_callback(artik_error ret, int status, char *response,
 		fclose(fp);
 
 	fp = fopen(outfilename, "rb");
+	if (!fp) {
+		fprintf(stdout, "TEST: %s failed to open %s (err=%d)\n", __func__,
+				outfilename, errno);
+		return;
+	}
 
 	MD5_Init(&mdContext);
 
@@ -110,8 +115,9 @@ void http_stream_response_callback(artik_error ret, int status, char *response,
 
 	MD5_Final(c, &mdContext);
 
+	memset(file_MD5, 0, sizeof(file_MD5));
 	for (i = 0; i < MD5_DIGEST_LENGTH; i++)
-		target += sprintf(target, "%02x", c[i]);
+		snprintf(&(file_MD5[i*2]), 3, "%02x", c[i]);
 
 	fprintf(stdout, "MD5 of downloaded file = %s\n", file_MD5);
 	fprintf(stdout, "MD5 expected = %s\n", IMAGE_MD5);
@@ -130,15 +136,14 @@ artik_error test_http_get_stream(bool verify, bool secure)
 	artik_http_module *http = (artik_http_module *)
 					artik_request_api_module("http");
 	artik_error ret = S_OK;
-	FILE *fp;
+	FILE *fp = NULL;
 	char outfilename[FILENAME_MAX] = "./image.jpeg";
-	int i;
-	int bytes;
+	int i = 0;
+	int bytes = 0;
 	MD5_CTX mdContext;
 	unsigned char c[MD5_DIGEST_LENGTH];
 	unsigned char data[1024];
-	char file_MD5[32];
-	char *target = file_MD5;
+	char file_MD5[(MD5_DIGEST_LENGTH*2)+1];
 	artik_ssl_config ssl_config = { 0 };
 	artik_http_headers headers;
 	artik_http_header_field fields[] = {
@@ -147,10 +152,15 @@ artik_error test_http_get_stream(bool verify, bool secure)
 	};
 
 	fp = fopen(outfilename, "wb");
+	if (!fp) {
+		fprintf(stdout, "TEST: %s failed to open %s (err=%d)\n", __func__,
+				outfilename, errno);
+		return ret;
+	}
 
 	memset(&ssl_config, 0, sizeof(ssl_config));
 
-	ssl_config.ca_cert.data = strdup(httpbin_root_ca);
+	ssl_config.ca_cert.data = (char *)httpbin_root_ca;
 	ssl_config.ca_cert.len = strlen(httpbin_root_ca);
 
 	if (verify)
@@ -180,16 +190,36 @@ artik_error test_http_get_stream(bool verify, bool secure)
 		fclose(fp);
 
 	fp = fopen(outfilename, "rb");
+	if (!fp) {
+		fprintf(stdout, "TEST: %s failed to open %s (err=%d)\n", __func__,
+				outfilename, errno);
+		return ret;
+	}
 
 	MD5_Init(&mdContext);
 
-	while ((bytes = fread(data, 1, 1024, fp)) != 0)
+	while (1) {
+		bytes = fread(data, 1, 1024, fp);
+		if (!bytes) {
+			if (feof(fp)) {
+				break;
+			} else if (ferror(fp)) {
+				fclose(fp);
+				fprintf(stdout, "TEST: %s failed to read data from %s\n",
+					__func__, outfilename);
+				return ret;
+			}
+		}
+
 		MD5_Update(&mdContext, data, bytes);
+	}
+
 
 	MD5_Final(c, &mdContext);
 
+	memset(file_MD5, 0, sizeof(file_MD5));
 	for (i = 0; i < MD5_DIGEST_LENGTH; i++)
-		target += sprintf(target, "%02x", c[i]);
+		snprintf(&(file_MD5[i*2]), 3, "%02x", c[i]);
 
 	fprintf(stdout, "MD5 of downloaded file = %s\n", file_MD5);
 	fprintf(stdout, "MD5 expected = %s\n", IMAGE_MD5);
@@ -201,7 +231,6 @@ artik_error test_http_get_stream(bool verify, bool secure)
 		fprintf(stdout, "Image no correctly donwloaded\n");
 		fprintf(stdout, "TEST: %s failed\n", __func__);
 	}
-
 
 	artik_release_api_module(http);
 
@@ -226,7 +255,7 @@ artik_error test_http_get(bool verify, bool secure)
 
 	memset(&ssl_config, 0, sizeof(ssl_config));
 
-	ssl_config.ca_cert.data = strdup(httpbin_root_ca);
+	ssl_config.ca_cert.data = (char *)httpbin_root_ca;
 	ssl_config.ca_cert.len = strlen(httpbin_root_ca);
 
 	if (verify)
@@ -281,7 +310,7 @@ artik_error test_http_post(bool verify, bool secure)
 
 	memset(&ssl_config, 0, sizeof(ssl_config));
 
-	ssl_config.ca_cert.data = strdup(httpbin_root_ca);
+	ssl_config.ca_cert.data = (char *)httpbin_root_ca;
 	ssl_config.ca_cert.len = strlen(httpbin_root_ca);
 
 	if (verify)
@@ -335,7 +364,7 @@ artik_error test_http_put(bool verify, bool secure)
 
 	memset(&ssl_config, 0, sizeof(ssl_config));
 
-	ssl_config.ca_cert.data = strdup(httpbin_root_ca);
+	ssl_config.ca_cert.data = (char *)httpbin_root_ca;
 	ssl_config.ca_cert.len = strlen(httpbin_root_ca);
 
 	if (verify)
@@ -389,7 +418,7 @@ artik_error test_http_del(bool verify, bool secure)
 
 	memset(&ssl_config, 0, sizeof(ssl_config));
 
-	ssl_config.ca_cert.data = strdup(httpbin_root_ca);
+	ssl_config.ca_cert.data = (char *)httpbin_root_ca;
 	ssl_config.ca_cert.len = strlen(httpbin_root_ca);
 
 	if (verify)
@@ -448,7 +477,7 @@ artik_error test_http_async(bool verify, bool secure)
 
 	memset(&ssl_config, 0, sizeof(ssl_config));
 
-	ssl_config.ca_cert.data = strdup(httpbin_root_ca);
+	ssl_config.ca_cert.data = (char *)httpbin_root_ca;
 	ssl_config.ca_cert.len = strlen(httpbin_root_ca);
 
 	if (verify)

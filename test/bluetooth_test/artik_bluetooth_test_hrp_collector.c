@@ -86,7 +86,7 @@ static void on_scan(artik_bt_event event, void *data, void *user_data)
 	artik_bt_device dev = *(artik_bt_device *)data;
 
 	fprintf(stdout, "Address: %s\n", dev.remote_address);
-	strcpy(remote_address, dev.remote_address);
+	strncpy(remote_address, dev.remote_address, sizeof(remote_address) - 1);
 
 	bt->stop_scan();
 	bt->connect(remote_address);
@@ -160,9 +160,10 @@ static void on_gatt_property(artik_bt_event event, void *data, void *user_data)
 		if (prop & BT_GATT_CHAR_PROPERTY_READ) {
 			if (bt->gatt_char_read_value(remote_address,
 					HEART_RATE_SERVICE, HEART_RATE_SENSOR_LOCATION, &byte, &byte_len) == 0) {
-				print_location(byte);
-				if (byte)
+				if (byte) {
+					print_location(byte);
 					free(byte);
+				}
 			}
 		}
 	} else {

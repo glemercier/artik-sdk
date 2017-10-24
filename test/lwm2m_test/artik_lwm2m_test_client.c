@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <linux/limits.h>
 #include <signal.h>
+#include <sys/stat.h>
 
 #include <artik_module.h>
 #include <artik_platform.h>
@@ -37,6 +38,7 @@
 #define UUID_MAX_LEN	64
 #define DATA_MAX_LEN	1024
 #define MAX_PACKET_SIZE 1024
+#define MAX_LONG        0x7FFFFFFF
 
 artik_loop_module *loop;
 artik_lwm2m_module *lwm2m;
@@ -91,7 +93,7 @@ void prv_read_obj(char *buffer, void *user_data)
 	artik_lwm2m_handle handle = (artik_lwm2m_handle) user_data;
 	artik_error result;
 	char uri[URI_MAX_LEN];
-	char data[256]; int len = 256;
+	char data[257]; int len = 256;
 	command cmd;
 
 	prv_init_command(&cmd, buffer);
@@ -211,7 +213,7 @@ static void test_serialization(artik_lwm2m_handle handle)
 								len_str);
 		fprintf(stdout, "result of serialization string sent : %s\n",
 								error_msg(res));
-		if (buffer_int)
+		if (buffer_str)
 			free(buffer_str);
 	} else
 		fprintf(stdout, "Failed to serialize array of string : %s\n",
@@ -220,13 +222,9 @@ static void test_serialization(artik_lwm2m_handle handle)
 static bool fill_buffer_from_file(const char *file, char **pbuffer)
 {
 	FILE *stream = NULL;
-	long size = 0;
 	char *buffer = NULL;
-
-	if (access(file, F_OK) != 0) {
-		fprintf(stderr, "cannot access '%s': %s\n", file, strerror(errno));
-		return false;
-	}
+	size_t size = 0;
+	struct stat st;
 
 	stream = fopen(file, "r");
 	if (!stream) {
@@ -234,24 +232,35 @@ static bool fill_buffer_from_file(const char *file, char **pbuffer)
 		goto error;
 	}
 
-	if (fseek(stream, 0, SEEK_END) != 0) {
+	if (fstat(fileno(stream), &st)) {
+		fprintf(stderr, "cannot access '%s': %s\n", file, strerror(errno));
+		goto error;
+	}
+
+	if ((st.st_size < 0) || (st.st_size >= MAX_LONG)) {
+		fprintf(stderr, "invalid size of file '%s'\n", file);
+		goto error;
+	}
+
+	size = st.st_size + 1;
+
+	if (fseek(stream, 0, SEEK_SET) != 0) {
 		fprintf(stderr, "cannot seek '%s': %s\n", file, strerror(errno));
 		goto error;
 	}
 
-	size = ftell(stream);
-	if (size < 0) {
-		fprintf(stderr, "cannot tell '%s': %s\n", file, strerror(errno));
+	buffer = malloc((size + 1)*sizeof(char));
+	if (!buffer) {
+		fprintf(stderr, "cannot allocate %lu bytes\n", (unsigned long)size);
 		goto error;
 	}
 
-	rewind(stream);
-	buffer = malloc((size + 1)*sizeof(char));
-	if (!buffer) {
-		fprintf(stderr, "cannot allocate %ld bytes\n", size);
-		goto error;
+	if (!fread(buffer, sizeof(char), size, stream)) {
+		if (ferror(stream)) {
+			fprintf(stderr, "failed to read %lu bytes\n", (unsigned long)size);
+			goto error;
+		}
 	}
-	fread(buffer, sizeof(char), size, stream);
 	fclose(stream);
 
 	buffer[size] = '\0';
@@ -312,11 +321,14 @@ artik_error test_lwm2m_default(void)
 	} else if (strlen(akc_device_certificate_path) > 0 && strlen(akc_device_private_key_path) > 0) {
 		if (!fill_buffer_from_file(akc_device_certificate_path, &ssl_config.client_cert.data)) {
 			fprintf(stdout, "TEST: failed\n");
+			free(ssl_config.ca_cert.data);
 			return -1;
 		}
 		ssl_config.client_cert.len = strlen(ssl_config.client_cert.data);
 
 		if (!fill_buffer_from_file(akc_device_private_key_path, &ssl_config.client_key.data)) {
+			free(ssl_config.client_cert.data);
+			free(ssl_config.ca_cert.data);
 			fprintf(stdout, "TEST: failed\n");
 			return -1;
 		}
@@ -355,8 +367,6 @@ artik_error test_lwm2m_default(void)
 		goto exit;
 
 	test_serialization(client_h);
-	if (ret != S_OK)
-		goto exit;
 
 	for (i = 0; commands[i].name != NULL; i++)
 		commands[i].user_data = (void *) client_h;
@@ -387,6 +397,14 @@ exit:
 	lwm2m->client_release(client_h);
 	fprintf(stdout, "TEST: %s %s\n", __func__,
 			(ret == S_OK) ? "succeeded" : "failed");
+
+	if (ssl_config.ca_cert.data)
+		free(ssl_config.ca_cert.data);
+	if (ssl_config.client_cert.data)
+		free(ssl_config.client_cert.data);
+	if (ssl_config.client_key.data)
+		free(ssl_config.client_key.data);
+
 	return ret;
 }
 
@@ -399,7 +417,6 @@ int main(UNUSED int argc, UNUSED char *argv[])
 {
 	int opt;
 	artik_error ret = S_OK;
-
 
 	while ((opt = getopt(argc, argv, "na:sc:p:u:i:k:")) != -1) {
 		switch (opt) {

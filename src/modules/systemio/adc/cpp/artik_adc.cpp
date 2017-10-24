@@ -64,6 +64,9 @@ artik::Adc::~Adc() {
 }
 
 artik::Adc &artik::Adc::operator=(Adc const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_module = val.m_module;
   this->m_handle = val.m_handle;
   this->set_name(val.get_name());

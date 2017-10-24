@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/stat.h>
 
 #include <artik_module.h>
 #include <artik_loop.h>
@@ -203,7 +204,7 @@ int main(int argc, char *argv[])
 	char *client_key = NULL; // Client key
 	char *host = NULL; // IP Address of server
 	int port = 0;
-	long fsize;
+	struct stat st;
 	FILE *f;
 
 	while ((opt = getopt(argc, argv, "r:c:k:i:p:m:vt")) != -1) {
@@ -212,43 +213,105 @@ int main(int argc, char *argv[])
 			f = fopen(optarg, "rb");
 			if (!f) {
 				printf("File not found for parameter -r\n");
-				return -1;
+				ret = E_BAD_ARGS;
+				goto exit;
 			}
-			fseek(f, 0, SEEK_END);
-			fsize = ftell(f);
-			fseek(f, 0, SEEK_SET);
-			root_ca = malloc(fsize + 1);
-			fread(root_ca, fsize, 1, f);
+			if (fstat(fileno(f), &st) < 0) {
+				printf("Could not get file size\n");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
+			if (root_ca)
+				free(root_ca);
+
+			root_ca = malloc(st.st_size + 1);
+			if (!root_ca) {
+				fclose(f);
+				ret = E_NO_MEM;
+				goto exit;
+			}
+
+			if (!fread(root_ca, st.st_size, 1, f)) {
+				printf("Failed to read root CA file\n");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
 			fclose(f);
 			break;
 		case 'c':
 			f = fopen(optarg, "rb");
 			if (!f) {
 				printf("File not found for parameter -c\n");
-				return -1;
+				ret = E_BAD_ARGS;
+				goto exit;
 			}
-			fseek(f, 0, SEEK_END);
-			fsize = ftell(f);
-			fseek(f, 0, SEEK_SET);
-			client_cert = malloc(fsize + 1);
-			fread(client_cert, fsize, 1, f);
+			if (fstat(fileno(f), &st) < 0) {
+				printf("Could not get file size\n");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
+			if (client_cert)
+				free(client_cert);
+
+			client_cert = malloc(st.st_size + 1);
+			if (!client_cert) {
+				fclose(f);
+				ret = E_NO_MEM;
+				goto exit;
+			}
+
+			if (!fread(client_cert, st.st_size, 1, f)) {
+				printf("Failed to read client certificate file\n");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
 			fclose(f);
 			break;
 		case 'k':
 			f = fopen(optarg, "rb");
 			if (!f) {
 				printf("File not found for parameter -k\n");
-				return -1;
+				ret = E_BAD_ARGS;
+				goto exit;
 			}
-			fseek(f, 0, SEEK_END);
-			fsize = ftell(f);
-			fseek(f, 0, SEEK_SET);
-			client_key = malloc(fsize + 1);
-			fread(client_key, fsize, 1, f);
+			if (fstat(fileno(f), &st) < 0) {
+				printf("Could not get file size\n");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
+			if (client_key)
+				free(client_key);
+
+			client_key = malloc(st.st_size + 1);
+			if (!client_key) {
+				fclose(f);
+				ret = E_NO_MEM;
+				goto exit;
+			}
+
+			if (!fread(client_key, st.st_size, 1, f)) {
+				printf("Failed to read client certificate file\n");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
 			fclose(f);
 			break;
 		case 'i':
-			host = malloc(strlen(optarg)+1);
+			if (host)
+				free(host);
+
 			host = strdup(optarg);
 			break;
 		case 'p':
@@ -284,6 +347,15 @@ int main(int argc, char *argv[])
 
 	if (test_message)
 		free(test_message);
+exit:
+	if (root_ca)
+		free(root_ca);
+	if (client_key)
+		free(client_key);
+	if (client_cert)
+		free(client_cert);
+	if (host)
+		free(host);
 
 	return (ret == S_OK) ? 0 : -1;
 }

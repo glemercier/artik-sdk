@@ -74,6 +74,8 @@ static artik_error _call_exe(const char *cmd)
 	if (obexd_buf_len <= 0)
 		log_dbg("get obexd check stream failed!\n");
 
+	pclose(obexd_check_stream);
+
 	if (_obexd_start_check(obexd_buf, OBEXD_CMD) == S_OK) {
 		obexed_is_used = TRUE;
 		log_dbg("obexd is already started!\n");

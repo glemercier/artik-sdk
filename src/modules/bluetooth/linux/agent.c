@@ -390,6 +390,7 @@ artik_error bt_agent_register_capability(artik_bt_agent_capability e)
 			NULL);
 	if (!_introspection_data) {
 		log_err("Get dbus introspection data node from xml file failed\n");
+		g_free(capa);
 		return E_BT_ERROR;
 	}
 	interface = g_dbus_node_info_lookup_interface(
@@ -400,6 +401,7 @@ artik_error bt_agent_register_capability(artik_bt_agent_capability e)
 			&_interface_vtable, NULL, NULL, &error);
 	if (error) {
 		log_err("g_dbus_connection_register_object failed :%s\n", error->message);
+		g_free(capa);
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}

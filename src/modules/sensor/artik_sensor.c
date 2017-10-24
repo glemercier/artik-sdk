@@ -66,7 +66,12 @@ static artik_error artik_sensor_request(artik_sensor_config *config,
 
 static artik_sensor_config *artik_sensor_list(void)
 {
-	return artik_api_sensors[artik_get_platform()];
+	int platid = artik_get_platform();
+
+	if (platid < 0)
+		return NULL;
+
+	return artik_api_sensors[platid];
 }
 
 static artik_sensor_config *artik_sensor_get_sensor(unsigned int nb,

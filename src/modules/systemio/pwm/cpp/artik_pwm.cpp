@@ -66,6 +66,9 @@ artik::Pwm::~Pwm() {
 }
 
 artik::Pwm &artik::Pwm::operator=(Pwm const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_module = val.m_module;
   this->m_handle = val.m_handle;
   this->set_name(val.get_name());

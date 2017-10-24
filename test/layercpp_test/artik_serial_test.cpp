@@ -51,6 +51,7 @@ artik_error test_serial_loopback(void) {
   if (ret != S_OK) {
     fprintf(stderr, "TEST: %s failed to request serial port (%d)\n", __func__,
         ret);
+    delete(sp);
     return ret;
   }
 

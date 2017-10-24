@@ -63,16 +63,20 @@
 int get_ipv4addr(const char *ifname, struct in_addr *addr)
 {
 	int ret = ERROR;
+	int sockfd = 0;
 
 	if (ifname && addr) {
-		int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+		if (strlen(ifname) >= IFNAMSIZ)
+			return ERROR;
 
+		sockfd = socket(PF_INET, SOCK_DGRAM, 0);
 		if (sockfd >= 0) {
 			struct ifreq req;
 
-			strncpy(req.ifr_name, ifname, IFNAMSIZ);
-			ret = ioctl(sockfd, SIOCGIFADDR, (unsigned long)&req);
+			memset(&req, 0, sizeof(struct ifreq));
+			memcpy(req.ifr_name, ifname, strlen(ifname));
 
+			ret = ioctl(sockfd, SIOCGIFADDR, (unsigned long)&req);
 			if (!ret) {
 				struct sockaddr_in *req_addr;
 
@@ -91,16 +95,21 @@ int get_ipv4addr(const char *ifname, struct in_addr *addr)
 int set_ipv4addr(const char *ifname, const struct in_addr *addr)
 {
 	int ret = ERROR;
+	int sockfd = 0;
 
 	if (ifname && addr) {
-		int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+		if (strlen(ifname) >= IFNAMSIZ)
+			return ERROR;
 
+		sockfd = socket(PF_INET, SOCK_DGRAM, 0);
 		if (sockfd >= 0) {
 			struct sockaddr_in *inaddr;
 			struct ifreq req;
 
+			memset(&req, 0, sizeof(struct ifreq));
+
 			/* Add the device name to the request */
-			strncpy(req.ifr_name, ifname, IFNAMSIZ);
+			memcpy(req.ifr_name, ifname, strlen(ifname));
 
 			/* Add the INET address to the request */
 			inaddr             = (struct sockaddr_in *)
@@ -120,17 +129,21 @@ int set_ipv4addr(const char *ifname, const struct in_addr *addr)
 int get_dripv4addr(const char *ifname, struct in_addr *addr)
 {
 	int ret = ERROR;
+	int sockfd = 0;
 
 	if (ifname && addr) {
-		int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+		if (strlen(ifname) >= IFNAMSIZ)
+			return ERROR;
 
+		sockfd = socket(PF_INET, SOCK_DGRAM, 0);
 		if (sockfd >= 0) {
 			struct ifreq req;
 
-			strncpy(req.ifr_name, ifname, IFNAMSIZ);
+			memset(&req, 0, sizeof(struct ifreq));
+			memcpy(req.ifr_name, ifname, strlen(ifname));
+
 			ret = ioctl(sockfd, SIOCGIFDSTADDR,
 				(unsigned long)&req);
-
 			if (!ret) {
 				struct sockaddr_in *req_addr;
 
@@ -149,16 +162,21 @@ int get_dripv4addr(const char *ifname, struct in_addr *addr)
 int set_dripv4addr(const char *ifname, const struct in_addr *addr)
 {
 	int ret = ERROR;
+	int sockfd = 0;
 
 	if (ifname && addr) {
-		int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+		if (strlen(ifname) >= IFNAMSIZ)
+			return ERROR;
 
+		sockfd = socket(PF_INET, SOCK_DGRAM, 0);
 		if (sockfd >= 0) {
 			struct sockaddr_in *inaddr;
 			struct ifreq req;
 
+			memset(&req, 0, sizeof(struct ifreq));
+
 			/* Add the device name to the request */
-			strncpy(req.ifr_name, ifname, IFNAMSIZ);
+			memcpy(req.ifr_name, ifname, strlen(ifname));
 
 			/* Add the INET address to the request */
 			inaddr			= (struct sockaddr_in *)
@@ -179,14 +197,19 @@ int set_dripv4addr(const char *ifname, const struct in_addr *addr)
 int get_ipv4netmask(const char *ifname, struct in_addr *addr)
 {
 	int ret = ERROR;
+	int sockfd = 0;
 
 	if (ifname && addr) {
-		int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+		if (strlen(ifname) >= IFNAMSIZ)
+			return ERROR;
 
+		sockfd = socket(PF_INET, SOCK_DGRAM, 0);
 		if (sockfd >= 0) {
 			struct ifreq req;
 
-			strncpy(req.ifr_name, ifname, IFNAMSIZ);
+			memset(&req, 0, sizeof(struct ifreq));
+			memcpy(req.ifr_name, ifname, strlen(ifname));
+
 			ret = ioctl(sockfd, SIOCGIFNETMASK,
 				(unsigned long)&req);
 
@@ -208,16 +231,21 @@ int get_ipv4netmask(const char *ifname, struct in_addr *addr)
 int set_ipv4netmask(const char *ifname, const struct in_addr *addr)
 {
 	int ret = ERROR;
+	int sockfd = 0;
 
 	if (ifname && addr) {
-		int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+		if (strlen(ifname) >= IFNAMSIZ)
+			return ERROR;
 
+		sockfd = socket(PF_INET, SOCK_DGRAM, 0);
 		if (sockfd >= 0) {
 			struct sockaddr_in *inaddr;
 			struct ifreq req;
 
+			memset(&req, 0, sizeof(struct ifreq));
+
 			/* Add the device name to the request */
-			strncpy(req.ifr_name, ifname, IFNAMSIZ);
+			memcpy(req.ifr_name, ifname, strlen(ifname));
 
 			/* Add the INET address to the request */
 			inaddr			= (struct sockaddr_in *)
@@ -238,21 +266,23 @@ int set_ipv4netmask(const char *ifname, const struct in_addr *addr)
 int getmacaddr(const char *ifname, uint8_t  *macaddr)
 {
 	int ret = ERROR;
+	int sockfd = 0;
 
 	if (ifname && macaddr) {
+		if (strlen(ifname) >= IFNAMSIZ)
+			return ERROR;
 
 		/* Get a socket (only so that we get access to the INET
 		 * subsystem)
 		 */
-		int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
-
+		sockfd = socket(PF_INET, SOCK_DGRAM, 0);
 		if (sockfd >= 0) {
 			struct ifreq req;
 
 			memset(&req, 0, sizeof(struct ifreq));
 
 			/* Put the driver name into the request */
-			strncpy(req.ifr_name, ifname, IFNAMSIZ);
+			memcpy(req.ifr_name, ifname, strlen(ifname));
 
 			/* Perform the ioctl to get the MAC address */
 			ret = ioctl(sockfd, SIOCGIFHWADDR, (unsigned long)&req);
@@ -324,7 +354,7 @@ int del_allroutes_interface(const char *ifname)
 {
 	char buf[CMD_LENGTH];
 
-	sprintf(buf, "ip route flush dev %s", ifname);
+	snprintf(buf, CMD_LENGTH, "ip route flush dev %s", ifname);
 
 	return system(buf);
 }
@@ -457,14 +487,18 @@ int verify_ipv4addr_in_used(const struct in_addr *inaddr)
 	struct icmphdr icmp_hdr;
 	struct sockaddr_in addr;
 	int sequence = 0;
+	unsigned char data[2048];
+	int rc;
+	struct timeval timeout = {2, 0};
+	fd_set read_set;
+	socklen_t slen;
+	struct icmphdr rcv_hdr;
+	int sock = -1;
 
 	if (system("sysctl -w net.ipv4.ping_group_range=\"0 0\" > NUL") < 0) {
 		log_err("Error system");
-		ret = ERROR;
-		goto errout;
+		return ERROR;
 	}
-
-	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
 
 	log_dbg("Ping IP address %d.%d.%d.%d\n",
 		(inaddr->s_addr) & 0xff,
@@ -472,10 +506,10 @@ int verify_ipv4addr_in_used(const struct in_addr *inaddr)
 		(inaddr->s_addr >> 16) & 0xff,
 		(inaddr->s_addr >> 24) & 0xff);
 
+	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
 	if (sock < 0) {
 		log_err("Error sock : %d", errno);
-		ret = ERROR;
-		goto errout;
+		return ERROR;
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -487,14 +521,6 @@ int verify_ipv4addr_in_used(const struct in_addr *inaddr)
 	icmp_hdr.un.echo.id = 1234;
 
 	for (;;) {
-
-		unsigned char data[2048];
-		int rc;
-		struct timeval timeout = {2, 0};
-		fd_set read_set;
-		socklen_t slen;
-		struct icmphdr rcv_hdr;
-
 		icmp_hdr.un.echo.sequence = sequence++;
 
 		memcpy(data, &icmp_hdr, sizeof(icmp_hdr));
@@ -558,5 +584,6 @@ int verify_ipv4addr_in_used(const struct in_addr *inaddr)
 	}
 
 errout:
+	close(sock);
 	return ret;
 }

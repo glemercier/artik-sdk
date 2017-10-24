@@ -82,74 +82,66 @@ static void _handle_select_configuration(GVariant *parameters,
 static void _handle_set_configuration(GVariant *parameters,
 		GDBusMethodInvocation *invocation)
 {
-	artik_bt_a2dp_source_property *properties = NULL;
+	artik_bt_a2dp_source_property properties;
 	GVariant *_g_property = NULL, *prop_dict = NULL;
 	GVariant *value = NULL, *internal = NULL;
-	gchar *key = NULL, *_device = NULL, *_uuid = NULL, *_state = NULL;
-	gchar *_transport_path = NULL;
+	gchar *key = NULL;
 	gint i = 0, j = 0, property_len = 0, interval_len = 0;
 
-	properties = (artik_bt_a2dp_source_property *) malloc
-			(sizeof(artik_bt_a2dp_source_property));
-	memset(properties, 0, sizeof(artik_bt_a2dp_source_property));
+	memset(&properties, 0, sizeof(artik_bt_a2dp_source_property));
 
-	g_variant_get(parameters, "(&o@a{sv})", &_transport_path, &_g_property);
 	if (_endpoint->transport_path)
 		free(_endpoint->transport_path);
-	_endpoint->transport_path = (char *) malloc(strlen(_transport_path) + 1);
-	strcpy(_endpoint->transport_path, _transport_path);
-	_endpoint->transport_path[strlen(_transport_path)] = '\0';
 
+	g_variant_get(parameters, "(o@a{sv})", &_endpoint->transport_path, &_g_property);
 	g_dbus_method_invocation_return_value(invocation, NULL);
 
 	property_len = g_variant_n_children(_g_property);
-	if (property_len > 0) {
-		for (i = 0; i < property_len; i++) {
-			prop_dict = g_variant_get_child_value(_g_property, i);
-			g_variant_get(prop_dict, "{&sv}", &key, &value);
+	if (!property_len)
+		return;
 
-			if (g_strcmp0(key, "Device") == 0) {
-				g_variant_get(value, "o", &_device);
-				properties->device = (char *) malloc(strlen(_device) + 1);
-				strcpy(properties->device, _device);
-				properties->device[strlen(_device)] = '\0';
-				log_dbg("device is: %s\n", properties->device);
-			} else if (g_strcmp0(key, "UUID") == 0) {
-				g_variant_get(value, "s", &_uuid);
-				properties->uuid = (char *) malloc(strlen(_uuid) + 1);
-				strcpy(properties->uuid, _uuid);
-				properties->uuid[strlen(_uuid)] = '\0';
-				log_dbg("uuid is: %s\n", properties->uuid);
-			} else if (g_strcmp0(key, "Codec") == 0) {
-				g_variant_get(value, "y", &properties->codec);
-			} else if (g_strcmp0(key, "Configuration") == 0) {
-				interval_len = g_variant_n_children(value);
-				if (interval_len > 0) {
-					properties->configuration = (unsigned char *) malloc
+	for (i = 0; i < property_len; i++) {
+		prop_dict = g_variant_get_child_value(_g_property, i);
+		g_variant_get(prop_dict, "{&sv}", &key, &value);
+
+		if (g_strcmp0(key, "Device") == 0) {
+			g_variant_get(value, "&o", &properties.device);
+			log_dbg("device is: %s\n", properties.device);
+		} else if (g_strcmp0(key, "UUID") == 0) {
+			g_variant_get(value, "&s", &properties.uuid);
+			log_dbg("uuid is: %s\n", properties.uuid);
+		} else if (g_strcmp0(key, "Codec") == 0) {
+			g_variant_get(value, "y", &properties.codec);
+		} else if (g_strcmp0(key, "Configuration") == 0) {
+			interval_len = g_variant_n_children(value);
+			if (interval_len > 0) {
+				if (!properties.configuration) {
+					properties.configuration = (unsigned char *) malloc
 							((sizeof(unsigned char) * interval_len) + 1);
 					for (j = 0; j < interval_len; j++) {
 						internal = g_variant_get_child_value(value, j);
 						g_variant_get(internal, "y",
-								&properties->configuration[j]);
+								&properties.configuration[j]);
 						g_variant_unref(internal);
 					}
-					properties->configuration[interval_len] = '\0';
+					properties.configuration[interval_len] = '\0';
 				}
-			} else if (g_strcmp0(key, "State") == 0) {
-				g_variant_get(value, "s", &_state);
-				properties->state = (char *) malloc(strlen(_state) + 1);
-				strcpy(properties->state, _state);
-				properties->state[strlen(_state)] = '\0';
-				log_dbg("state is: %s\n", properties->state);
 			}
-			g_variant_unref(value);
-			g_variant_unref(prop_dict);
+		} else if (g_strcmp0(key, "State") == 0) {
+			g_variant_get(value, "&s", &properties.state);
+			log_dbg("state is: %s\n", properties.state);
 		}
-		g_variant_unref(_g_property);
-
-		if (_endpoint->set_callback)
-			_endpoint->set_callback(properties);
+		g_variant_unref(value);
+		g_variant_unref(prop_dict);
 	}
+
+	if (_endpoint->set_callback)
+		_endpoint->set_callback(&properties);
+
+	g_variant_unref(_g_property);
+
+	if (properties.configuration)
+		free(properties.configuration);
 }
 
 static void _handle_clear_configuration(void)
@@ -190,11 +182,12 @@ static void bt_a2dp_source_create(
 			_endpoint->delay_reporting = delay_reporting;
 			_endpoint->endpoint_path = (char *) malloc(strlen(path) + 1);
 			if (_endpoint->endpoint_path) {
-				strcpy(_endpoint->endpoint_path, path);
+				strncpy(_endpoint->endpoint_path, path, strlen(path));
 				_endpoint->endpoint_path[strlen(path)] = '\0';
 			} else {
 				free(_endpoint);
 				_endpoint = NULL;
+				return;
 			}
 			if (cap_size) {
 				_endpoint->capabilities = (char *) malloc(cap_size);
@@ -205,6 +198,7 @@ static void bt_a2dp_source_create(
 					free(_endpoint->endpoint_path);
 					free(_endpoint);
 					_endpoint = NULL;
+					return;
 				}
 			}
 		}
@@ -405,7 +399,7 @@ artik_error bt_a2dp_source_get_properties(
 		g_variant_get(v, "o", &device);
 
 		(*properties)->device = (char *) malloc(strlen(device) + 1);
-		strcpy((*properties)->device, device);
+		strncpy((*properties)->device, device, strlen(device));
 		(*properties)->device[strlen(device)] = '\0';
 
 		g_variant_unref(v);
@@ -423,7 +417,7 @@ artik_error bt_a2dp_source_get_properties(
 		g_variant_get(tuple, "(v)", &v);
 		g_variant_get(v, "s", &uuid);
 		(*properties)->uuid = (char *) malloc(strlen(uuid) + 1);
-		strcpy((*properties)->uuid, uuid);
+		strncpy((*properties)->uuid, uuid, strlen(uuid));
 		(*properties)->uuid[strlen(uuid)] = '\0';
 
 		g_variant_unref(v);
@@ -478,8 +472,8 @@ artik_error bt_a2dp_source_get_properties(
 
 		g_variant_get(tuple, "(v)", &v);
 		g_variant_get(v, "s", &state);
-		(*properties)->state = (char *) malloc(strlen(state)+1);
-		strcpy((*properties)->state, state);
+		(*properties)->state = (char *) malloc(strlen(state) + 1);
+		strncpy((*properties)->state, state, strlen(state));
 		(*properties)->state[strlen(state)] = '\0';
 		log_dbg("Current state is :%s\n", (*properties)->state);
 

@@ -88,112 +88,115 @@ static int check_dhcp_server_config(artik_network_dhcp_server_config *config)
 	const char *str_regex = "^(([0-9]|[1-9][0-9]"\
 	"|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]"\
 	"|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$";
+	regex_t preg;
+	int match;
+	size_t nmatch = 3;
+	regmatch_t pmatch[nmatch];
+	int ret = 0;
 
-	if (str_regex) {
-		regex_t preg;
-		int err;
+	if (regcomp(&preg, str_regex, REG_EXTENDED))
+		return -1;
 
-		err = regcomp(&preg, str_regex, REG_EXTENDED);
+	if (preg.re_nsub != 3) {
+		ret = -1;
+		goto exit;
+	}
 
-		if (err == 0) {
-			int match;
-			size_t nmatch = 0;
-			regmatch_t *pmatch = NULL;
+	if (!strcmp(config->ip_addr.address, "")) {
+		match = regexec(&preg,
+			config->ip_addr.address,
+			nmatch, pmatch, 0);
 
-			nmatch = preg.re_nsub + 1;
+		if (match != 0) {
+			log_err("Wrong ip_addr");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("ip_addr not defined");
+		ret = -1;
+		goto exit;
+	}
 
-			pmatch = malloc(sizeof(*pmatch) * nmatch);
+	if (!strcmp(config->netmask.address, "")) {
+		match = regexec(&preg,
+			config->netmask.address,
+			nmatch, pmatch, 0);
 
-			if (nmatch == 4) {
+		if (match != 0) {
+			log_err("Wrong netmask");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("netmask not defined");
+		ret = -1;
+		goto exit;
+	}
 
-				if (strcmp(config->ip_addr.address, "") != 0) {
-					match = regexec(&preg,
-						config->ip_addr.address,
-						nmatch, pmatch, 0);
+	if (!strcmp(config->gw_addr.address, "")) {
+		match = regexec(&preg,
+			config->gw_addr.address,
+			nmatch, pmatch, 0);
 
-					if (match != 0) {
-						log_err("Wrong ip_addr");
-						return -1;
-					}
-				} else {
-					log_err("ip_addr not defined");
-					return -1;
-				}
+		if (match != 0) {
+			log_err("Wrong gw_addr");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("gw_addr not defined");
+		ret = -1;
+		goto exit;
+	}
 
-				if (strcmp(config->netmask.address, "") != 0) {
-					match = regexec(&preg,
-						config->netmask.address,
-						nmatch, pmatch, 0);
+	if (!strcmp(config->dns_addr[0].address, "")) {
+		match = regexec(&preg,
+			config->dns_addr[0].address,
+			nmatch, pmatch, 0);
 
-					if (match != 0) {
-						log_err("Wrong netmask");
-						return -1;
-					}
-				} else {
-					log_err("netmask not defined");
-					return -1;
-				}
+		if (match != 0) {
+			log_err("Wrong dns_addr[0]");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("dns_addr[0] not defined");
+		ret = -1;
+		goto exit;
+	}
 
-				if (strcmp(config->gw_addr.address, "") != 0) {
-					match = regexec(&preg,
-						config->gw_addr.address,
-						nmatch, pmatch, 0);
+	if (!strcmp(config->dns_addr[1].address, "")) {
+		match = regexec(&preg,
+			config->dns_addr[1].address,
+			nmatch, pmatch, 0);
 
-					if (match != 0) {
-						log_err("Wrong gw_addr");
-						return -1;
-					}
-				} else {
-					log_err("gw_addr not defined");
-					return -1;
-				}
-
-				if (strcmp(config->dns_addr[0].address, "")
-									!= 0) {
-					match = regexec(&preg,
-						config->dns_addr[0].address,
-						nmatch, pmatch, 0);
-
-					if (match != 0) {
-						log_err("Wrong dns_addr[0]");
-						return -1;
-					}
-				} else {
-					log_err("dns_addr[0] not defined");
-					return -1;
-				}
-
-				if (strcmp(config->dns_addr[1].address, "")
-									!= 0) {
-					match = regexec(&preg,
-						config->dns_addr[1].address,
-						nmatch, pmatch, 0);
-
-					if (match != 0) {
-						log_err("Wrong dns_addr[1]");
-						return -1;
-					}
-				}
-
-				if (strcmp(config->start_addr.address, "")
-									!= 0) {
-					match = regexec(&preg,
-						config->start_addr.address,
-						nmatch, pmatch, 0);
-
-					if (match != 0) {
-						log_err("Wrong start_addr");
-						return -1;
-					}
-				} else {
-					log_err("start_addr not defined");
-					return -1;
-				}
-			}
+		if (match != 0) {
+			log_err("Wrong dns_addr[1]");
+			ret = -1;
+			goto exit;
 		}
 	}
 
-	return 0;
+	if (!strcmp(config->start_addr.address, "")) {
+		match = regexec(&preg,
+			config->start_addr.address,
+			nmatch, pmatch, 0);
+
+		if (match != 0) {
+			log_err("Wrong start_addr");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("start_addr not defined");
+		ret = -1;
+		goto exit;
+	}
+
+exit:
+	regfree(&preg);
+	return ret;
 }
 
 static int check_network_config(artik_network_config *config)
@@ -201,97 +204,99 @@ static int check_network_config(artik_network_config *config)
 	const char *str_regex = "^(([0-9]|[1-9][0-9]"\
 	"|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]"\
 	"|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$";
+	regex_t preg;
+	int match;
+	size_t nmatch = 3;
+	regmatch_t pmatch[nmatch];
+	int ret = 0;
 
-	if (str_regex) {
-		regex_t preg;
-		int err;
+	if (regcomp(&preg, str_regex, REG_EXTENDED))
+		return -1;
 
-		err = regcomp(&preg, str_regex, REG_EXTENDED);
+	if (preg.re_nsub != 3) {
+		ret = -1;
+		goto exit;
+	}
 
-		if (err == 0) {
-			int match;
-			size_t nmatch = 0;
-			regmatch_t *pmatch = NULL;
+	if (!strcmp(config->ip_addr.address, "")) {
+		match = regexec(&preg,
+			config->ip_addr.address,
+			nmatch, pmatch, 0);
 
-			nmatch = preg.re_nsub + 1;
+		if (match != 0) {
+			log_err("Wrong ip_addr");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("ip_addr not defined");
+		ret = -1;
+		goto exit;
+	}
 
-			pmatch = malloc(sizeof(*pmatch) * nmatch);
+	if (!strcmp(config->netmask.address, "")) {
+		match = regexec(&preg,
+			config->netmask.address,
+			nmatch, pmatch, 0);
 
-			if (nmatch == 4) {
+		if (match != 0) {
+			log_err("Wrong netmask");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("netmask not defined");
+		ret = -1;
+		goto exit;
+	}
 
-				if (strcmp(config->ip_addr.address, "") != 0) {
-					match = regexec(&preg,
-						config->ip_addr.address,
-						nmatch, pmatch, 0);
+	if (!strcmp(config->gw_addr.address, "")) {
+		match = regexec(&preg,
+			config->gw_addr.address,
+			nmatch, pmatch, 0);
 
-					if (match != 0) {
-						log_err("Wrong ip_addr");
-						return -1;
-					}
-				} else {
-					log_err("ip_addr not defined");
-					return -1;
-				}
+		if (match != 0) {
+			log_err("Wrong gw_addr");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("gw_addr not defined");
+		ret = -1;
+		goto exit;
+	}
 
-				if (strcmp(config->netmask.address, "") != 0) {
-					match = regexec(&preg,
-						config->netmask.address,
-						nmatch, pmatch, 0);
+	if (!strcmp(config->dns_addr[0].address, "")) {
+		match = regexec(&preg,
+			config->dns_addr[0].address,
+			nmatch, pmatch, 0);
 
-					if (match != 0) {
-						log_err("Wrong netmask");
-						return -1;
-					}
-				} else {
-					log_err("netmask not defined");
-					return -1;
-				}
+		if (match != 0) {
+			log_err("Wrong dns_addr[0]");
+			ret = -1;
+			goto exit;
+		}
+	} else {
+		log_err("dns_addr[0] not defined");
+		ret = -1;
+		goto exit;
+	}
 
-				if (strcmp(config->gw_addr.address, "") != 0) {
-					match = regexec(&preg,
-						config->gw_addr.address,
-						nmatch, pmatch, 0);
+	if (!strcmp(config->dns_addr[1].address, "")) {
+		match = regexec(&preg,
+			config->dns_addr[1].address,
+			nmatch, pmatch, 0);
 
-					if (match != 0) {
-						log_err("Wrong gw_addr");
-						return -1;
-					}
-				} else {
-					log_err("gw_addr not defined");
-					return -1;
-				}
-
-				if (strcmp(config->dns_addr[0].address, "")
-									!= 0) {
-					match = regexec(&preg,
-						config->dns_addr[0].address,
-						nmatch, pmatch, 0);
-
-					if (match != 0) {
-						log_err("Wrong dns_addr[0]");
-						return -1;
-					}
-				} else {
-					log_err("dns_addr[0] not defined");
-					return -1;
-				}
-
-				if (strcmp(config->dns_addr[1].address, "")
-									!= 0) {
-					match = regexec(&preg,
-						config->dns_addr[1].address,
-						nmatch, pmatch, 0);
-
-					if (match != 0) {
-						log_err("Wrong dns_addr[1]");
-						return -1;
-					}
-				}
-			}
+		if (match != 0) {
+			log_err("Wrong dns_addr[1]");
+			ret = -1;
+			goto exit;
 		}
 	}
 
-	return 0;
+exit:
+	regfree(&preg);
+	return ret;
 }
 
 static int network_connection(int fd, enum watch_io io, void *user_data)
@@ -312,6 +317,8 @@ static int network_connection(int fd, enum watch_io io, void *user_data)
 		log_dbg("%s netlink error", __func__);
 		return 1;
 	}
+
+	memset(buf, 0, sizeof(buf));
 	len = recvmsg(fd, &msg, 0);
 
 	for (hdr = (struct nlmsghdr *)buf; len > 0 && NLMSG_OK(hdr, len); hdr =
@@ -384,6 +391,7 @@ static artik_error initialize_watch_online_status(void)
 	if (bind(watch_online_status->fd, (struct sockaddr *)&addr,
 							sizeof(addr)) != 0) {
 		log_err("couldn't bind NETLINK_ROUTE socket");
+		close(watch_online_status->fd);
 		free(watch_online_status);
 		watch_online_status = NULL;
 		return E_ACCESS_DENIED;
@@ -393,6 +401,7 @@ static artik_error initialize_watch_online_status(void)
 				&watch_online_status->current_online_status);
 	if (ret != S_OK) {
 		log_err("couldn't get initial online status");
+		close(watch_online_status->fd);
 		free(watch_online_status);
 		watch_online_status = NULL;
 		return ret;
@@ -420,7 +429,7 @@ artik_error os_network_add_watch_online_status(
 	if (!watch_online_status) {
 		ret = initialize_watch_online_status();
 
-		if (ret != S_OK)
+		if (!watch_online_status || (ret != S_OK))
 			return ret;
 	}
 
@@ -434,9 +443,7 @@ artik_error os_network_add_watch_online_status(
 	node->config.callback = app_callback;
 	node->config.user_data = user_data;
 
-	if (ret != S_OK)
-		artik_list_delete_node(&(watch_online_status->root),
-							(artik_list *)node);
+	artik_list_delete_node(&(watch_online_status->root), (artik_list *)node);
 
 	*handle = (watch_online_status_handle)node->node.handle;
 
@@ -515,7 +522,17 @@ static int dhcp_client_renew(artik_network_dhcp_client_handle *handle,
 
 		log_dbg("Renewing IP address");
 
-		get_ipv4addr(interface, &addr);
+		if (!dhcp_client) {
+			log_err("Could not find DHCP client instance");
+			ret = ERROR;
+			goto exit;
+		}
+
+		if (get_ipv4addr(interface, &addr) < 0) {
+			log_err("Failed to get IP address");
+			ret = ERROR;
+			goto exit;
+		}
 
 		if (dhcpc_request(*handle, &ds, interface, &addr, true)
 								== ERROR) {

@@ -839,10 +839,10 @@ static artik_error _commissioning_target_start(artik_zigbee_module *zb,
 	count = get_test_device_count();
 	for (i = index; i < count; i++) {
 		test_device = get_test_device(i);
-		if (test_device->ezmode_commissioning_target_start == NULL ||
-			test_device->ezmode_commissioning_target_stop == NULL)
+		if (!test_device->ezmode_commissioning_target_start ||
+				!test_device->ezmode_commissioning_target_stop) {
 			continue;
-
+		}
 		showln("Target: testing started by ep(%d)",
 						test_device->endpoint_id);
 
@@ -1000,10 +1000,10 @@ static artik_error _commissioning_initiator_start(artik_zigbee_module *zb,
 	count = get_test_device_count();
 	for (i = index; i < count; i++) {
 		test_device = get_test_device(i);
-		if (test_device->ezmode_commissioning_initiator_start == NULL ||
-			test_device->ezmode_commissioning_initiator_stop
-									== NULL)
+		if (!test_device->ezmode_commissioning_initiator_start ||
+				!test_device->ezmode_commissioning_initiator_stop) {
 			continue;
+		}
 
 		showln("Initiator: testing started by ep(%d)",
 						test_device->endpoint_id);
@@ -1407,10 +1407,9 @@ static artik_error _find_network(artik_zigbee_module *zb)
 
 static void _func_network_find_join(char *input, int max_size)
 {
-	static int step;
-	artik_zigbee_module *zb;
-	int n;
-
+	static int step = 0;
+	artik_zigbee_module *zb = NULL;
+	int n = 0;
 	artik_error ret = E_ZIGBEE_ERROR;
 
 	if (input == NULL)
@@ -1449,6 +1448,11 @@ static void _func_network_find_join(char *input, int max_size)
 		}
 
 		n = read_int(input, max_size, -1);
+		if ((n < 0) || (n > 9)) {
+			showln("Please input legal value");
+			break;
+		}
+
 		switch (n) {
 		case 0:
 			_func_entry(_func_network);
@@ -1466,8 +1470,6 @@ static void _func_network_find_join(char *input, int max_size)
 				showln("The selection is out of the"\
 					" network found size %d",
 						nwk_find_size);
-			else if (n < 0)
-				showln("Please input legal value");
 			else {
 				showln("Join network channel(%d), tx power(%d)"\
 					", pan id(0x%04X)",
@@ -2117,8 +2119,10 @@ void _on_callback_attr_changed(artik_zigbee_attribute_changed_response *info)
 	int n;
 
 	device = get_test_device_by_endpoint_id(info->endpoint_id);
-	if (device == NULL)
+	if (!device) {
 		log_err("Invalid endpoint id: %d", info->endpoint_id);
+		return;
+	}
 
 	switch (info->type) {
 	case ARTIK_ZIGBEE_ATTR_ONOFF_STATUS:

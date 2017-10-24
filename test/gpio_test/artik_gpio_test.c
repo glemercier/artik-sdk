@@ -83,7 +83,7 @@ static artik_error test_rgb_led(int platid)
 	for (i = 0; i < (sizeof(leds) / sizeof(*leds)); i++) {
 		ret = gpio->request(&leds[i].handle, &leds[i].config);
 		if (ret != S_OK)
-			return ret;
+			goto exit;
 	}
 
 	/* Play around with all possible colors */
@@ -111,16 +111,12 @@ static artik_error test_rgb_led(int platid)
 	gpio->write(leds[G].handle, 1);	/* RBG */
 	usleep(1000 * 1000);
 
+exit:
 	/* Release GPIOs for LEDs */
 	for (i = 0; i < (sizeof(leds) / sizeof(*leds)); i++)
 		gpio->release(leds[i].handle);
 
-	ret = artik_release_api_module(gpio);
-	if (ret != S_OK) {
-		fprintf(stderr, "TEST: %s failed, could not release module\n",
-								__func__);
-		return ret;
-	}
+	artik_release_api_module(gpio);
 
 	fprintf(stdout, "TEST: %s %s\n", __func__, (ret == S_OK) ? "succeeded" :
 								"failed");

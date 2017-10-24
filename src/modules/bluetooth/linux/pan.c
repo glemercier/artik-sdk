@@ -197,7 +197,7 @@ static artik_error _generate_device_path(char *_path,
 	memset(_path, 0, NETWORK_PATH_LEN);
 	strncpy(_path, DBUS_BLUEZ_OBJECT_PATH_HCI0,
 		strlen(DBUS_BLUEZ_OBJECT_PATH_HCI0));
-	strcat(_path, MAC_PREFIX);
+	strncat(_path, MAC_PREFIX, NETWORK_PATH_LEN - strlen(_path) - 1);
 
 	token = strtok((char *)_mac_addr, ":");
 	while (token) {
@@ -206,10 +206,10 @@ static artik_error _generate_device_path(char *_path,
 			log_err("MAC format error! Must be as XX:XX:XX:XX:XX:XX");
 			return E_BT_ERROR;
 		}
-		strcat(_path, token);
+		strncat(_path, token, NETWORK_PATH_LEN - strlen(_path) - 1);
 		/*last mac addr didn't appen '_'*/
 		if (cat_count != 6)
-			strcat(_path, "_");
+			strncat(_path, "_", NETWORK_PATH_LEN - strlen(_path) - 1);
 		token = strtok(NULL, ":");
 	}
 
@@ -220,8 +220,6 @@ static artik_error _generate_device_path(char *_path,
 artik_error bt_pan_connect(const char *mac_addr,
 	const char *uuid, char **network_interface)
 {
-	char *addr = NULL;
-
 	if (_is_network_path_valid() == 1)
 		return E_BT_ERROR;
 	if (_pan_parameter_check(mac_addr, uuid) != S_OK)
@@ -229,11 +227,7 @@ artik_error bt_pan_connect(const char *mac_addr,
 	if (!network_interface)
 		return E_INVALID_VALUE;
 
-	addr = (char *)malloc(strlen(mac_addr) + 1);
-	strncpy(addr, mac_addr, strlen(mac_addr));
-	addr[strlen(mac_addr)] = '\0';
-
-	if (_generate_device_path(_network_path, addr) != S_OK)
+	if (_generate_device_path(_network_path, mac_addr) != S_OK)
 		return E_BAD_ARGS;
 
 	if (_pan_connect(_network_path, uuid, network_interface) == S_OK)

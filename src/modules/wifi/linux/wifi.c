@@ -398,12 +398,11 @@ int wifi_connect(const char *ssid, const char *psk, int save_profile)
 		return WIFI_ERROR_CONNECT_INVALID_PSK;
 
 	buf = os_malloc(len);
-	os_memset(buf, 0, len);
-	os_memset(cmd, 0, 100);
-
 	if (!buf)
 		return WIFI_ERROR;
 
+	os_memset(buf, 0, len);
+	os_memset(cmd, 0, 100);
 
 	ret = _wifi_send_cmd(ctrl_conn, "LIST_NETWORKS", buf, &len);
 
@@ -437,7 +436,7 @@ int wifi_connect(const char *ssid, const char *psk, int save_profile)
 		netid = atoi(buf);
 	}
 
-	sprintf(cmd, "SET_NETWORK %d ssid \"%s\"", netid, ssid);
+	snprintf(cmd, sizeof(cmd), "SET_NETWORK %d ssid \"%s\"", netid, ssid);
 	ret = _wifi_send_cmd(ctrl_conn, cmd, buf, &len);
 
 	if (ret != WIFI_SUCCESS) {
@@ -452,7 +451,7 @@ int wifi_connect(const char *ssid, const char *psk, int save_profile)
 	}
 
 	if (psk && os_strlen(psk)) {
-		sprintf(cmd, "SET_NETWORK %d psk \"%s\"", netid, psk);
+		snprintf(cmd, sizeof(cmd), "SET_NETWORK %d psk \"%s\"", netid, psk);
 		ret = _wifi_send_cmd(ctrl_conn, cmd, buf, &len);
 		if (ret != WIFI_SUCCESS) {
 			os_free(buf);
@@ -466,7 +465,7 @@ int wifi_connect(const char *ssid, const char *psk, int save_profile)
 		}
 	} else {
 		os_memset(cmd, 0, 100);
-		sprintf(cmd, "SET_NETWORK %d key_mgmt %s", netid, "NONE");
+		snprintf(cmd, sizeof(cmd), "SET_NETWORK %d key_mgmt %s", netid, "NONE");
 		ret = _wifi_send_cmd(ctrl_conn, cmd, buf, &len);
 		if (ret != WIFI_SUCCESS) {
 			os_free(buf);
@@ -480,7 +479,7 @@ int wifi_connect(const char *ssid, const char *psk, int save_profile)
 	}
 
 	os_memset(cmd, 0, 100);
-	sprintf(cmd, "SELECT_NETWORK %d", netid);
+	snprintf(cmd, sizeof(cmd), "SELECT_NETWORK %d", netid);
 	ret = _wifi_send_cmd(ctrl_conn, cmd, buf, &len);
 	if (ret != WIFI_SUCCESS) {
 		os_free(buf);
@@ -494,7 +493,7 @@ int wifi_connect(const char *ssid, const char *psk, int save_profile)
 
 	if (save_profile) {
 		os_memset(cmd, 0, 100);
-		sprintf(cmd, "SAVE_CONFIG");
+		snprintf(cmd, sizeof(cmd), "SAVE_CONFIG");
 		ret = _wifi_send_cmd(ctrl_conn, cmd, buf, &len);
 		if (ret != WIFI_SUCCESS) {
 			os_free(buf);

@@ -228,7 +228,8 @@ int main(void)
 	desc.property = test_desc_props;
 	desc.length = sizeof(TEST_DESCRIPTOR_VALUE);
 	desc.value = (unsigned char *)malloc(sizeof(desc.value) * desc.length + 1);
-	strcpy((char *)desc.value, TEST_DESCRIPTOR_VALUE);
+	strncpy((char *)desc.value, TEST_DESCRIPTOR_VALUE,
+			sizeof(desc.value) * desc.length);
 	bt->gatt_add_descriptor(svc_id, char_id, desc, &desc_id);
 
 	printf("> set read/write/notify request callbacks\n");

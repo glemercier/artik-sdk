@@ -21,6 +21,8 @@
 artik::Network::Network() {
   m_module = reinterpret_cast<artik_network_module*>(
       artik_request_api_module("network"));
+  m_dhcp_client_handle = NULL;
+  m_dhcp_server_handle = NULL;
 }
 
 artik::Network::~Network() {

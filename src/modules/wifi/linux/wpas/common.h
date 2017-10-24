@@ -329,9 +329,11 @@ static inline char *MAC2STR_BY_FORMAT(char *format, const u8 *addr)
 {
 	char str[128] = "";
 
-	sprintf(str, format, (unsigned int)(addr)[0], (unsigned int)(addr)[1],
-		(unsigned int)(addr)[2], (unsigned int)(addr)[3],
-		(unsigned int)(addr)[4], (unsigned int)(addr)[5]);
+	snprintf(str, sizeof(str), format,
+			(unsigned int)(addr)[0], (unsigned int)(addr)[1],
+			(unsigned int)(addr)[2], (unsigned int)(addr)[3],
+			(unsigned int)(addr)[4], (unsigned int)(addr)[5]);
+
 	return strdup(str);
 }
 

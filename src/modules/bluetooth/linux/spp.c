@@ -177,12 +177,10 @@ artik_error bt_spp_register_profile(artik_bt_spp_profile_option *opt)
 	GVariantBuilder *option = NULL;
 	int ret = -1;
 
-	if (opt == NULL)
+	if ((opt == NULL) || (opt->channel <= 0))
 		return E_INVALID_VALUE;
-	if (opt->channel <= 0)
-		return E_INVALID_VALUE;
-	if ((strncmp(opt->role, "server", strlen("server")))
-		&& (strncmp(opt->role, "client", strlen("client"))))
+	if (opt->role && (strncmp(opt->role, "server", strlen("server")))
+			&& (strncmp(opt->role, "client", strlen("client"))))
 		return E_INVALID_VALUE;
 
 	option = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));

@@ -226,9 +226,11 @@ artik_error cunit_init(CU_pSuite *psuite)
 artik_error remote_info_get(void)
 {
 	int ret = 0;
+	char format[32];
 
 	fprintf(stdout, "remote device mac address: ");
-	ret = fscanf(stdin, "%s", remote_mac_addr);
+	snprintf(format, sizeof(format), "%%%ds", (int)BT_ADDRESS_LEN);
+	ret = fscanf(stdin, format, remote_mac_addr);
 	if (ret == -1)
 		return E_INVALID_VALUE;
 	fprintf(stdout, "remote address: %s-%zu\n",

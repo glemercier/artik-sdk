@@ -40,7 +40,6 @@ namespace artik {
 class Mqtt {
  private:
   artik_mqtt_module *m_module;
-  artik_mqtt_module *m_loop;
   artik_mqtt_config m_config;
   artik_mqtt_handle m_client;
 

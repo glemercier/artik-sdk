@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/stat.h>
+#include <linux/limits.h>
 
 #include <artik_module.h>
 #include <artik_security.h>
@@ -83,9 +84,13 @@ static bool read_pem_file(const char *filename, char **out)
 	if (!fp)
 		return false;
 
-	fstat(fileno(fp), &st);
+	if (fstat(fileno(fp), &st)) {
+		fclose(fp);
+		return false;
+	}
+
 	*out = malloc(st.st_size + 1);
-	if (!out) {
+	if (!*out) {
 		fclose(fp);
 		return false;
 	}
@@ -98,6 +103,7 @@ static bool read_pem_file(const char *filename, char **out)
 			if (ferror(fp)) {
 				fclose(fp);
 				free(*out);
+				*out = NULL;
 				return false;
 			}
 			break;
@@ -234,6 +240,14 @@ int main(int argc, char **argv)
 	if (!read_pem_file(argv[2], &ca_pem)) {
 		snprintf(json_ret, JSON_RET_MAX_LEN, JSON_RET_TPL, "true",
 				"Cannot read root CA file", E_BAD_ARGS);
+		usage();
+		ret = convert_err_code(E_BAD_ARGS);
+		goto exit;
+	}
+
+	if (strlen(argv[3]) > PATH_MAX) {
+		snprintf(json_ret, JSON_RET_MAX_LEN, JSON_RET_TPL, "true",
+				"Invalid size for signed data file", E_BAD_ARGS);
 		usage();
 		ret = convert_err_code(E_BAD_ARGS);
 		goto exit;

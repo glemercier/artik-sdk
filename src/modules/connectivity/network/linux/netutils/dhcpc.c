@@ -384,6 +384,7 @@ void *dhcpc_open(const void *macaddr, int maclen)
 		}
 
 		/* Bind the socket */
+		memset(&addr, 0, sizeof(struct sockaddr_in));
 		addr.sin_family      = AF_INET;
 		addr.sin_port        = htons(DHCPC_CLIENT_PORT);
 		addr.sin_addr.s_addr = INADDR_ANY;
@@ -459,7 +460,10 @@ int dhcpc_request(void *handle, struct dhcpc_state *presult,
 
 	/* Save the currently assigned IP address (should be INADDR_ANY) */
 	oldaddr.s_addr = 0;
-	get_ipv4addr(interface, &oldaddr);
+	if (get_ipv4addr(interface, &oldaddr) < 0) {
+		log_err("Get IPv4 address failed: %s", strerror(errno));
+		return ERROR;
+	}
 
 	/* Loop until we receive the lease (or an error occurs) */
 	do {
@@ -512,9 +516,10 @@ int dhcpc_request(void *handle, struct dhcpc_state *presult,
 			if (count > 0)
 				count--;
 			else {
-				log_err("Reached the limit of broadcasting\n"
-					"DISCOVER");
-				(void)set_ipv4addr(interface, &oldaddr);
+				log_err("Reached the limit of broadcasting\nDISCOVER");
+				if (set_ipv4addr(interface, &oldaddr) < 0)
+					log_err("Failed to setold IP address\n");
+
 				return ERROR;
 			}
 
@@ -540,8 +545,9 @@ int dhcpc_request(void *handle, struct dhcpc_state *presult,
 					 * by the server and break out of the
 					 * loop.
 					 */
-					(void)set_ipv4addr(interface,
-							&presult->ipaddr);
+					if (set_ipv4addr(interface, &presult->ipaddr) < 0)
+						return ERROR;
+
 					state = STATE_HAVE_OFFER;
 				}
 			}
@@ -609,8 +615,9 @@ int dhcpc_request(void *handle, struct dhcpc_state *presult,
 				else if (msgtype == DHCPOFFER) {
 					log_dbg("Received another OFFER,\n"
 						"send DECLINE\n");
-					(void)dhcpc_sendmsg(pdhcpc, presult,
-						DHCPDECLINE, interface, renew);
+					if (dhcpc_sendmsg(pdhcpc, presult,
+						DHCPDECLINE, interface, renew) < 0)
+						return ERROR;
 				}
 
 				/* Otherwise, it is something that we do not
@@ -629,7 +636,9 @@ int dhcpc_request(void *handle, struct dhcpc_state *presult,
 
 			else if (errno != EAGAIN) {
 				/* An error other than a timeout was received */
-				(void)set_ipv4addr(interface, &oldaddr);
+				if (set_ipv4addr(interface, &oldaddr) < 0)
+					log_dbg("Failed to revert old IP address");
+
 				return ERROR;
 			}
 

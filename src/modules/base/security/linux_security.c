@@ -317,6 +317,10 @@ artik_error os_security_get_certificate(artik_security_handle handle,
 	PEM_write_bio_X509(b64, params.certs[0]);
 	BIO_write(b64, "\0", 1);
 	BIO_get_mem_ptr(b64, &bptr);
+	if (!bptr) {
+		BIO_free(b64);
+		return E_BAD_ARGS;
+	}
 
 	/* Allocate memory for the certificate string */
 	*cert = (char *)malloc(bptr->length);
@@ -443,6 +447,10 @@ artik_error os_security_get_ca_chain(artik_security_handle handle,
 
 	BIO_write(b64, "\0", 1);
 	BIO_get_mem_ptr(b64, &bptr);
+	if (!bptr) {
+		BIO_free(b64);
+		return E_BAD_ARGS;
+	}
 
 	*chain = (char *)malloc(bptr->length);
 	if (!(*chain)) {

@@ -207,13 +207,23 @@ int hwaddr_mask_txt(char *buf, size_t len, const u8 *addr, const u8 *mask)
 		}
 	}
 
-	if (print_mask)
-		res = os_snprintf(buf, len, "%s/%s",
-				  MAC2STR(addr), MAC2STR(mask));
-	else
-		res = os_snprintf(buf, len, "%s", MAC2STR(addr));
+	if (print_mask) {
+		char *addr_s = MAC2STR(addr);
+		char *mask_s = MAC2STR(mask);
+
+		res = os_snprintf(buf, len, "%s/%s", addr_s, mask_s);
+		free(mask_s);
+		free(addr_s);
+	} else {
+		char *addr_s = MAC2STR(addr);
+
+		res = os_snprintf(buf, len, "%s", addr_s);
+		free(addr_s);
+	}
+
 	if (os_snprintf_error(len, res))
 		return -1;
+
 	return res;
 }
 

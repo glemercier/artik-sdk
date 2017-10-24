@@ -52,7 +52,7 @@ static artik_error os_adc_open(artik_adc_config *config)
 
 	user_data->fd = open(user_data->path, O_SYNC | O_RDONLY);
 
-	return (user_data->fd < 0) ? E_BUSY : S_OK;
+	return (user_data->fd <= 0) ? E_BUSY : S_OK;
 }
 
 artik_error os_adc_request(artik_adc_config *config)
@@ -111,13 +111,10 @@ artik_error os_adc_get_value(artik_adc_config *config, int *value)
 
 	log_dbg("");
 
+	if (!config || !value)
+		return E_BAD_ARGS;
+
 	user_data = (artik_adc_user_data_t *)config->user_data;
-
-	if (!config)
-		return E_BAD_ARGS;
-
-	if (!value)
-		return E_BAD_ARGS;
 
 	if (os_adc_open(config) != S_OK)
 		return E_BAD_ARGS;

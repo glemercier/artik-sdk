@@ -51,6 +51,9 @@ artik::AccelerometerSensor::~AccelerometerSensor() {
 
 artik::AccelerometerSensor
 &artik::AccelerometerSensor::operator=(artik::AccelerometerSensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -107,7 +110,7 @@ int artik::AccelerometerSensor::get_speed_z(void) const {
   return data;
 }
 
-artik::GyroSensor::GyroSensor(artik_sensor_gyro*sensor,
+artik::GyroSensor::GyroSensor(artik_sensor_gyro *sensor,
     artik_sensor_config *config, artik_sensor_handle handle, int index)
   : artik::SensorDevice(),
     m_sensor(sensor),
@@ -135,6 +138,9 @@ artik::GyroSensor::~GyroSensor() {
 }
 
 artik::GyroSensor &artik::GyroSensor::operator=(artik::GyroSensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -220,6 +226,9 @@ artik::HumiditySensor::~HumiditySensor() {
 
 artik::HumiditySensor &artik::HumiditySensor::operator=(
     artik::HumiditySensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -285,6 +294,9 @@ artik::LightSensor::~LightSensor() {
 
 artik::LightSensor &artik::LightSensor::operator=(
     artik::LightSensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -350,6 +362,9 @@ artik::TemperatureSensor::~TemperatureSensor() {
 
 artik::TemperatureSensor &artik::TemperatureSensor::operator=(
     artik::TemperatureSensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -425,6 +440,9 @@ artik::ProximitySensor::~ProximitySensor() {
 
 artik::ProximitySensor &artik::ProximitySensor::operator=(
     artik::ProximitySensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -490,6 +508,9 @@ artik::FlameSensor::~FlameSensor() {
 
 artik::FlameSensor &artik::FlameSensor::operator=(
     artik::FlameSensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -555,6 +576,9 @@ artik::PressureSensor::~PressureSensor() {
 
 artik::PressureSensor &artik::PressureSensor::operator=(
     artik::PressureSensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -619,6 +643,9 @@ artik::HallSensor::~HallSensor() {
 }
 
 artik::HallSensor &artik::HallSensor::operator=(artik::HallSensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_sensor = val.m_sensor;
   this->m_config = val.m_config;
   this->m_handle = val.m_handle;
@@ -672,6 +699,9 @@ artik::Sensor::~Sensor() {
 }
 
 artik::Sensor &artik::Sensor::operator=(Sensor const &val) {
+  if (this == &val)
+    return *this;
+
   this->m_module = val.m_module;
   if (!this->m_module)
     artik_throw(artik::ArtikInitException());

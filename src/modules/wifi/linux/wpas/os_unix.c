@@ -240,13 +240,6 @@ int os_get_random(unsigned char *buf, size_t len)
 	return rc != len ? -1 : 0;
 }
 
-
-unsigned long os_random(void)
-{
-	return random();
-}
-
-
 char *os_rel2abs_path(const char *rel_path)
 {
 	char *buf = NULL, *cwd, *ret;

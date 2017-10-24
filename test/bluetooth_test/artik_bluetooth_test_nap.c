@@ -133,7 +133,6 @@ static int uninit(void *user_data)
 
 int main(int argc, char *argv[])
 {
-	artik_error ret = S_OK;
 	char *bridge = NULL;
 	int status = -1;
 	char buf[CMD_LENGTH];
@@ -164,83 +163,87 @@ int main(int argc, char *argv[])
 	}
 
 	if (check_interface_from_proc(bridge) > 0) {
-		sprintf(buf, "brctl delbr %s", bridge);
+		snprintf(buf, CMD_LENGTH, "brctl delbr %s", bridge);
 		if (system(buf) < 0) {
 			printf("cmd system error\n");
 			return -1;
 		}
 	}
 
-	sprintf(buf, "brctl addbr %s", bridge);
+	snprintf(buf, CMD_LENGTH, "brctl addbr %s", bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("config network bridge failed\r\n");
 		goto out;
 	}
 
-	sprintf(buf, "ip addr add %s dev %s", nap_ip, bridge);
+	snprintf(buf, CMD_LENGTH, "ip addr add %s dev %s", nap_ip, bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("config %s address failed\r\n", bridge);
 		goto out;
 	}
 
-	sprintf(buf, "ip link set %s up", bridge);
+	snprintf(buf, CMD_LENGTH, "ip link set %s up", bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("up %s failed\r\n", bridge);
 		goto out;
 	}
 
 	status = system("echo 1 > /proc/sys/net/ipv4/ip_forward");
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("enable ip forward failed\r\n");
 		goto out;
 	}
 
-	sprintf(buf, "ifconfig %s netmask %s up", bridge, nap_netmask);
+	snprintf(buf, CMD_LENGTH, "ifconfig %s netmask %s up", bridge, nap_netmask);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("up %s failed\r\n", bridge);
 		goto out;
 	}
 
-	sprintf(buf, "iptables -t nat -A POSTROUTING -s %s/%s "
+	snprintf(buf, CMD_LENGTH, "iptables -t nat -A POSTROUTING -s %s/%s "
 	       "-j MASQUERADE", nap_ip, nap_netmask);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("configure the iptable failed\r\n");
 		goto out;
 	}
 
-	sprintf(buf, "iptables -t filter -A FORWARD -i %s -j ACCEPT", bridge);
+	snprintf(buf, CMD_LENGTH, "iptables -t filter -A FORWARD -i %s -j ACCEPT",
+			bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("configure the iptable failed\r\n");
 		goto out;
 	}
 
-	sprintf(buf, "iptables -t filter -A FORWARD -o %s -j ACCEPT", bridge);
+	snprintf(buf, CMD_LENGTH, "iptables -t filter -A FORWARD -o %s -j ACCEPT",
+			bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("configure the iptable failed\r\n");
 		goto out;
 	}
 
-	sprintf(buf, "iptables -t filter -A FORWARD -i %s -j ACCEPT", bridge);
+	snprintf(buf, CMD_LENGTH, "iptables -t filter -A FORWARD -i %s -j ACCEPT",
+			bridge);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("configure the iptable failed\r\n");
 		goto out;
 	}
 
-	sprintf(buf, "/usr/sbin/dnsmasq --pid-file=/var/run/dnsmasq.%s.pid "
+	snprintf(buf, CMD_LENGTH,
+		"/usr/sbin/dnsmasq --pid-file=/var/run/dnsmasq.%s.pid "
 		"--bind-interfaces --dhcp-range=%s,%s,60m "
 		"--except-interface=lo --interface=%s "
 		"--dhcp-option=option:router,%s", bridge, nap_dhcp_begin,
 		nap_dhcp_end, bridge, nap_ip);
 	status = system(buf);
-	if (-1 == status || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+	if ((status == -1) || !WIFEXITED(status) || WEXITSTATUS(status)) {
 		printf("configure the iptable failed\r\n");
 		goto out;
 	}
@@ -266,18 +269,19 @@ int main(int argc, char *argv[])
 
 	loop->run();
 out:
-	bt->deinit();
 
-	if (bt)
+	if (bt) {
+		bt->deinit();
 		artik_release_api_module(bt);
+	}
 	if (loop)
 		artik_release_api_module(loop);
-	sprintf(buf, "ifconfig %s down", bridge);
+	snprintf(buf, CMD_LENGTH, "ifconfig %s down", bridge);
 	if (system(buf) < 0) {
 		printf("cmd system error\n");
 		return -1;
 	}
-	sprintf(buf, "brctl delbr %s", bridge);
+	snprintf(buf, CMD_LENGTH, "brctl delbr %s", bridge);
 	if (system(buf) < 0) {
 		printf("cmd system error\n");
 		return -1;
@@ -286,12 +290,12 @@ out:
 		printf("cmd system error\n");
 		return -1;
 	}
-	strcpy(buf, "iptables -t nat -D POSTROUTING -s 10.0.0.1/255.255.255.0 "
-		"-j MASQUERADE");
+	strncpy(buf, "iptables -t nat -D POSTROUTING -s 10.0.0.1/255.255.255.0 "
+		"-j MASQUERADE", CMD_LENGTH - 1);
 	if (system(buf) < 0) {
 		printf("cmd system error\n");
 		return -1;
 	}
 
-	return (ret == S_OK) ? 0 : -1;
+	return -1;
 }

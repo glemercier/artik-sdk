@@ -37,7 +37,7 @@ artik_error test_api_version(void)
 
 artik_error test_platform_name(void)
 {
-	int platid = artik_get_platform();
+	int platid = -1;
 	char platname[MAX_PLATFORM_NAME];
 
 	fprintf(stdout, "TEST: %s\n", __func__);

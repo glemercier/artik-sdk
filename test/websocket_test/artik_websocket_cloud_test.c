@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/stat.h>
 
 #include <artik_module.h>
 #include <artik_loop.h>
@@ -233,11 +234,12 @@ int main(int argc, char *argv[])
 {
 	int opt;
 	artik_error ret = S_OK;
-	artik_ssl_config ssl_config = {0};
-	long fsize;
+	artik_ssl_config ssl_config;
+	struct stat st;
 	FILE *f;
 	char *root_ca = NULL; // Root CA certificate
 
+	memset(&ssl_config, 0, sizeof(artik_ssl_config));
 	ssl_config.se_config.use_se = false;
 
 	while ((opt = getopt(argc, argv, "t:d:m:svr:")) != -1) {
@@ -263,11 +265,29 @@ int main(int argc, char *argv[])
 				printf("File not found for parameter -r\n");
 				return -1;
 			}
-			fseek(f, 0, SEEK_END);
-			fsize = ftell(f);
-			fseek(f, 0, SEEK_SET);
-			root_ca = malloc(fsize + 1);
-			fread(root_ca, fsize, 1, f);
+			if (fstat(fileno(f), &st) < 0) {
+				printf("Failed to get file size\n");
+				fclose(f);
+				return -1;
+			}
+
+			if (root_ca)
+				free(root_ca);
+
+			root_ca = malloc(st.st_size + 1);
+			if (!root_ca) {
+				printf("Failed to allocate memory for the root CA\n");
+				fclose(f);
+				return -1;
+			}
+
+			if (!fread(root_ca, st.st_size, 1, f)) {
+				printf("Failed to read root CA file\n");
+				free(root_ca);
+				fclose(f);
+				return -1;
+			}
+
 			fclose(f);
 			break;
 		default:
@@ -285,6 +305,7 @@ int main(int argc, char *argv[])
 	if (root_ca) {
 		ssl_config.ca_cert.data = strdup(root_ca);
 		ssl_config.ca_cert.len = strlen(root_ca);
+		free(root_ca);
 	}
 
 	ret = test_websocket_write(TEST_TIMEOUT_MS, ssl_config);
@@ -296,6 +317,8 @@ int main(int argc, char *argv[])
 exit:
 	if (test_message != NULL)
 		free(test_message);
+	if (ssl_config.ca_cert.data != NULL)
+		free(ssl_config.ca_cert.data);
 
 	return (ret == S_OK) ? 0 : -1;
 }

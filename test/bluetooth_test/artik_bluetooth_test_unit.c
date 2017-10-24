@@ -196,23 +196,13 @@ static void test_remove_unpaired_devices(void)
 
 static void test_set_pairable_timeout(void)
 {
-	int timeout;
-
-	srand(time(NULL));
-	timeout = rand() % 10000;
-
-	ret = bt->set_pairableTimeout(timeout);
+	ret = bt->set_pairableTimeout(10000);
 	CU_ASSERT_EQUAL(ret, S_OK);
 }
 
 static void test_set_discoverable_timeout(void)
 {
-	int timeout;
-
-	srand(time(NULL));
-	timeout = rand() % 10000;
-
-	ret = bt->set_discoverableTimeout(timeout);
+	ret = bt->set_discoverableTimeout(10000);
 	CU_ASSERT_EQUAL(ret, S_OK);
 }
 
@@ -319,7 +309,7 @@ static void read_remote_mac(const char *option)
 				tmp = strtok(NULL, " ");
 
 				if (strlen(tmp) == BT_ADDRESS_LEN) {
-					strcpy(remote_mac_addr, tmp);
+					strncpy(remote_mac_addr, tmp, BT_ADDRESS_LEN);
 
 					if (!strcmp(option, "BT/EDR"))
 						goto exit;
@@ -328,7 +318,7 @@ static void read_remote_mac(const char *option)
 				tmp = strtok(NULL, " ");
 
 				if (strlen(tmp) == UUID_LEN) {
-					strcpy(uuid, tmp);
+					strncpy(uuid, tmp, UUID_LEN);
 					goto exit;
 				}
 			}
@@ -343,22 +333,30 @@ static void write_mac_info(void)
 			"BT/EDR xx:xx:xx:xx:xx:xx\n"
 			"BLE xx:xx:xx:xx:xx:xx\n"
 			"UUID 0000xxxx-0000-1000-8000-00805f9b34fb\n";
-	char *result;
+	char *result = NULL;
 	char input[UUID_LEN];
+	char format[32];
+	int fd = 0;
+	int result_len = sizeof(char) * (strlen(tutorial) + 5);
 
-	int fd;
+	snprintf(format, sizeof(format), "%%%ds", UUID_LEN);
+
+	result = (char *) malloc(result_len);
+	if (!result)
+		return;
 
 	fd = creat("/etc/bluetooth/test/unit_test", 0644);
 	if (fd < 0) {
 		fprintf(stdout, "file create failed\n");
+		free(result);
 		return;
 	}
-	result = (char *) malloc(sizeof(char) * (strlen(tutorial) + 5));
+
 	fprintf(stdout, "%s\n\n", tutorial);
 
 	while (1) {
 		fprintf(stdout, "BT/EDR : ");
-		if (fscanf(stdin, "%s", input) == -1) {
+		if (fscanf(stdin, format, input) == -1) {
 			fprintf(stdout, "\ncmd fscanf error!\n");
 			break;
 		}
@@ -369,14 +367,11 @@ static void write_mac_info(void)
 		fprintf(stdout, "\n17 characters are expected, please input again\n");
 	}
 
-	strcpy(result, "UNIT TEST Formation\nBT/EDR");
-	strcat(result, input);
-
-	strcat(result, "\nBLE ");
+	snprintf(result, result_len, "UNIT TEST Formation\nBT/EDR%s\nBLE", input);
 
 	while (1) {
 		fprintf(stdout, "BLE : ");
-		if (fscanf(stdin, "%s", input) == -1) {
+		if (fscanf(stdin, format, input) == -1) {
 			fprintf(stdout, "\ncmd fscanf error!\n");
 			break;
 		}
@@ -387,12 +382,12 @@ static void write_mac_info(void)
 		fprintf(stdout, "\n17 characters are expected, please input again\n");
 	}
 
-	strcat(result, input);
-	strcat(result, "\nUUID 0000");
+	strncat(result, input, result_len - strlen(result) - 1);
+	strncat(result, "\nUUID 0000", result_len - strlen(result) - 1);
 
 	while (1) {
 		fprintf(stdout, "UUID 0000xxxx-0000-1000-8000-00805f9b34fb :");
-		if (fscanf(stdin, "%s", input) == -1) {
+		if (fscanf(stdin, format, input) == -1) {
 			fprintf(stdout, "\ncmd fscanf error!\n");
 			break;
 		}
@@ -403,8 +398,9 @@ static void write_mac_info(void)
 				"\nOnly 4 characters are expected, please input again\n");
 	}
 
-	strcat(result, input);
-	strcat(result, "-0000-1000-8000-00805f9b34fb\n");
+	strncat(result, input, result_len - strlen(result) - 1);
+	strncat(result, "-0000-1000-8000-00805f9b34fb\n",
+			result_len - strlen(result) - 1);
 
 	printf("\n%s\n", result);
 	if (write(fd, result, strlen(result)) == -1)
@@ -439,7 +435,8 @@ static void create_test_file(void)
 
 int main(int argc, char *argv[])
 {
-	CU_initialize_registry();
+	if (CU_initialize_registry() != CUE_SUCCESS)
+		return CU_get_error();
 
 	if (CU_register_suites(suites) != CUE_SUCCESS) {
 		fprintf(stderr, "suite registration failed - %s\n", CU_get_error_msg());

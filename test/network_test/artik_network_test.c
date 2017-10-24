@@ -144,13 +144,15 @@ static artik_error test_get_online_status(void)
 
 static void disconnect(void *user_data)
 {
-	system("ifconfig wlan0 down");
+	if (system("ifconfig wlan0 down"))
+		fprintf(stdout, "Failed to bring down network interface\n");
 }
 
 static void reconnect(void *user_data)
 {
-	system("ifconfig wlan0 up; sleep 1; pkill dhclient;"\
-		" sleep 1; dhclient wlan0");
+	if (system("ifconfig wlan0 up; sleep 1; pkill dhclient;"\
+			" sleep 1; dhclient wlan0"))
+		fprintf(stdout, "Failed to bring up network interface\n");
 }
 
 static void quit(void *user_data)
@@ -243,27 +245,27 @@ int main(int argc, char *argv[])
 			break;
 		case 'i':
 			strncpy(config.ip_addr.address, optarg,
-				MAX_IP_ADDRESS_LEN);
+				MAX_IP_ADDRESS_LEN-1);
 			enable_set_config = true;
 			break;
 		case 'n':
 			strncpy(config.netmask.address, optarg,
-				MAX_IP_ADDRESS_LEN);
+				MAX_IP_ADDRESS_LEN-1);
 			enable_set_config = true;
 			break;
 		case 'g':
 			strncpy(config.gw_addr.address, optarg,
-				MAX_IP_ADDRESS_LEN);
+				MAX_IP_ADDRESS_LEN-1);
 			enable_set_config = true;
 			break;
 		case 'c':
 			strncpy(config.dns_addr[0].address, optarg,
-				MAX_IP_ADDRESS_LEN);
+				MAX_IP_ADDRESS_LEN-1);
 			enable_set_config = true;
 			break;
 		case 'd':
 			strncpy(config.dns_addr[1].address, optarg,
-				MAX_IP_ADDRESS_LEN);
+				MAX_IP_ADDRESS_LEN-1);
 			enable_set_config = true;
 			break;
 		case 'e':

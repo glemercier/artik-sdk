@@ -58,6 +58,7 @@ int main(void) {
     pwm_config.pin_num = ARTIK_A305_PWM0;
   }
 
+  memset(&pwm_config, 0, sizeof(pwm_config));
   pwm_config.name = const_cast<char*>("pwm");
   pwm_config.period = 400000;
   pwm_config.duty_cycle = 200000;

@@ -230,7 +230,7 @@ static artik_error get_humidity(artik_sensor_handle handle, int *store)
 	int ret;
 	unsigned short h0_rh = 0, h1_rh = 0;
 	short h_out = 0, h0_t0_out = 0, h1_t0_out = 0;
-	double humidity;
+	double humidity = 0.0;
 
 	if (!store)
 		return E_BAD_ARGS;
@@ -265,10 +265,12 @@ static artik_error get_humidity(artik_sensor_handle handle, int *store)
 
 	log_dbg("h1_t0_out(%d:%04x)\n", h1_t0_out, h1_t0_out & 0xffff);
 
-	humidity = (double) (h1_rh - h0_rh) / (h1_t0_out - h0_t0_out);
-	humidity *= (h_out - h0_t0_out);
-	humidity += h0_rh;
-	humidity /= 2;
+	if (h1_t0_out - h0_t0_out) {
+		humidity = (double) (h1_rh - h0_rh) / (h1_t0_out - h0_t0_out);
+		humidity *= (h_out - h0_t0_out);
+		humidity += h0_rh;
+		humidity /= 2;
+	}
 
 	log_dbg("h(%04d.%d)\n", (int) (humidity * 100) / 100,
 			(int) (humidity * 100) % 100);
@@ -330,11 +332,14 @@ static artik_error get_celsius(artik_sensor_handle handle, int *store)
 
 	log_dbg("t1_out(%d:%04x)\n", t1_out, t1_out & 0xffff);
 
-	temperature  = (double)(t1_deg - t0_deg) / (t1_out - t0_out);
-	temperature *= (t_out - t0_out);
-	temperature += t0_deg;
-
-	temperature /= 8;
+	if (!(t1_out - t0_out)) {
+		temperature = 0;
+	} else {
+		temperature  = (double)(t1_deg - t0_deg) / (t1_out - t0_out);
+		temperature *= (t_out - t0_out);
+		temperature += t0_deg;
+		temperature /= 8;
+	}
 
 	log_dbg("t(%04d.%d)\n", (int) (temperature * 100) / 100,
 			(int) (temperature * 100) % 100);

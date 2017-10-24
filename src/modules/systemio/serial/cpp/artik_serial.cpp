@@ -55,6 +55,7 @@ artik::Serial::Serial() {
   this->m_handle = NULL;
   this->m_module = reinterpret_cast<artik_serial_module*>(
       artik_request_api_module("serial"));
+  memset(&this->m_config, 0, sizeof(this->m_config));
 }
 
 artik::Serial::~Serial() {

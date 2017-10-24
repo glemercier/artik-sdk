@@ -48,7 +48,7 @@ static int write_sysfs_entry(char *entry, char *value)
 {
 	int fd = open(entry, O_WRONLY);
 
-	if (fd == -1)
+	if (fd < 0)
 		return -errno;
 
 	if (write(fd, value, strlen(value)) == -1) {
@@ -65,10 +65,14 @@ static int read_sysfs_entry(char *entry, char *value)
 {
 	int fd = open(entry, O_RDONLY);
 
-	if (!fd)
+	if (fd < 0)
 		return -errno;
 
-	lseek(fd, 0, SEEK_SET);
+	if (lseek(fd, 0, SEEK_SET) == -1) {
+		close(fd);
+		return -errno;
+	}
+
 	if (read(fd, value, MAX_VAL_STRING) == -1) {
 		close(fd);
 		return -errno;
@@ -252,9 +256,15 @@ int os_gpio_change_callback(int fd, enum watch_io io, void *user_data)
 	}
 
     /* Read new state for clearing interrupt and return value */
-	lseek(data->fd, 0, SEEK_SET);
-	if (read(data->fd, &gpio_value, sizeof(gpio_value)) < 0)
+	if (lseek(data->fd, 0, SEEK_SET) < 0) {
+		log_err("Failed to seek to the beginning");
 		return 0;
+	}
+
+	if (read(data->fd, &gpio_value, sizeof(gpio_value)) < 0) {
+		log_err("Failed to read data");
+		return 0;
+	}
 
 	if (gpio_value == '0')
 		val = 0;
@@ -290,14 +300,19 @@ artik_error os_gpio_set_change_callback(artik_gpio_config *config,
 				"/sys/class/gpio/gpio%d/value", config->id);
 
 	data->fd = open(value_path, O_RDONLY);
-	if (!data->fd)
+	if (data->fd <= 0)
 		return E_BUSY;
 
 	data->callback = callback;
 	data->user_data = user_data;
 
 	/* Read value first to clear interrupts */
-	lseek(data->fd, 0, SEEK_SET);
+	if (lseek(data->fd, 0, SEEK_SET) < 0) {
+		ret = E_ACCESS_DENIED;
+		log_err("Failed to read gpio value");
+		goto exit;
+	}
+
 	if (read(data->fd, &gpio_value, sizeof(gpio_value)) < 0) {
 		ret = E_ACCESS_DENIED;
 		log_err("Failed to read gpio value");

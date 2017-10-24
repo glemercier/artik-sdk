@@ -115,6 +115,7 @@ artik_error os_wifi_start_ap(const char *ssid, const char *password,
 	unsigned int len = 128;
 	char cmd[128] = "";
 	char reply[128] = "";
+	artik_error ret = S_OK;
 
 	if (wifi_mode != ARTIK_WIFI_MODE_AP)
 		return E_NOT_INITIALIZED;
@@ -144,50 +145,81 @@ artik_error os_wifi_start_ap(const char *ssid, const char *password,
 
 	/* Disable in case it was already started */
 	strncpy(cmd, "DISABLE", 128);
-	wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+	if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+		ret = E_ACCESS_DENIED;
+		goto exit;
+	}
 	log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 
 	snprintf(cmd, 128, "SET ssid %s", ssid);
-	wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+	if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+		ret = E_ACCESS_DENIED;
+		goto exit;
+	}
 	log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 
 	snprintf(cmd, 128, "SET channel %d", channel);
-	wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+	if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+		ret = E_ACCESS_DENIED;
+		goto exit;
+	}
 	log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 
 	if (!encryption_flags) {
 		strncpy(cmd, "SET wpa 0", 128);
-		wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+		if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+			ret = E_ACCESS_DENIED;
+			goto exit;
+		}
 		log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 	} else if (encryption_flags & WIFI_ENCRYPTION_WPA2) {
 		strncpy(cmd, "SET wpa 2", 128);
-		wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+		if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+			ret = E_ACCESS_DENIED;
+			goto exit;
+		}
 		log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 
 		strncpy(cmd, "SET wpa_key_mgmt WPA-PSK", 128);
-		wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+		if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+			ret = E_ACCESS_DENIED;
+			goto exit;
+		}
 		log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 
 		strncpy(cmd, "SET wpa_pairwise TKIP", 128);
-		wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+		if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+			ret = E_ACCESS_DENIED;
+			goto exit;
+		}
 		log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 
 		strncpy(cmd, "SET rsn_pairwise CCMP", 128);
-		wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+		if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+			ret = E_ACCESS_DENIED;
+			goto exit;
+		}
 		log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 
 		snprintf(cmd, 128, "SET wpa_passphrase %s", password);
-		wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+		if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+			ret = E_ACCESS_DENIED;
+			goto exit;
+		}
 		log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 	}
 
 	strncpy(cmd, "ENABLE", 128);
-	wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL);
+	if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), reply, &len, NULL) < 0) {
+		ret = E_ACCESS_DENIED;
+		goto exit;
+	}
 	log_dbg("wpa_ctrl_request: %s => %s", cmd, reply);
 
+exit:
 	wpa_ctrl_close(ctrl);
 
-	return S_OK;
+	return ret;
 }
 
 artik_error os_wifi_get_scan_result(artik_wifi_ap **aps, int *num_aps)

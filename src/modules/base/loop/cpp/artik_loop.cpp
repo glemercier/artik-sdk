@@ -33,6 +33,9 @@ artik::Loop::~Loop() {
 }
 
 artik::Loop &artik::Loop::operator=(artik::Loop const &loop) {
+  if (this == &loop)
+    return *this;
+
   this->m_module = loop.m_module;
   return *this;
 }

@@ -300,9 +300,12 @@ static void prv_set_repeat_mode(char *buffer, void *user_data)
 	} else if (strcmp(repeat_mode, "off") == 0) {
 		repeat = 3;
 	} else {
+		free(repeat_mode);
 		printf("invalid repeat mode\n");
 		return;
 	}
+
+	free(repeat_mode);
 
 	ret = bt->avrcp_controller_set_repeat_mode(repeat);
 
@@ -451,7 +454,6 @@ command_desc_t commands[] = {
 
 int main(void)
 {
-	artik_error ret = S_OK;
 	int i = 0;
 
 	if (!artik_is_module_available(ARTIK_MODULE_BLUETOOTH)) {
@@ -506,8 +508,5 @@ int main(void)
 
 	}
 
-	if (ret != S_OK)
-		printf("Test AVRCP failed!\n");
-
-	return (ret == S_OK) ? 0 : -1;
+	return 0;
 }

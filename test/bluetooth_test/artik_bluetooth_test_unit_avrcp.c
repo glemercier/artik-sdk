@@ -35,9 +35,11 @@ static artik_bluetooth_module *bt;
 artik_error remote_info_get(void)
 {
 	int ret = 0;
+	char format[32];
 
 	fprintf(stdout, "remote device mac address: ");
-	ret = fscanf(stdin, "%s", remote_mac_addr);
+	snprintf(format, sizeof(format), "%%%ds", (int)BT_ADDRESS_LEN);
+	ret = fscanf(stdin, format, remote_mac_addr);
 	if (ret == -1)
 		return E_BAD_ARGS;
 	if (strlen(remote_mac_addr) != BT_ADDRESS_LEN)
@@ -85,15 +87,18 @@ static void disconnect(void)
 static int list_item(void)
 {
 	int ret = 0;
-	char any_key[255];
+	char any_key = 0;
 	int start_item = -1;
 	int end_item = -1;
 	int num = 0;
 	artik_bt_avrcp_item *item_list, *node;
 
 	fprintf(stdout, "press any key to list item");
-	ret = fscanf(stdin, "%s", any_key);
-	printf("%s\n", any_key);
+	ret = fscanf(stdin, "%c", &any_key);
+	if (ret < 0)
+		return -1;
+
+	printf("%c\n", any_key);
 
 	ret = bt->avrcp_controller_list_item(start_item, end_item, &item_list);
 

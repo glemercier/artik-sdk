@@ -19,11 +19,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
+#include <sys/stat.h>
 
 #include <artik_module.h>
 #include <artik_http.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+#define MAX_LONG 0x7FFFFFFF
 
 artik_error test_http_get(char *root_ca, char *client_cert, char *client_key,
 				char *ip_address, char *port, bool verify)
@@ -43,17 +46,17 @@ artik_error test_http_get(char *root_ca, char *client_cert, char *client_key,
 	memset(&ssl_config, 0, sizeof(ssl_config));
 
 	if (root_ca) {
-		ssl_config.ca_cert.data = strdup(root_ca);
+		ssl_config.ca_cert.data = root_ca;
 		ssl_config.ca_cert.len = strlen(root_ca);
 	}
 
 	if (client_cert) {
-		ssl_config.client_cert.data = strdup(client_cert);
+		ssl_config.client_cert.data = client_cert;
 		ssl_config.client_cert.len = strlen(client_cert);
 	}
 
 	if (client_key) {
-		ssl_config.client_key.data = strdup(client_key);
+		ssl_config.client_key.data = client_key;
 		ssl_config.client_key.len = strlen(client_key);
 	}
 
@@ -140,7 +143,7 @@ int main(int argc, char *argv[])
 	char *client_key = NULL; // Client key
 	char *ip_address = NULL; // IP Address of server
 	char *port = NULL; // Port
-	long fsize;
+	struct stat st;
 	FILE *f;
 
 	if (!artik_is_module_available(ARTIK_MODULE_HTTP)) {
@@ -156,47 +159,111 @@ int main(int argc, char *argv[])
 			f = fopen(optarg, "rb");
 			if (!f) {
 				printf("File not found for parameter -r\n");
-				return -1;
+				ret = E_BAD_ARGS;
+				goto exit;
 			}
-			fseek(f, 0, SEEK_END);
-			fsize = ftell(f);
-			fseek(f, 0, SEEK_SET);
-			root_ca = malloc(fsize + 1);
-			fread(root_ca, fsize, 1, f);
+			if (fstat(fileno(f), &st) < 0) {
+				printf("Failed to get file size");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
+			if (root_ca)
+				free(root_ca);
+
+			root_ca = malloc(st.st_size + 1);
+			if (!root_ca) {
+				fclose(f);
+				ret = E_NO_MEM;
+				goto exit;
+			}
+
+			if (!fread(root_ca, st.st_size, 1, f)) {
+				fclose(f);
+				printf("Failed to read root CA file\n");
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
 			fclose(f);
 			break;
 		case 'c':
 			f = fopen(optarg, "rb");
 			if (!f) {
 				printf("File not found for parameter -c\n");
-				return -1;
+				ret = E_BAD_ARGS;
+				goto exit;
 			}
-			fseek(f, 0, SEEK_END);
-			fsize = ftell(f);
-			fseek(f, 0, SEEK_SET);
-			client_cert = malloc(fsize + 1);
-			fread(client_cert, fsize, 1, f);
+			if (fstat(fileno(f), &st) < 0) {
+				printf("Failed to get file size");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
+			if (client_cert)
+				free(client_cert);
+
+			client_cert = malloc(st.st_size + 1);
+			if (!client_cert) {
+				fclose(f);
+				ret = E_NO_MEM;
+				goto exit;
+			}
+
+			if (!fread(client_cert, st.st_size, 1, f)) {
+				fclose(f);
+				printf("Failed to read client certificate file\n");
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
 			fclose(f);
 			break;
 		case 'k':
 			f = fopen(optarg, "rb");
 			if (!f) {
 				printf("File not found for parameter -k\n");
-				return -1;
+				ret = E_BAD_ARGS;
+				goto exit;
 			}
-			fseek(f, 0, SEEK_END);
-			fsize = ftell(f);
-			fseek(f, 0, SEEK_SET);
-			client_key = malloc(fsize + 1);
-			fread(client_key, fsize, 1, f);
+			if (fstat(fileno(f), &st) < 0) {
+				printf("Failed to get file size");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
+			if (client_key)
+				free(client_key);
+
+			client_key = malloc(st.st_size + 1);
+			if (!client_key) {
+				fclose(f);
+				ret = E_NO_MEM;
+				goto exit;
+			}
+
+			if (!fread(client_key, st.st_size, 1, f)) {
+				fclose(f);
+				printf("Failed to read client key file\n");
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
 			fclose(f);
 			break;
 		case 'i':
-			ip_address = malloc(strlen(optarg)+1);
+			if (ip_address)
+				free(ip_address);
+
 			ip_address = strdup(optarg);
 			break;
 		case 'p':
-			port = malloc(strlen(optarg)+1);
+			if (port)
+				free(port);
+
 			port = strdup(optarg);
 			break;
 		case 'v':
@@ -210,12 +277,24 @@ int main(int argc, char *argv[])
 			printf("[-i <ip address of the server>]"\
 				" [-p <port of the server>] ");
 			printf("[-v (for enabling verify root CA)]\r\n");
-			return 0;
+			ret = E_BAD_ARGS;
+			goto exit;
 		}
 	}
 
 	ret = test_http_get(root_ca, client_cert, client_key, ip_address, port,
 									verify);
+exit:
+	if (client_key)
+		free(client_key);
+	if (client_cert)
+		free(client_cert);
+	if (root_ca)
+		free(root_ca);
+	if (ip_address)
+		free(ip_address);
+	if (port)
+		free(port);
 
 	return (ret == S_OK) ? 0 : -1;
 }

@@ -67,7 +67,8 @@ static int on_socket(int fd, enum watch_io io, void *user_data)
 			printf("Buffer received %d bytes\n", num_bytes);
 			buffer[num_bytes] = '\0';
 			printf("%s\n", buffer);
-			send(fd, "Hello\n", 7, 0);
+			if (send(fd, "Hello\n", 7, 0) != 7)
+				printf("Failed to send data\n");
 		}
 	}
 	return 1;
@@ -118,7 +119,7 @@ void callback_on_agent_request_pincode(artik_bt_event event,
 void callback_on_agent_request_passkey(artik_bt_event event,
 	void *data, void *user_data)
 {
-	unsigned int passkey;
+	unsigned long passkey;
 	artik_bt_agent_request_property *request_property =
 		(artik_bt_agent_request_property *)data;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
@@ -127,8 +128,9 @@ void callback_on_agent_request_passkey(artik_bt_event event,
 	fprintf(stdout, "<AGENT>: Request passkey (%s)\n",
 		request_property->device);
 	ask("Enter passkey (1~999999): ");
-	if (sscanf(buffer, "%u", &passkey) > 0)
-		bt->agent_send_passkey(request_property->handle, passkey);
+	passkey = strtoul(buffer, NULL, 10);
+	if ((passkey > 0) && (passkey < 999999))
+		bt->agent_send_passkey(request_property->handle, (unsigned int)passkey);
 	else
 		fprintf(stdout, "<AGENT>: get passkey error\n");
 

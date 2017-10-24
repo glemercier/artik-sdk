@@ -102,7 +102,9 @@ void wpa_cli_close_connection(void)
 		return;
 
 	if (wpa_cli_attached) {
-		wpa_ctrl_detach(mon_conn);
+		if (wpa_ctrl_detach(mon_conn) < 0)
+			log_err("Failed to detach from wpa service");
+
 		wpa_cli_attached = 0;
 	}
 	wpa_ctrl_close(ctrl_conn);

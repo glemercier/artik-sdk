@@ -777,6 +777,10 @@ artik_error artik_bluetooth_avrcp_controller_get_repeat(
 			sizeof(char));
 	artik_error ret = S_OK;
 
+	if (!repeat_mode_str)
+		return E_NO_MEM;
+
+	memset(repeat_mode_str, 0, max_repeat_mode_len * sizeof(char));
 	ret = os_bt_avrcp_controller_get_repeat(&repeat_mode_str);
 	int str_len = strlen(repeat_mode_str);
 

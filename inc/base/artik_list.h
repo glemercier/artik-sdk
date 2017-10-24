@@ -181,11 +181,13 @@ extern "C" {
 	static inline artik_error artik_list_delete_node(artik_list **list,
 							 artik_list *node)
 	{
-		artik_list *elem = *list;
+		artik_list *elem = NULL;
 		artik_list *prev = NULL;
 
 		if (!list || !*list || !node)
 			return E_BAD_ARGS;
+
+		elem = *list;
 
 		while (elem && (elem != node)) {
 			prev = elem;
@@ -220,11 +222,13 @@ extern "C" {
 							   ARTIK_LIST_HANDLE
 							   handle)
 	{
-		artik_list *elem = *list;
+		artik_list *elem = NULL;
 		artik_list *prev = NULL;
 
 		if (!list || !*list || (handle == ARTIK_LIST_INVALID_HANDLE))
 			return E_BAD_ARGS;
+
+		elem = *list;
 
 		while (elem && (elem->handle != handle)) {
 			prev = elem;
@@ -257,11 +261,13 @@ extern "C" {
 	static inline artik_error artik_list_delete_pos(artik_list **list,
 							unsigned int pos)
 	{
-		artik_list *elem = *list;
+		artik_list *elem = NULL;
 		artik_list *prev = NULL;
 
 		if (!list || !*list || (pos >= artik_list_size(*list)))
 			return E_BAD_ARGS;
+
+		elem = *list;
 
 		while (elem && pos > 0) {
 			prev = elem;
@@ -300,11 +306,13 @@ extern "C" {
 							  check_func,
 							  void *param_of_check)
 	{
-		artik_list *elem = *list;
+		artik_list *elem = NULL;
 		artik_list *prev = NULL;
 
-		if (!list || !elem || !check_func)
+		if (!list || !check_func)
 			return E_BAD_ARGS;
+
+		elem = *list;
 
 		while (elem && ((*check_func) (elem, param_of_check) == 0)) {
 			prev = elem;

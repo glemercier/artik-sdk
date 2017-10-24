@@ -424,6 +424,7 @@ struct test_device *add_test_device(ARTIK_ZIGBEE_PROFILE profile,
 	return test_device;
 
 err:
+	free(test_device);
 	return NULL;
 }
 

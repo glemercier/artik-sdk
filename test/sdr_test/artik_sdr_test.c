@@ -107,11 +107,6 @@ static artik_error test_cloud_sdr_registration(void)
 		goto exit;
 	}
 
-	if (ret != S_OK) {
-		fprintf(stdout, "TEST: %s failed (err=%d)\n", __func__, ret);
-		goto exit;
-	}
-
 	fprintf(stdout, "TEST: %s Enter PIN %s\n", __func__, reg_pin);
 
 	/* Wait for user to enter the PIN */
@@ -297,13 +292,10 @@ static artik_error test_websocket_sdr(void)
 					artik_request_api_module("cloud");
 	artik_loop_module *loop = (artik_loop_module *)
 					artik_request_api_module("loop");
-
 	artik_websocket_handle handle;
 	int timeout_id = 0;
 	int write_periodic_id = 0;
 	artik_ssl_config ssl_config;
-
-	char *response = NULL;
 
 	/* Prepare the SSL configuration */
 	memset(&ssl_config, 0, sizeof(ssl_config));
@@ -359,9 +351,6 @@ static artik_error test_websocket_sdr(void)
 	fprintf(stdout, "TEST: %s finished\n", __func__);
 
 exit:
-	if (response)
-		free(response);
-
 	artik_release_api_module(cloud);
 	artik_release_api_module(loop);
 

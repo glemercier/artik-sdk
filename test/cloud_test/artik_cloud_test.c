@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 
 #include <artik_module.h>
 #include <artik_cloud.h>
@@ -516,7 +517,7 @@ int main(int argc, char *argv[])
 	artik_ssl_config ssl_config = {0};
 
 	int opt;
-	long fsize;
+	struct stat st;
 	FILE *f;
 	char *root_ca = NULL; // Root CA certificate
 
@@ -563,13 +564,32 @@ int main(int argc, char *argv[])
 			f = fopen(optarg, "rb");
 			if (!f) {
 				printf("File not found for parameter -r\n");
-				return -1;
+				ret = E_BAD_ARGS;
+				goto exit;
 			}
-			fseek(f, 0, SEEK_END);
-			fsize = ftell(f);
-			fseek(f, 0, SEEK_SET);
-			root_ca = malloc(fsize + 1);
-			fread(root_ca, fsize, 1, f);
+			if (fstat(fileno(f), &st) < 0) {
+				printf("Could not get file size\n");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
+			if (root_ca)
+				free(root_ca);
+
+			root_ca = malloc(st.st_size + 1);
+			if (!root_ca) {
+				fclose(f);
+				ret = E_NO_MEM;
+				goto exit;
+			}
+			if (!fread(root_ca, st.st_size, 1, f)) {
+				printf("Failed to read root CA file\n");
+				fclose(f);
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
+
 			fclose(f);
 			break;
 		default:
@@ -663,6 +683,8 @@ exit:
 		free(data);
 	if (root_ca != NULL)
 		free(root_ca);
+	if (ssl_config.ca_cert.data != NULL)
+		free(ssl_config.ca_cert.data);
 
 	return (ret == S_OK) ? 0 : -1;
 }

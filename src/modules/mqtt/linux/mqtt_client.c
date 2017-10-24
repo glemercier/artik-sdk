@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <mosquitto.h>
 #include <artik_log.h>
@@ -190,13 +191,19 @@ static void my_log_callback(struct mosquitto *mosq, void *obj, int level,
 static void tls_cleanup_temp_cert_files(void)
 {
 	if (access(TLS_CA_FILENAME, F_OK) != -1)
-		remove(TLS_CA_FILENAME);
+		if (remove(TLS_CA_FILENAME) < 0)
+			log_dbg("Failed to delete %s (err=%d)",
+					TLS_CA_FILENAME, errno);
 
 	if (access(TLS_CERT_FILENAME, F_OK) != -1)
-		remove(TLS_CERT_FILENAME);
+		if (remove(TLS_CERT_FILENAME) < 0)
+			log_dbg("Failed to delete %s (err=%d)",
+					TLS_CERT_FILENAME, errno);
 
 	if (access(TLS_KEY_FILENAME, F_OK) != -1)
-		remove(TLS_KEY_FILENAME);
+		if (remove(TLS_KEY_FILENAME) < 0)
+			log_dbg("Failed to delete %s (err=%d)",
+					TLS_KEY_FILENAME, errno);
 }
 
 static artik_error tls_write_temp_cert_files(struct mosquitto *mosq,
@@ -667,6 +674,9 @@ int mqtt_client_disconnect(artik_mqtt_handle handle_client)
 
 	log_dbg("");
 
+	if (!client)
+		return -MQTT_ERROR_PARAM;
+
 	return mosquitto_disconnect((struct mosquitto *) client->mosq);
 }
 
@@ -676,7 +686,8 @@ int mqtt_client_subscribe(artik_mqtt_handle handle_client, int qos,
 	mqtt_handle_client *client = (mqtt_handle_client *)
 		artik_list_get_by_handle(requested_node,
 			(ARTIK_LIST_HANDLE)handle_client);
-	int rc;
+	int rc = MQTT_ERROR_SUCCESS;
+	int err = MOSQ_ERR_SUCCESS;
 
 	log_dbg("");
 
@@ -686,13 +697,12 @@ int mqtt_client_subscribe(artik_mqtt_handle handle_client, int qos,
 	if (!msgtopic || !client)
 		return -MQTT_ERROR_PARAM;
 
-	rc = MQTT_ERROR_SUCCESS;
-	rc = mosquitto_subscribe((struct mosquitto *) client->mosq, NULL,
+	err = mosquitto_subscribe((struct mosquitto *) client->mosq, NULL,
 			msgtopic, qos);
 
 	log_dbg("mosquitto_subscribe rc %d\n", rc);
 
-	if (rc != MOSQ_ERR_SUCCESS)
+	if (err != MOSQ_ERR_SUCCESS)
 		rc = -MQTT_ERROR_LIB;
 
 	return rc;
@@ -705,16 +715,17 @@ int mqtt_client_unsubscribe(artik_mqtt_handle handle_client,
 		artik_list_get_by_handle(requested_node,
 			(ARTIK_LIST_HANDLE)handle_client);
 	int rc = MQTT_ERROR_SUCCESS;
+	int err = MOSQ_ERR_SUCCESS;
 
 	log_dbg("");
 
 	if (!client || !msg_topic)
 		return -MQTT_ERROR_PARAM;
 
-	rc = mosquitto_unsubscribe((struct mosquitto *) client->mosq, NULL,
+	err = mosquitto_unsubscribe((struct mosquitto *) client->mosq, NULL,
 			msg_topic);
 
-	if (rc != MOSQ_ERR_SUCCESS)
+	if (err != MOSQ_ERR_SUCCESS)
 		rc = -MQTT_ERROR_LIB;
 
 	return rc;
@@ -726,7 +737,8 @@ int mqtt_client_publish(artik_mqtt_handle handle_client, int qos, bool retain,
 	mqtt_handle_client *client = (mqtt_handle_client *)
 		artik_list_get_by_handle(requested_node,
 			(ARTIK_LIST_HANDLE)handle_client);
-	int rc = -1;
+	int rc = MQTT_ERROR_SUCCESS;
+	int err = MOSQ_ERR_SUCCESS;
 
 	log_dbg("");
 
@@ -736,11 +748,12 @@ int mqtt_client_publish(artik_mqtt_handle handle_client, int qos, bool retain,
 	if (!client || !msg_topic || payload_len == 0 || !msg_content)
 		return -MQTT_ERROR_PARAM;
 
-	rc = mosquitto_publish((struct mosquitto *) client->mosq, NULL,
+	err = mosquitto_publish((struct mosquitto *) client->mosq, NULL,
 			msg_topic,
 			payload_len, msg_content, qos, retain);
 
-	if (rc != MOSQ_ERR_SUCCESS)
-		return -MQTT_ERROR_LIB;
-	return MQTT_ERROR_SUCCESS;
+	if (err != MOSQ_ERR_SUCCESS)
+		rc = -MQTT_ERROR_LIB;
+
+	return rc;
 }

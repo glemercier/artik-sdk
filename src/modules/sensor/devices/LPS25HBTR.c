@@ -229,7 +229,7 @@ static artik_error get_celsius(artik_sensor_handle handle, int *store)
 	if (ret < 0)
 		return ret;
 
-	*store = data/480 + 42.5;
+	*store = (int)((((double)data) / 480.0) + 42.5);
 
 	return S_OK;
 }

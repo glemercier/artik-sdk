@@ -154,6 +154,7 @@ artik_error os_i2c_read_register(artik_i2c_config *config, unsigned int reg,
 		(int)config->wordsize > I2C_WORDSIZE_INVALID))
 		return E_BAD_ARGS;
 
+	memset(&data, 0, sizeof(data));
 	snprintf(devname, I2C_DEV_MAX_LEN, "/dev/i2c-%d", config->id);
 
 	fd = open(devname, O_RDWR);
@@ -214,6 +215,7 @@ artik_error os_i2c_write_register(artik_i2c_config *config, unsigned int reg,
 		(int)config->wordsize > I2C_WORDSIZE_INVALID))
 		return E_BAD_ARGS;
 
+	memset(&data, 0, sizeof(data));
 	snprintf(devname, I2C_DEV_MAX_LEN, "/dev/i2c-%d", config->id);
 
 	fd = open(devname, O_RDWR);
@@ -257,7 +259,7 @@ artik_error os_i2c_write_register(artik_i2c_config *config, unsigned int reg,
 	}
 
 exit:
-	if (data.msgs[0].buf)
+	if (data.msgs && data.msgs[0].buf)
 		free(data.msgs[0].buf);
 
 	if (data.msgs)

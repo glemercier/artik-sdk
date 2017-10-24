@@ -45,7 +45,7 @@ static void on_scan(artik_bt_event event, void *data, void *user_data)
 	for (int i = 0; i < dev.uuid_length; i++)
 		printf("%s [%s]\n", dev.uuid_list[i].uuid, dev.uuid_list[i].uuid_name);
 
-	strcpy(addr, dev.remote_address);
+	strncpy(addr, dev.remote_address, sizeof(addr) - 1);
 
 	printf("> stop scan\n");
 	bt->stop_scan();

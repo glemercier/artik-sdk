@@ -87,6 +87,7 @@ typedef struct os_websocket_security_data_t {
 typedef struct {
 	struct lws_context *context;
 	struct lws *wsi;
+	struct lws_protocols *protocols;
 	SSL_CTX *ssl_ctx;
 	int loop_process_id;
 	os_websocket_security_data *sec_data;
@@ -172,6 +173,7 @@ void lws_cleanup(artik_websocket_config *config)
 	SSL_CTX_free(ARTIK_WEBSOCKET_INTERFACE->ssl_ctx);
 
 	/* Finalize freeing process */
+	free(ARTIK_WEBSOCKET_INTERFACE->protocols);
 	free(config->private_data);
 	config->private_data = NULL;
 }
@@ -181,8 +183,6 @@ int lws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 {
 	uint64_t event_setter = FLAG_EVENT;
 	char *received = NULL;
-	websocket_node *node = (websocket_node *)artik_list_get_by_handle(
-					requested_node, (ARTIK_LIST_HANDLE)wsi);
 
 	switch (reason) {
 
@@ -235,6 +235,14 @@ int lws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 
 	case LWS_CALLBACK_WSI_DESTROY:
 		log_dbg("LWS_CALLBACK_WSI_DESTROY");
+		websocket_node *node = (websocket_node *)artik_list_get_by_handle(
+				requested_node, (ARTIK_LIST_HANDLE)wsi);
+
+		if (!node) {
+			log_err("Failed to find websocket instance");
+			return -1;
+		}
+
 		node->interface.error_connect = true;
 		if (write(CB_FDS[FD_CLOSE], &event_setter,
 						sizeof(event_setter)) < 0)
@@ -571,7 +579,7 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 		int *port, bool *use_tls)
 {
 	char *protocol = NULL;
-	char *_port = NULL;
+	char _port[6];
 	char *_path = NULL;
 	char *_host = NULL;
 
@@ -579,6 +587,9 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 	int ret = 0;
 
 	regex_t preg;
+	int match;
+	size_t nmatch = 0;
+	regmatch_t pmatch[5];
 
 	log_dbg("uri = %s", uri);
 
@@ -589,15 +600,8 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 	err = regcomp(&preg, str_regex, REG_EXTENDED);
 
 	if (err == 0) {
-		int match;
-		size_t nmatch = 0;
-		regmatch_t *pmatch = NULL;
-
 		nmatch = preg.re_nsub + 1;
-
-		pmatch = malloc(sizeof(*pmatch) * nmatch);
-
-		if (pmatch && nmatch == 5) {
+		if (nmatch == 5) {
 			match = regexec(&preg, str_request, nmatch, pmatch, 0);
 
 			regfree(&preg);
@@ -609,7 +613,6 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 				size_t size = end - start;
 
 				protocol = malloc(sizeof(*protocol)*(size+1));
-
 				if (protocol) {
 					strncpy(protocol, &str_request[start],
 						size);
@@ -623,6 +626,7 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 						*use_tls = false;
 
 					log_dbg("use_tls = %d", *use_tls);
+					free(protocol);
 				}
 
 				start = pmatch[2].rm_so;
@@ -630,7 +634,6 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 				size = end - start;
 
 				_host = malloc(sizeof(*_host)*(size+1));
-
 				if (_host) {
 					strncpy(_host, &str_request[start],
 						size);
@@ -644,17 +647,13 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 				end = pmatch[3].rm_eo;
 				size = end - start;
 
-				_port = malloc(sizeof(*_port)*(size+1));
-
-				if (_port && size != 0) {
+				if ((size > 0) && (size < sizeof(_port))) {
 					char *p = NULL;
 
-					strncpy(_port, &str_request[start],
-						size);
+					strncpy(_port, &str_request[start], size);
 					_port[size] = '\0';
 
 					p = strtok(_port, ":");
-
 					if (p)
 						*port = atoi(p);
 				} else {
@@ -671,16 +670,16 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 				size = end - start;
 
 				_path = malloc(sizeof(*_path)*(size+1));
-
 				if (_path) {
-					strncpy(_path, &str_request[start],
-						size);
+					strncpy(_path, &str_request[start],	size);
 					_path[size] = '\0';
 
-					if (strcmp(_path, "") == 0)
-						*path = "/";
-					else
+					if (strcmp(_path, "") == 0) {
+						*path = strdup("/");
+						free(_path);
+					} else {
 						*path = _path;
+					}
 
 					log_dbg("path = %s", *path);
 				}
@@ -694,7 +693,6 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 
 				size = regerror(err, &preg, NULL, 0);
 				text = malloc(sizeof(*text) * size);
-
 				if (text) {
 					regerror(err, &preg, text, size);
 					log_err("%s", text);
@@ -717,21 +715,21 @@ artik_error os_websocket_open_stream(artik_websocket_config *config)
 {
 	artik_error ret = S_OK;
 	os_websocket_fds *fds;
-	os_websocket_interface *interface;
-	struct lws_context *context;
+	os_websocket_interface *interface = NULL;
+	struct lws_context *context = NULL;
 	struct lws_context_creation_info info;
-	struct lws *wsi;
-	struct lws_protocols *protocols;
+	struct lws *wsi = NULL;
 	os_websocket_security_data *sec_data = NULL;
-	artik_loop_module *loop = (artik_loop_module *)
-					artik_request_api_module("loop");
-	websocket_node *node;
-
+	websocket_node *node = NULL;
 	char *host = NULL;
 	char *path = NULL;
 	int port = 0;
-	int len;
+	int len = 0;
 	bool use_tls = false;
+	struct lws_client_connect_info conn_info;
+	char *hostport = NULL;
+	artik_loop_module *loop = (artik_loop_module *)
+					artik_request_api_module("loop");
 
 	if (!config->uri) {
 		log_err("Undefined uri");
@@ -749,31 +747,31 @@ artik_error os_websocket_open_stream(artik_websocket_config *config)
 	log_dbg("");
 
 	interface = malloc(sizeof(os_websocket_interface));
-	if (interface == NULL) {
+	if (!interface) {
 		log_err("Failed to allocate memory");
 		ret = E_NO_MEM;
 		goto exit;
 	}
 
-	protocols = malloc(2 * sizeof(struct lws_protocols));
-	if (protocols == NULL) {
+	interface->protocols = malloc(2 * sizeof(struct lws_protocols));
+	if (!interface->protocols) {
 		log_err("Failed to allocate memory");
 		ret = E_NO_MEM;
 		goto exit;
 	}
-	memset(protocols, 0, 2 * sizeof(struct lws_protocols));
 
-	protocols[0].name = ARTIK_WEBSOCKET_PROTOCOL_NAME;
-	protocols[0].callback = lws_callback;
-	protocols[0].per_session_data_size = 0;
-	protocols[0].rx_buffer_size = 4096;
-	protocols[0].id = (uintptr_t)config;
-	protocols[0].user = (void *)&interface->container;
+	memset(interface->protocols, 0, 2 * sizeof(struct lws_protocols));
+	interface->protocols[0].name = ARTIK_WEBSOCKET_PROTOCOL_NAME;
+	interface->protocols[0].callback = lws_callback;
+	interface->protocols[0].per_session_data_size = 0;
+	interface->protocols[0].rx_buffer_size = 4096;
+	interface->protocols[0].id = (uintptr_t)config;
+	interface->protocols[0].user = (void *)&interface->container;
 
 	memset(&info, 0, sizeof(struct lws_context_creation_info));
 	info.port = CONTEXT_PORT_NO_LISTEN;
 	info.iface = NULL;
-	info.protocols = protocols;
+	info.protocols = interface->protocols;
 	info.gid = -1;
 	info.uid = -1;
 
@@ -798,7 +796,6 @@ artik_error os_websocket_open_stream(artik_websocket_config *config)
 	char *https_proxy = getenv("https_proxy");
 
 	if (http_proxy || https_proxy) {
-
 		char *proxy = NULL;
 		char *str_regex = NULL;
 		char *lws_proxy = NULL;
@@ -815,101 +812,79 @@ artik_error os_websocket_open_stream(artik_websocket_config *config)
 					"^http://([0-9A-Za-z.-]+):([0-9]+)$");
 		}
 
-		if (proxy && str_regex &&
-			regcomp(&preg, str_regex, REG_EXTENDED) == 0) {
-
+		if (proxy && str_regex && !regcomp(&preg, str_regex, REG_EXTENDED)) {
 			int match;
 			size_t nmatch = 0;
-			regmatch_t *pmatch = NULL;
+			regmatch_t pmatch[3];
 
 			nmatch = preg.re_nsub + 1;
+			if (nmatch == 3) {
+				char address[INET6_ADDRSTRLEN + 1] = "";
+				char port[7] = "";
+				int start = 0;
+				int end = 0;
+				size_t size = 0;
 
-			pmatch = malloc(sizeof(*pmatch) * nmatch);
-
-			if (pmatch && nmatch == 3) {
-				match = regexec(&preg, proxy, nmatch, pmatch,
-									0);
-
+				match = regexec(&preg, proxy, nmatch, pmatch, 0);
 				regfree(&preg);
 
-				if (match == 0) {
-					char *address = NULL;
-					char *port = NULL;
-
-					int start = pmatch[1].rm_so;
-					int end = pmatch[1].rm_eo;
-					size_t size = end - start;
-
-					address = malloc(sizeof(*address)*
-						(size+1));
-
-					if (address) {
-						strncpy(address, &proxy[start],
-							size);
-						address[size] = '\0';
-					}
-
-					start = pmatch[2].rm_so;
-					end = pmatch[2].rm_eo;
-					size = end - start;
-
-					port = malloc(sizeof(*port)*(size+1));
-
-					if (port) {
-						strncpy(port,
-							&proxy[start],
-							size);
-						port[size] = '\0';
-					}
-
-					if (address && port) {
-						len  =
-							strlen(address) + 1 +
-							strlen(port) + 1;
-
-						lws_proxy = (char *)malloc(len);
-
-					}
-
-					if (lws_proxy)
-						snprintf(
-						lws_proxy,
-						len, "%s:%s",
-						address, port);
-
-					if (lws_proxy && lws_set_proxy(context,
-						lws_proxy) != 0) {
-						ret = E_WEBSOCKET_ERROR;
-							goto exit;
-					}
-
-					if (lws_proxy)
-						free(lws_proxy);
-
-					if (address)
-						free(address);
-
-					if (port)
-						free(port);
-
-				} else {
+				if (match) {
 					log_err("Wrong websocket proxy");
 					ret = E_WEBSOCKET_ERROR;
 					goto exit;
 				}
+
+				start = pmatch[1].rm_so;
+				end = pmatch[1].rm_eo;
+				size = end - start;
+				if (size < sizeof(address)) {
+					strncpy(address, &proxy[start], size);
+					address[size] = '\0';
+				}
+
+				start = pmatch[2].rm_so;
+				end = pmatch[2].rm_eo;
+				size = end - start;
+				if (size < sizeof(port)) {
+					strncpy(port, &proxy[start], size);
+					port[size] = '\0';
+				}
+
+				if (strlen(address) && strlen(port)) {
+					len = strlen(address) + 1 + strlen(port) + 1;
+
+					lws_proxy = (char *)malloc(len);
+					if (!lws_proxy) {
+						ret = E_NO_MEM;
+						goto exit;
+					}
+					snprintf(lws_proxy,	len, "%s:%s", address, port);
+				}
+
+				if (lws_proxy && lws_set_proxy(context,	lws_proxy) != 0) {
+					ret = E_WEBSOCKET_ERROR;
+					free(lws_proxy);
+					goto exit;
+				}
+
+				if (lws_proxy)
+					free(lws_proxy);
 			}
 		}
 	}
 
-	struct lws_client_connect_info conn_info;
-
 	memset(&conn_info, 0, sizeof(conn_info));
 
-	char *hostport = NULL;
-
 	if (host) {
-		hostport = malloc(strlen(host) + 5 + 1);
-		sprintf(hostport, "%.*s:%d", 256, host, port);
+		int host_len = strlen(host) + 5 + 1;
+
+		hostport = malloc(host_len);
+		if (!hostport) {
+			ret = E_NO_MEM;
+			goto exit;
+		}
+
+		snprintf(hostport, host_len, "%.*s:%d", 256, host, port);
 	}
 
 	conn_info.context = context;
@@ -944,6 +919,7 @@ artik_error os_websocket_open_stream(artik_websocket_config *config)
 	}
 
 	free(hostport);
+	hostport = NULL;
 
 	fds = malloc(sizeof(*fds));
 	if (fds == NULL) {
@@ -958,7 +934,7 @@ artik_error os_websocket_open_stream(artik_websocket_config *config)
 	fds->fdset[FD_RECEIVE] = eventfd(0, 0);
 	fds->fdset[FD_ERROR] = eventfd(0, 0);
 
-
+	memset(interface, 0, sizeof(*interface));
 	interface->context = (void *)context;
 	interface->wsi = (void *)wsi;
 	interface->container.fds = (void *)fds;
@@ -980,6 +956,23 @@ artik_error os_websocket_open_stream(artik_websocket_config *config)
 
 	config->private_data = (void *)interface;
 exit:
+	if (ret != S_OK) {
+		if (interface) {
+			if (interface->protocols)
+				free(interface->protocols);
+			free(interface);
+		}
+		if (sec_data)
+			free(sec_data);
+	}
+
+	if (host)
+		free(host);
+	if (path)
+		free(path);
+	if (hostport)
+		free(hostport);
+
 	return ret;
 }
 
@@ -994,6 +987,12 @@ artik_error os_websocket_write_stream(artik_websocket_config *config,
 	websocket_node *node = (websocket_node *)artik_list_get_by_handle(
 		requested_node, (ARTIK_LIST_HANDLE)
 		ARTIK_WEBSOCKET_INTERFACE->wsi);
+
+	if (!node) {
+		log_err("Could not find websocket instance");
+		ret = E_WEBSOCKET_ERROR;
+		goto exit;
+	}
 
 	if (node->interface.error_connect) {
 		log_err("Impossible to write, no connection");

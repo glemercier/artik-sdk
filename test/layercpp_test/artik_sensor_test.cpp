@@ -34,8 +34,6 @@ static void signal_handler(int signum) {
 }
 
 int main(int argc, char *argv[]) {
-  artik::Sensor sensor_module;
-  std::vector<artik::SensorDevice*> tab;
   artik::AccelerometerSensor *sensor_acce = NULL;
   artik::HumiditySensor *sensor_humidity = NULL;
   artik::LightSensor *sensor_photolight = NULL;
@@ -48,12 +46,9 @@ int main(int argc, char *argv[]) {
 
   signal(SIGINT, signal_handler);
   try {
-    try {
-      tab = sensor_module.list();
-    }
-    catch (artik::ArtikException error) {
-      printf("list ERROR[%s]\n", error.what());
-    }
+    artik::Sensor sensor_module;
+    std::vector<artik::SensorDevice*> tab = sensor_module.list();
+
     for (unsigned int i = 0; i < tab.size(); ++i) {
       printf("CONFIG[%s] : [%d]\n", tab[i]->get_name(), tab[i]->get_type());
       delete tab[i];

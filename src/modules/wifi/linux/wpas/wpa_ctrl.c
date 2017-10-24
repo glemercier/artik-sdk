@@ -533,7 +533,9 @@ int wpa_ctrl_pending(struct wpa_ctrl *ctrl)
 	tv.tv_usec = 0;
 	FD_ZERO(&rfds);
 	FD_SET(ctrl->s, &rfds);
-	select(ctrl->s + 1, &rfds, NULL, NULL, &tv);
+	if (select(ctrl->s + 1, &rfds, NULL, NULL, &tv) < 0)
+		return -1;
+
 	return FD_ISSET(ctrl->s, &rfds);
 }
 

@@ -70,7 +70,7 @@ void callback_on_display_pincode(artik_bt_event event,
 void callback_on_request_passkey(artik_bt_event event,
 	void *data, void *user_data)
 {
-	unsigned int passkey;
+	unsigned long passkey;
 	artik_bt_agent_request_property *request_property =
 		(artik_bt_agent_request_property *)data;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
@@ -79,8 +79,9 @@ void callback_on_request_passkey(artik_bt_event event,
 	fprintf(stdout, "<AGENT>: Request passkey (%s)\n",
 		request_property->device);
 	ask("Enter passkey (1~999999): ");
-	if (sscanf(buffer, "%u", &passkey) > 0)
-		bt->agent_send_passkey(request_property->handle, passkey);
+	passkey = strtoul(buffer, NULL, 10);
+	if ((passkey > 0) && (passkey < 999999))
+		bt->agent_send_passkey(request_property->handle, (unsigned int)passkey);
 	else
 		fprintf(stdout, "<AGENT>: get passkey error\n");
 
@@ -225,12 +226,11 @@ void uninit(int signal)
 int main(int argc, char *argv[])
 {
 	artik_error ret = S_OK;
-	int temp_capa = 0;
+	unsigned long temp_capa = 0;
 
-	if (argv[1] != NULL) {
-		temp_capa = argv[1][0] - '0';
-		if (temp_capa >= BT_CAPA_KEYBOARDDISPLAY
-			|| temp_capa < BT_CAPA_END)
+	if (argc > 1) {
+		temp_capa = strtoul(argv[1], NULL, 10);
+		if (temp_capa < BT_CAPA_END)
 			g_capa = temp_capa;
 	}
 

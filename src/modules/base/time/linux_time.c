@@ -144,7 +144,6 @@ artik_error os_time_set_time(artik_time date, artik_time_zone gmt)
 	time_t sec = 0;
 
 	memset(&dtime, 0, sizeof(dtime));
-	memset(&dtime, 1, sizeof(date));
 	memset(&stime, 0, sizeof(stime));
 	memcpy(&dtime, &date, sizeof(date));
 
@@ -428,6 +427,7 @@ artik_error os_time_get_delay_alarm(artik_alarm_handle handle,
 
 artik_error os_time_sync_ntp(const char *hostname)
 {
+	artik_error ret = S_OK;
 	unsigned char msg[48] = { 010, 0, 0, 0, 0, 0, 0, 0, 0 };
 	unsigned long buf[1024];
 
@@ -446,12 +446,17 @@ artik_error os_time_sync_ntp(const char *hostname)
 		return E_BAD_ARGS;
 	proto = getprotobyname("udp");
 	sock = socket(PF_INET, SOCK_DGRAM, proto->p_proto);
+	if (sock < 0) {
+		log_err("Failed to open socket");
+		return E_BAD_ARGS;
+	}
 
 	if (setsockopt
 	    (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&time_struct,
 	     sizeof(time_struct)) < 0) {
 		log_err("Failed to set socket options");
-		return E_BAD_ARGS;
+		ret = E_BAD_ARGS;
+		goto exit;
 	}
 
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -459,7 +464,8 @@ artik_error os_time_sync_ntp(const char *hostname)
 	host_resolv = gethostbyname(hostname);
 	if (!host_resolv) {
 		log_err("Failed to resolve host name");
-		return E_HTTP_ERROR;
+		ret = E_HTTP_ERROR;
+		goto exit;
 	}
 
 	server_addr.sin_addr.s_addr =
@@ -472,34 +478,41 @@ artik_error os_time_sync_ntp(const char *hostname)
 		   sizeof(server_addr));
 	if (res != 48) {
 		log_err("Failed to send request to socket");
-		return E_BAD_ARGS;
+		ret = E_BAD_ARGS;
+		goto exit;
 	}
 
 	saddr_l = sizeof(saddr);
 	res = recvfrom(sock, buf, 48, 0, &saddr, &saddr_l);
 	if (res != 48) {
 		log_err("Timeout on receiving response over the socket");
-		return E_BAD_ARGS;
+		ret = E_BAD_ARGS;
+		goto exit;
 	}
 
 	time_struct.tv_sec = ntohl((time_t) buf[4]) - EPOCH_BALANCE;
 	res = settimeofday(&time_struct, NULL);
 	if (res != 0) {
 		log_err("Failed to set new time");
-		return E_BAD_ARGS;
+		ret = E_BAD_ARGS;
+		goto exit;
 	}
 
-	return S_OK;
+exit:
+	close(sock);
+
+	return ret;
 }
 
 artik_error os_time_convert_timestamp_to_time(const int64_t timestamp,
 					      artik_time *date)
 {
 	struct tm *rtime = NULL;
+	time_t ts = (time_t)(timestamp & 0xFFFFFFFF);
 
 	memset(date, 0, sizeof(*date));
 
-	rtime = gmtime((time_t *)&timestamp);
+	rtime = gmtime(&ts);
 
 	if (!rtime)
 		return E_INVALID_VALUE;

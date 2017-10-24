@@ -19,6 +19,7 @@
 #include "artik_lwm2m.hh"
 
 artik::Lwm2m::Lwm2m() {
+  m_handle = NULL;
   m_module = reinterpret_cast<artik_lwm2m_module*>(
       artik_request_api_module("lwm2m"));
 }

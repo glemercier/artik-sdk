@@ -122,7 +122,7 @@ static artik_error test_serial_loopback(int platid)
 
 	fprintf(stdout, "TEST: %s\n", __func__);
 
-	serial->request(&handle, &config);
+	ret = serial->request(&handle, &config);
 	if (ret != S_OK) {
 		fprintf(stderr, "TEST: %s failed to request serial port (%d)\n",
 			__func__, ret);

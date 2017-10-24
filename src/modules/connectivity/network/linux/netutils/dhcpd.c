@@ -228,7 +228,7 @@ typedef struct {
 	in_addr_t endip;
 	in_addr_t netmask;
 	in_addr_t gw_addr;
-	in_addr_t *dns_addr;
+	in_addr_t dns_addr[MAX_DNS_ADDRESSES];
 
 	artik_loop_module *loop;
 	int sockfd;
@@ -247,18 +247,22 @@ static struct dhcpd_state_s g_state;
 int set_arpmapping(const struct sockaddr_in *inaddr,
 			const uint8_t *macaddr, const char *interface){
 	int ret = -EINVAL;
+	int sockfd = 0;
 
-	if (inaddr != NULL && macaddr != NULL) {
-		int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+	if (inaddr && macaddr && interface) {
+		if (strlen(interface) >= 16)
+			return -EINVAL;
 
+		sockfd = socket(PF_INET, SOCK_DGRAM, 0);
 		if (sockfd >= 0) {
 			struct arpreq req;
 
+			memset(&req, 0, sizeof(struct arpreq));
 			memcpy(&req.arp_pa, inaddr, sizeof(struct sockaddr_in));
 
 			req.arp_ha.sa_family = ARPHRD_ETHER;
 			memcpy(&req.arp_ha.sa_data, macaddr, ETHER_ADDR_LEN);
-			strncpy(req.arp_dev, interface, 16);
+			memcpy(req.arp_dev, interface, strlen(interface));
 			req.arp_flags = ATF_COM;
 
 			ret = ioctl(sockfd, SIOCSARP, (unsigned long)
@@ -290,14 +294,13 @@ static inline void dhcpd_arpupdate(uint8_t *ipaddr, uint8_t *hwaddr,
 	/* Put the protocol address in a standard form. ipaddr is assume to be
 	 * in network order by the memcpy.
 	 */
-
 	inaddr.sin_family = AF_INET;
 	inaddr.sin_port = 0;
 	memcpy(&inaddr.sin_addr.s_addr, ipaddr, sizeof(in_addr_t));
 
 	/* Update the ARP table */
-
-	(void)set_arpmapping(&inaddr, hwaddr, interface);
+	if (set_arpmapping(&inaddr, hwaddr, interface) < 0)
+		log_err("Failed to update ARP table");
 }
 
 /****************************************************************************
@@ -810,7 +813,7 @@ static inline int dhcpd_openresponder(void)
 	}
 
 	/* Bind the socket to a local port.*/
-
+	memset(&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family      = AF_INET;
 	addr.sin_port        = htons(DHCP_SERVER_PORT);
 	addr.sin_addr.s_addr = g_state.ds_serverip;
@@ -957,6 +960,8 @@ static inline int dhcpd_sendoffer(in_addr_t ipaddr, in_addr_t netmask,
 	uint32_t *dnsaddr = NULL;
 
 	dnsaddr = (uint32_t *)malloc(MAX_DNS_ADDRESSES*sizeof(uint32_t));
+	if (!dnsaddr)
+		return ERROR;
 
 	for (i = 0; i < MAX_DNS_ADDRESSES; i++)
 		dnsaddr[i] = htonl(dns_addr[i]);
@@ -1025,6 +1030,8 @@ int dhcpd_sendack(in_addr_t ipaddr, in_addr_t startip, in_addr_t netmask,
 	uint32_t *dnsaddr = NULL;
 
 	dnsaddr = (uint32_t *)malloc(MAX_DNS_ADDRESSES*sizeof(uint32_t));
+	if (!dnsaddr)
+		return ERROR;
 
 	for (i = 0; i < MAX_DNS_ADDRESSES; i++)
 		dnsaddr[i] = dns_addr[i];
@@ -1255,11 +1262,13 @@ static inline int dhcpd_request(unsigned int num_leases, in_addr_t startip,
 
 	if (response == DHCPACK) {
 		log_dbg("ACK IP %08lx\n", (long)ipaddr);
-		dhcpd_sendack(ipaddr, startip, netmask, gw_addr, dns_addr,
-							num_leases, interface);
+		if (dhcpd_sendack(ipaddr, startip, netmask, gw_addr, dns_addr,
+							num_leases, interface) < 0)
+			log_err("Failed to send NACK");
 	} else if (response == DHCPNAK) {
 		log_dbg("NAK IP %08lx\n", (long)ipaddr);
-		dhcpd_sendnak(interface);
+		if (dhcpd_sendnak(interface) < 0)
+			log_err("Failed to send NACK");
 	} else
 		log_dbg("Remaining silent IP %08lx\n", (long)ipaddr);
 
@@ -1312,11 +1321,10 @@ static inline int dhcpd_openlistener(const char *interface)
 {
 	struct sockaddr_in addr;
 	struct ifreq req;
-	int sockfd;
-	int ret;
+	int sockfd = -1;
+	int ret = 0;
 
 	/* Create a socket to listen for requests from DHCP clients */
-
 	sockfd = dhcpd_socket();
 	if (sockfd < 0) {
 		log_err("ERROR: socket failed: %d\n", errno);
@@ -1324,8 +1332,14 @@ static inline int dhcpd_openlistener(const char *interface)
 	}
 
 	/* Get the IP address of the selected device */
+	if (strlen(interface) >= IFNAMSIZ) {
+		log_err("ERROR: interface name is too long\n");
+		close(sockfd);
+		return ERROR;
+	}
 
-	strncpy(req.ifr_name, interface, IFNAMSIZ);
+	memset(&req, 0, sizeof(struct ifreq));
+	memcpy(req.ifr_name, interface, strlen(interface));
 	ret = ioctl(sockfd, SIOCGIFADDR, (unsigned long)&req);
 	if (ret < 0) {
 		log_err("ERROR: setsockopt SIOCGIFADDR failed: %d\n", errno);
@@ -1340,7 +1354,7 @@ static inline int dhcpd_openlistener(const char *interface)
 	/* Bind the socket to a local port. We have to bind to INADDRY_ANY to
 	 * receive broadcast messages.
 	 */
-
+	memset(&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family      = AF_INET;
 	addr.sin_port        = htons(DHCP_SERVER_PORT);
 	addr.sin_addr.s_addr = INADDR_ANY;
@@ -1443,8 +1457,6 @@ void *dhcpd_start(artik_network_dhcp_server_config *config)
 	server->endip = server->startip + server->num_leases - 1;
 	server->netmask = inet_addr(config->netmask.address);
 	server->gw_addr = inet_addr(config->gw_addr.address);
-	server->dns_addr = (in_addr_t *)malloc(
-			MAX_DNS_ADDRESSES * sizeof(in_addr_t));
 	server->loop = (artik_loop_module *)artik_request_api_module("loop");
 
 	for (int i = 0; i < MAX_DNS_ADDRESSES; i++) {

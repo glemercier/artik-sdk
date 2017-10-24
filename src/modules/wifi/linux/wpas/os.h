@@ -165,12 +165,6 @@ void os_daemonize_terminate(const char *pid_file);
 int os_get_random(unsigned char *buf, size_t len);
 
 /**
- * os_random - Get pseudo random value (not necessarily very strong)
- * Returns: Pseudo random value
- */
-unsigned long os_random(void);
-
-/**
  * os_rel2abs_path - Get an absolute path for a file
  * @rel_path: Relative path to a file
  * Returns: Absolute path for the file or %NULL on failure
