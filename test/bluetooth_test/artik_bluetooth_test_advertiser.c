@@ -80,6 +80,16 @@ static void set_advertisement(artik_bt_advertisement *adv)
 	printf("TX Power Level included\n");
 }
 
+static void free_advertisement(artik_bt_advertisement adv)
+{
+	if (adv.svc_uuid)
+		free(adv.svc_uuid);
+	if (adv.svc_data)
+		free(adv.svc_data);
+	if (adv.mfr_data)
+		free(adv.mfr_data);
+}
+
 static int on_signal(void *user_data)
 {
 	loop->quit();
@@ -91,7 +101,7 @@ int main(void)
 {
 	artik_bluetooth_module *bt;
 	artik_bt_advertisement adv = {0};
-	int adv_id;
+	int adv_id, sig_id;
 
 	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
@@ -102,14 +112,14 @@ int main(void)
 
 	bt->register_advertisement(&adv, &adv_id);
 
-	loop->add_signal_watch(SIGINT, on_signal, NULL, NULL);
+	loop->add_signal_watch(SIGINT, on_signal, NULL, &sig_id);
 	loop->run();
+	loop->remove_signal_watch(sig_id);
 
 	bt->unregister_advertisement(adv_id);
-
-	free(adv.mfr_data);
-
 	bt->deinit();
+
+	free_advertisement(adv);
 
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);

@@ -254,6 +254,7 @@ int main(void)
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 
+	free(adv.svc_uuid);
 	free(chr.value);
 	free(desc.value);
 

@@ -41,10 +41,12 @@ static const gchar adv_introspection_xml[] =
 "</node>";
 #pragma GCC diagnostic pop
 
-static GVariant *_handle_get_property(GDBusConnection * connection,
-		const gchar * sender, const gchar * object_path,
-		const gchar * interface_name, const gchar * property_name,
-		GError * *error, gpointer user_data)
+static GDBusNodeInfo *node_info;
+
+static GVariant *_handle_get_property(GDBusConnection *connection,
+		const gchar *sender, const gchar *object_path,
+		const gchar *interface_name, const gchar *property_name,
+		GError **error, gpointer user_data)
 {
 	GVariant *ret = NULL;
 	GVariantBuilder *b, *b1;
@@ -148,7 +150,6 @@ static const GDBusInterfaceVTable interface_vtable = {
 artik_error bt_register_advertisement(artik_bt_advertisement *user_adv, int *id)
 {
 	GError *e = NULL;
-	GDBusNodeInfo *node_info;
 	gchar *obj_path;
 	guint object_id, adv_id;
 	bt_advertisement *adv_info;
@@ -156,7 +157,12 @@ artik_error bt_register_advertisement(artik_bt_advertisement *user_adv, int *id)
 
 	log_dbg("%s", __func__);
 
-	node_info = g_dbus_node_info_new_for_xml(adv_introspection_xml, NULL);
+	node_info = g_dbus_node_info_new_for_xml(adv_introspection_xml, &e);
+	if (e) {
+		log_err("%s", e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	adv_id = g_slist_length(hci.advertisements);
 	obj_path = g_strdup_printf("%s%d", ADVERTISEMENT_PREFIX, adv_id);
@@ -218,8 +224,11 @@ artik_error bt_unregister_advertisement(int id)
 			NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
 			(GAsyncReadyCallback)_asyn_ready_cb, "Unregister Advertisement");
 
+	hci.advertisements = g_slist_remove(hci.advertisements, adv_info);
+	g_dbus_connection_unregister_object(hci.conn, adv_info->adv_id);
 	g_free(adv_info->adv_path);
 	g_free(adv_info);
+	g_dbus_node_info_unref(node_info);
 
 	return S_OK;
 }

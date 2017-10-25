@@ -27,6 +27,9 @@ artik_error bt_init(void)
 
 	log_dbg("%s", __func__);
 
+	if (hci.conn)
+		return S_OK;
+
 	hci.conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &e);
 	if (e != NULL) {
 		log_err("%s", e->message);
