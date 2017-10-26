@@ -1324,6 +1324,46 @@ extern "C" {
 		 */
 		artik_error(*gatt_add_characteristic) (int svc_id,
 				artik_bt_gatt_chr chr, int *id);
+		/* \brief Add a new GATT descriptor
+		 *
+		 * \param[in] service_id The internal id of the GATT service to which
+		 *                       the descriptor belongs to
+		 * \param[in] char_id The internal id of the GATT characteristic to which the
+		 *                    the descriptor belongs to
+		 * \param[in] desc The descriptor properties.
+		 * \param[out] id The internal id of the descriptor.
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 */
+		artik_error(*gatt_add_descriptor) (int service_id, int char_id,
+				artik_bt_gatt_desc desc, int *id);
+		/* \brief Remove a GATT service
+		 *
+		 * \param[in] sid The internal id of the GATT service to which
+		 *                       the descriptor belongs to
+		 * \return S_OK on success, otherwise a negative error value.
+		 */
+		artik_error(*gatt_remove_service) (int sid);
+		/* \brief Remove a GATT characteristic
+		 *
+		 * \param[in] sid The internal id of the GATT service to which
+		 *                       the descriptor belongs to
+		 * \param[in] cid The internal id of the GATT characteristic to which
+		 *                    the descriptor belongs to
+		 * \return S_OK on success, otherwise a negative error value.
+		 */
+		artik_error(*gatt_remove_characteristic) (int sid, int cid);
+		/* \brief Remove a GATT descriptor
+		 *
+		 * \param[in] sid The internal id of the GATT service to which
+		 *                       the descriptor belongs to
+		 * \param[in] cid The internal id of the GATT characteristic to
+		 *                    which the the descriptor belongs to
+		 * \param[in] did The internal id of the GATT descriptor to which the
+		 *                    descriptor belongs to
+		 * \return S_OK on success, otherwise a negative error value.
+		 */
+		artik_error(*gatt_remove_descriptor) (int sid, int cid, int did);
 		/*! \brief Set callback for handle read request of a GATT characteristic
 		 *
 		 * \param[in] svc_id The internal id of the GATT service
@@ -1351,19 +1391,6 @@ extern "C" {
 		 */
 		artik_error(*gatt_set_char_on_notify_request) (int svc_id, int char_id,
 				artik_bt_gatt_req_notify callback, void *user_data);
-		/* \brief Add a new GATT descriptor
-		 *
-		 * \param[in] service_id The internal id of the GATT service to which
-		 *                       the descriptor belongs to
-		 * \param[in] char_id The internal id of the GATT characteristic to wich the
-		 *                    the descriptor belongs to
-		 * \param[in] desc The descriptor properties.
-		 * \param[out] id The internal id of the descriptor.
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
-		 */
-		artik_error(*gatt_add_descriptor) (int service_id, int char_id,
-				artik_bt_gatt_desc desc, int *id);
 		/*! \brief Set callback for handle read request of a GATT descriptor
 		 *
 		 * \param[in] svc_id The internal id of the GATT service

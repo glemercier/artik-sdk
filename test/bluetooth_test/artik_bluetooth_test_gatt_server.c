@@ -246,8 +246,13 @@ int main(void)
 	loop->run();
 	loop->remove_signal_watch(signal_id);
 
+	bt->gatt_remove_descriptor(svc_id, char_id, desc_id);
+	bt->gatt_remove_characteristic(svc_id, char_id);
+	bt->gatt_remove_service(svc_id);
+
 	bt->unregister_advertisement(adv_id);
 	bt->gatt_unregister_service(svc_id);
+	bt->agent_unregister();
 
 	bt->deinit();
 

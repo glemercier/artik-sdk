@@ -70,14 +70,18 @@ static artik_error artik_bluetooth_gatt_add_service(artik_bt_gatt_service svc,
 		int *id);
 static artik_error artik_bluetooth_gatt_add_characteristic(int svc_id,
 		artik_bt_gatt_chr chr, int *id);
+static artik_error artik_bluetooth_gatt_add_descriptor(int service_id,
+		int char_id, artik_bt_gatt_desc desc, int *id);
+static artik_error artik_bluetooth_gatt_remove_service(int sid);
+static artik_error artik_bluetooth_gatt_remove_characteristic(int sid, int cid);
+static artik_error artik_bluetooth_gatt_remove_descriptor(int sid, int cid,
+		int did);
 static artik_error artik_bluetooth_gatt_set_char_on_read_request(int svc_id, int char_id,
 		artik_bt_gatt_req_read callback, void *user_data);
 static artik_error artik_bluetooth_gatt_set_char_on_write_request(int svc_id, int char_id,
 		artik_bt_gatt_req_write callback, void *user_data);
 static artik_error artik_bluetooth_gatt_set_char_on_notify_request(int svc_id, int char_id,
 		artik_bt_gatt_req_notify callback, void *user_data);
-static artik_error artik_bluetooth_gatt_add_descriptor(int service_id,
-		int char_id, artik_bt_gatt_desc desc, int *id);
 static artik_error artik_bluetooth_gatt_set_desc_on_read_request(int svc_id, int char_id,
 		int desc_id, artik_bt_gatt_req_read callback, void *user_data);
 static artik_error artik_bluetooth_gatt_set_desc_on_write_request(int svc_id, int char_id,
@@ -218,10 +222,13 @@ const artik_bluetooth_module bluetooth_module = {
 	artik_bluetooth_is_blocked,
 	artik_bluetooth_gatt_add_service,
 	artik_bluetooth_gatt_add_characteristic,
+	artik_bluetooth_gatt_add_descriptor,
+	artik_bluetooth_gatt_remove_service,
+	artik_bluetooth_gatt_remove_characteristic,
+	artik_bluetooth_gatt_remove_descriptor,
 	artik_bluetooth_gatt_set_char_on_read_request,
 	artik_bluetooth_gatt_set_char_on_write_request,
 	artik_bluetooth_gatt_set_char_on_notify_request,
-	artik_bluetooth_gatt_add_descriptor,
 	artik_bluetooth_gatt_set_desc_on_read_request,
 	artik_bluetooth_gatt_set_desc_on_write_request,
 	artik_bluetooth_gatt_register_service,
@@ -560,6 +567,30 @@ artik_error artik_bluetooth_gatt_add_characteristic(int service_id,
 	return os_bt_gatt_add_characteristic(service_id, chr, id);
 }
 
+artik_error artik_bluetooth_gatt_add_descriptor(int service_id, int char_id,
+		artik_bt_gatt_desc desc, int *id)
+{
+	if (!id)
+		return E_BAD_ARGS;
+
+	return os_bt_gatt_add_descriptor(service_id, char_id, desc, id);
+}
+
+artik_error artik_bluetooth_gatt_remove_service(int sid)
+{
+	return os_bt_gatt_remove_service(sid);
+}
+
+artik_error artik_bluetooth_gatt_remove_characteristic(int sid, int cid)
+{
+	return os_bt_gatt_remove_characteristic(sid, cid);
+}
+
+artik_error artik_bluetooth_gatt_remove_descriptor(int sid, int cid, int did)
+{
+	return os_bt_gatt_remove_descriptor(sid, cid, did);
+}
+
 artik_error artik_bluetooth_gatt_set_char_on_read_request(int svc_id, int char_id,
 		artik_bt_gatt_req_read callback, void *user_data)
 {
@@ -576,15 +607,6 @@ artik_error artik_bluetooth_gatt_set_char_on_notify_request(int svc_id, int char
 		artik_bt_gatt_req_notify callback, void *user_data)
 {
 	return os_bt_gatt_set_char_on_notify_request(svc_id, char_id, callback, user_data);
-}
-
-artik_error artik_bluetooth_gatt_add_descriptor(int service_id, int char_id,
-		artik_bt_gatt_desc desc, int *id)
-{
-	if (!id)
-		return E_BAD_ARGS;
-
-	return os_bt_gatt_add_descriptor(service_id, char_id, desc, id);
 }
 
 artik_error artik_bluetooth_gatt_set_desc_on_read_request(int svc_id, int char_id,

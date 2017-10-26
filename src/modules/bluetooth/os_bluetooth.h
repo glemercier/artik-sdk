@@ -67,14 +67,17 @@ bool os_bt_is_blocked(const char *addr);
 artik_error os_bt_gatt_add_service(artik_bt_gatt_service svc, int *id);
 artik_error os_bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr,
 		int *id);
+artik_error os_bt_gatt_add_descriptor(int service_id, int char_id,
+		artik_bt_gatt_desc desc, int *id);
+artik_error os_bt_gatt_remove_service(int sid);
+artik_error os_bt_gatt_remove_characteristic(int sid, int cid);
+artik_error os_bt_gatt_remove_descriptor(int sid, int cid, int did);
 artik_error os_bt_gatt_set_char_on_read_request(int svc_id, int char_id,
 		artik_bt_gatt_req_read callback, void *user_data);
 artik_error os_bt_gatt_set_char_on_write_request(int svc_id, int char_id,
 		artik_bt_gatt_req_write callback, void *user_data);
 artik_error os_bt_gatt_set_char_on_notify_request(int svc_id, int char_id,
 		artik_bt_gatt_req_notify callback, void *user_data);
-artik_error os_bt_gatt_add_descriptor(int service_id, int char_id,
-		artik_bt_gatt_desc desc, int *id);
 artik_error os_bt_gatt_set_desc_on_read_request(int svc_id, int char_id, int desc_id,
 		artik_bt_gatt_req_read callback, void *user_data);
 artik_error os_bt_gatt_set_desc_on_write_request(int svc_id, int char_id, int desc_id,
