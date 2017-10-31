@@ -165,7 +165,8 @@ static void _device_properties_changed(const gchar *path, GVariant *properties)
 
 		if (g_strcmp0(key, "Connected") == 0) {
 
-			if (hci.state == BT_DEVICE_STATE_IDLE)
+			if (hci.state == BT_DEVICE_STATE_IDLE
+					|| hci.state == BT_DEVICE_STATE_CONNECTING)
 				_process_connection_cb(path, BT_EVENT_CONNECT);
 			else if (hci.state == BT_DEVICE_STATE_PAIRING
 					&& !g_variant_get_boolean(val))
@@ -238,26 +239,21 @@ static void _pan_properties_changed(const gchar *path, GVariant *properties)
 	g_variant_iter_free(iter);
 }
 
-
 void _get_adapter_properties(GVariant *prop_array, artik_bt_adapter *adapter)
 {
-	GVariant *prop_dict, *v, *uuid;
+	GVariant *v, *uuid;
+	GVariantIter *iter;
 	gchar *key = NULL;
-	gint i = 0, j = 0, prop_len = 0, uuid_len = 0;
+	gint i = 0, uuid_len = 0;
 	uint32_t cod;
 
 	if (!adapter)
 		return;
+
 	memset(adapter, 0x00, sizeof(artik_bt_adapter));
 
-	prop_len = g_variant_n_children(prop_array);
-	if (prop_len < 1)
-		return;
-
-	for (i = 0; i < prop_len; i++) {
-		prop_dict = g_variant_get_child_value(prop_array, i);
-		g_variant_get(prop_dict, "{&sv}", &key, &v);
-
+	g_variant_get(prop_array, "(a{sv})", &iter);
+	while (g_variant_iter_loop(iter, "{&sv}", &key, &v)) {
 		if (g_strcmp0(key, "Address") == 0) {
 			g_variant_get(v, "s", &adapter->address);
 		} else if (g_strcmp0(key, "Name") == 0) {
@@ -278,34 +274,38 @@ void _get_adapter_properties(GVariant *prop_array, artik_bt_adapter *adapter)
 		} else if (g_strcmp0(key, "DiscoverableTimeout") == 0) {
 			g_variant_get(v, "u", &adapter->discover_timeout);
 		} else if (g_strcmp0(key, "UUIDs") == 0) {
+
 			uuid_len = g_variant_n_children(v);
 			adapter->uuid_length = uuid_len;
-			if (uuid_len > 0) {
-				adapter->uuid_list
-					= (artik_bt_uuid *)malloc(sizeof(artik_bt_uuid) * uuid_len);
-				for (j = 0; j < uuid_len; j++) {
-					uuid = g_variant_get_child_value(v, j);
 
-					g_variant_get(uuid, "s", &adapter->uuid_list[j].uuid);
-					adapter->uuid_list[j].uuid_name
-						= g_strdup(_get_uuid_name(adapter->uuid_list[j].uuid));
+			if (uuid_len > 0) {
+				adapter->uuid_list = g_try_new0(artik_bt_uuid, uuid_len);
+				if (!adapter->uuid_list) {
+					g_variant_unref(v);
+					break;
+				}
+
+				for (i = 0; i < uuid_len; i++) {
+					uuid = g_variant_get_child_value(v, i);
+
+					g_variant_get(uuid, "s", &adapter->uuid_list[i].uuid);
+					adapter->uuid_list[i].uuid_name
+						= g_strdup(_get_uuid_name(adapter->uuid_list[i].uuid));
 
 					g_variant_unref(uuid);
 				}
 			}
 		}
 	}
-
-	g_variant_unref(prop_dict);
-	g_variant_unref(v);
+	g_variant_iter_free(iter);
 }
 
 void _get_device_properties(GVariant *prop_array, artik_bt_device *device)
 {
-	GVariant *prop_dict, *v, *uuid, *v_mfr, *v_mfr_data, *v_byte,
-		*v_svc, *v_svc_data;
+	GVariant *v, *uuid, *v_mfr, *v_mfr_data, *v_byte, *v_svc, *v_svc_data;
+	GVariantIter *iter;
 	gchar *key = NULL, *svc_uuid = NULL;
-	gint i = 0, j = 0, prop_len = 0, uuid_len = 0;
+	gint i = 0, uuid_len = 0;
 	guint32 cod;
 	guint16 mfr_id = 0;
 
@@ -313,14 +313,8 @@ void _get_device_properties(GVariant *prop_array, artik_bt_device *device)
 		return;
 	memset(device, 0x00, sizeof(artik_bt_device));
 
-	prop_len = g_variant_n_children(prop_array);
-	if (prop_len < 1)
-		return;
-
-	for (i = 0; i < prop_len; i++) {
-		prop_dict = g_variant_get_child_value(prop_array, i);
-		g_variant_get(prop_dict, "{&sv}", &key, &v);
-
+	g_variant_get(prop_array, "a{sv}", &iter);
+	while (g_variant_iter_loop(iter, "{&sv}", &key, &v)) {
 		if (g_strcmp0(key, "Address") == 0) {
 			g_variant_get(v, "s", &device->remote_address);
 		} else if (g_strcmp0(key, "Name") == 0) {
@@ -340,12 +334,12 @@ void _get_device_properties(GVariant *prop_array, artik_bt_device *device)
 			if (uuid_len > 0) {
 				device->uuid_list
 					= (artik_bt_uuid *)malloc(sizeof(artik_bt_uuid) * uuid_len);
-				for (j = 0; j < uuid_len; j++) {
-					uuid = g_variant_get_child_value(v, j);
+				for (i = 0; i < uuid_len; i++) {
+					uuid = g_variant_get_child_value(v, i);
 
-					g_variant_get(uuid, "s", &device->uuid_list[j].uuid);
-					device->uuid_list[j].uuid_name
-						= g_strdup(_get_uuid_name(device->uuid_list[j].uuid));
+					g_variant_get(uuid, "s", &device->uuid_list[i].uuid);
+					device->uuid_list[i].uuid_name
+						= g_strdup(_get_uuid_name(device->uuid_list[i].uuid));
 
 					g_variant_unref(uuid);
 				}
@@ -362,9 +356,9 @@ void _get_device_properties(GVariant *prop_array, artik_bt_device *device)
 			if (device->manufacturer_data_len > 0) {
 				device->manufacturer_data
 						= (char *)malloc(device->manufacturer_data_len);
-				for (j = 0; j < device->manufacturer_data_len; j++) {
-					v_byte = g_variant_get_child_value(v_mfr_data, j);
-					g_variant_get(v_byte, "y", &device->manufacturer_data[j]);
+				for (i = 0; i < device->manufacturer_data_len; i++) {
+					v_byte = g_variant_get_child_value(v_mfr_data, i);
+					g_variant_get(v_byte, "y", &device->manufacturer_data[i]);
 					g_variant_unref(v_byte);
 				}
 			}
@@ -379,9 +373,9 @@ void _get_device_properties(GVariant *prop_array, artik_bt_device *device)
 			device->svc_data_len = g_variant_n_children(v_svc_data);
 			if (device->svc_data_len > 0) {
 				device->svc_data = (char *)malloc(device->svc_data_len);
-				for (j = 0; j < device->svc_data_len; j++) {
-					v_byte = g_variant_get_child_value(v_svc_data, j);
-					g_variant_get(v_byte, "y", &device->svc_data[j]);
+				for (i = 0; i < device->svc_data_len; i++) {
+					v_byte = g_variant_get_child_value(v_svc_data, i);
+					g_variant_get(v_byte, "y", &device->svc_data[i]);
 					g_variant_unref(v_byte);
 				}
 			}
@@ -389,9 +383,7 @@ void _get_device_properties(GVariant *prop_array, artik_bt_device *device)
 			g_variant_unref(v_svc_data);
 		}
 	}
-
-	g_variant_unref(prop_dict);
-	g_variant_unref(v);
+	g_variant_iter_free(iter);
 }
 
 artik_error _get_managed_objects(GVariant **variant)
@@ -408,27 +400,18 @@ artik_error _get_managed_objects(GVariant **variant)
 
 void _get_object_path(const char *addr, char **path)
 {
-	GVariant *obj1, *ar1, *ar2;
-	GVariantIter *iter1, *iter2;
-	gchar *dev_path, *itf;
-	artik_bt_device *device;
+	GVariant *obj1, *ar1, *ar2, *v;
+	GVariantIter *iter1, *iter2, *iter3;
+	gchar *obj_path, *itf, *key;
+	const gchar *value;
 
 	*path = NULL;
 
 	if (_get_managed_objects(&obj1) != S_OK)
 		return;
 
-	device = g_try_new0(artik_bt_device, 1);
-	if (!device)
-		return;
-
 	g_variant_get(obj1, "(a{oa{sa{sv}}})", &iter1);
-	while (g_variant_iter_loop(iter1, "{&o@a{sa{sv}}}", &dev_path, &ar1)) {
-
-		if (*path != NULL) {
-			g_variant_unref(ar1);
-			break;
-		}
+	while (g_variant_iter_loop(iter1, "{&o@a{sa{sv}}}", &obj_path, &ar1)) {
 
 		g_variant_get(ar1, "a{sa{sv}}", &iter2);
 		while (g_variant_iter_loop(iter2, "{&s@a{sv}}", &itf, &ar2)) {
@@ -436,91 +419,116 @@ void _get_object_path(const char *addr, char **path)
 			if (strcasecmp(itf, DBUS_IF_DEVICE1) != 0)
 				continue;
 
-			_get_device_properties(ar2, device);
-			if (strcasecmp(device->remote_address, addr) == 0) {
-				*path = g_strdup(dev_path);
-				g_variant_unref(ar2);
-				break;
+			g_variant_get(ar2, "a{sv}", &iter3);
+			while (g_variant_iter_loop(iter3, "{&sv}", &key, &v)) {
+
+				if (g_strcmp0(key, "Address") == 0) {
+					value = g_variant_get_string(v, NULL);
+
+					if (strcasecmp(value, addr) == 0)
+						*path = g_strdup(obj_path);
+				}
 			}
+			g_variant_iter_free(iter3);
 		}
 		g_variant_iter_free(iter2);
 	}
-
-	bt_free_device(device);
 	g_variant_iter_free(iter1);
+
 	g_variant_unref(obj1);
 }
 
 artik_error _get_devices(bt_device_state state,
 		artik_bt_device **device_list, int *count)
 {
-	GVariant *objects;
-	GVariant *path_array, *path_item;
-	GVariant *if_array, *if_item;
-	GVariant *prop_array;
-	gchar *path, *interface;
-	gsize path_count = 0, if_count = 0;
-	guint i = 0, j = 0;
-	int cnt = 0;
-	artik_bt_device *tmp_list;
+	GVariant *objects, *if_array, *prop_array;
+	GVariantIter *iter1, *iter2;
+	gchar *path, *itf;
+	gint cnt = 0;
+	artik_bt_device *tmp_list = NULL;
 	artik_error ret = S_OK;
 
-	log_dbg("");
+	log_dbg("%s state:%d", __func__, state);
 
 	ret = _get_managed_objects(&objects);
 	if (ret != S_OK)
 		return ret;
 
-	path_array = g_variant_get_child_value(objects, 0);
-	path_count = g_variant_n_children(path_array);
+	g_variant_get(objects, "(a{oa{sa{sv}}})", &iter1);
+	while (g_variant_iter_loop(iter1, "{&o@a{sa{sv}}}", &path, &if_array)) {
 
-	/* ignore AgentManager1 and Adapter1 */
-	tmp_list = (artik_bt_device *)malloc(sizeof(artik_bt_device)
-			* (path_count - 2));
+		g_variant_get(if_array, "a{sa{sv}}", &iter2);
+		while (g_variant_iter_loop(iter2, "{&s@a{sv}}", &itf, &prop_array)) {
 
-	for (i = 2; i < path_count; i++) {
-		path_item = g_variant_get_child_value(path_array, i);
-		g_variant_get(path_item, "{&o@a{sa{sv}}}", &path, &if_array);
+			if (strcasecmp(itf, DBUS_IF_DEVICE1) != 0)
+				continue;
 
-		if_count = g_variant_n_children(if_array);
-
-		for (j = 0; j < if_count; j++) {
-			if_item = g_variant_get_child_value(if_array, j);
-			g_variant_get(if_item, "{&s@a{sv}}", &interface, &prop_array);
-
-			if (strcasecmp(interface, DBUS_IF_DEVICE1) == 0) {
-				switch (state) {
-				case BT_DEVICE_STATE_PAIRED:
-					if (_is_paired(path))
-						_get_device_properties(prop_array, &tmp_list[cnt++]);
-					break;
-				case BT_DEVICE_STATE_CONNECTED:
-					if (_is_connected(path))
-						_get_device_properties(prop_array, &tmp_list[cnt++]);
-					break;
-				default:
-					_get_device_properties(prop_array, &tmp_list[cnt++]);
-					break;
+			switch (state) {
+			case BT_DEVICE_STATE_IDLE:
+				cnt++;
+				tmp_list = (artik_bt_device *)realloc(tmp_list,
+						sizeof(artik_bt_device) * cnt);
+				if (!tmp_list) {
+					g_variant_unref(objects);
+					g_variant_unref(prop_array);
+					g_variant_unref(if_array);
+					g_variant_iter_free(iter2);
+					g_variant_iter_free(iter1);
+					return E_NO_MEM;
 				}
+				_get_device_properties(prop_array, &tmp_list[cnt-1]);
+				break;
+			case BT_DEVICE_STATE_PAIRED:
+				if (_is_paired(path)) {
+					cnt++;
+					tmp_list = (artik_bt_device *)realloc(tmp_list,
+							sizeof(artik_bt_device) * cnt);
+					if (!tmp_list) {
+						g_variant_unref(objects);
+						g_variant_unref(prop_array);
+						g_variant_unref(if_array);
+						g_variant_iter_free(iter2);
+						g_variant_iter_free(iter1);
+						return E_NO_MEM;
+					}
+					_get_device_properties(prop_array, &tmp_list[cnt-1]);
+				}
+				break;
+			case BT_DEVICE_STATE_CONNECTED:
+				if (_is_connected(path)) {
+					cnt++;
+					tmp_list = (artik_bt_device *)realloc(tmp_list,
+							sizeof(artik_bt_device) * cnt);
+					if (!tmp_list) {
+						g_variant_unref(objects);
+						g_variant_unref(prop_array);
+						g_variant_unref(if_array);
+						g_variant_iter_free(iter2);
+						g_variant_iter_free(iter1);
+						return E_NO_MEM;
+					}
+					_get_device_properties(prop_array, &tmp_list[cnt-1]);
+				}
+				break;
+			default:
+				log_dbg("state %d is not supported", state);
+				break;
 			}
-			g_variant_unref(if_item);
-			g_variant_unref(prop_array);
 		}
-		g_variant_unref(path_item);
-		g_variant_unref(if_array);
+		g_variant_iter_free(iter2);
 	}
 
 	*count = cnt;
 	*device_list = tmp_list;
 
+	g_variant_iter_free(iter1);
 	g_variant_unref(objects);
-	g_variant_unref(path_array);
 
 	return ret;
 }
 
-void _get_gatt_path(const char *addr, const char *interface,
-		const char *uuid, const char *property, const char *value, gchar **gatt_path)
+void _get_gatt_path(const char *addr, const char *interface, const char *uuid,
+		const char *property, const char *value, gchar **gatt_path)
 {
 	GVariant *obj1, *ar1, *ar2, *val;
 	GVariantIter *iter1, *iter2, *iter3;
@@ -675,42 +683,38 @@ static void _process_gatt_service(gchar *path)
 void _process_connection_cb(const gchar *path, artik_bt_event e)
 {
 	GVariant *v1, *v2;
-	artik_bt_device d = {0};
+	artik_bt_device *device;
 
 	log_dbg("%s %s, evt: %d", __func__, path, e);
 
 	if (!(e & (BT_EVENT_BOND | BT_EVENT_CONNECT)))
 		return;
 
+	device = g_try_new0(artik_bt_device, 1);
+	if (!device)
+		return;
+	memset(device, 0, sizeof(artik_bt_device));
+
 	hci.state = BT_DEVICE_STATE_IDLE;
 
 	if (_get_all_device_properties(path, &v1) == S_OK) {
 
 		v2 = g_variant_get_child_value(v1, 0);
-		_get_device_properties(v2, &d);
-
-		_user_callback(e, &d);
-
-		g_free(d.uuid_list);
-		g_free(d.manufacturer_data);
-		g_free(d.svc_data);
+		_get_device_properties(v2, device);
 
 		g_variant_unref(v1);
 		g_variant_unref(v2);
-	} else {
-		if (e == BT_EVENT_BOND)
-			d.is_bonded = false;
-		else if (e == BT_EVENT_CONNECT)
-			d.is_connected = false;
-
-		_user_callback(e, &d);
 	}
+
+	_user_callback(e, device);
+
+	bt_free_device(device);
 }
 
 void _process_service_cb(const gchar *path, artik_bt_event e)
 {
 	GVariant *v1, *v2;
-	artik_bt_device d = {0};
+	artik_bt_device *device;
 
 	log_dbg("%s %s, evt: %d", __func__, path, e);
 
@@ -719,14 +723,19 @@ void _process_service_cb(const gchar *path, artik_bt_event e)
 
 	if (_get_all_device_properties(path, &v1) == S_OK) {
 
+		device = g_try_new0(artik_bt_device, 1);
+		if (!device) {
+			g_variant_unref(v1);
+			return;
+		}
+		memset(device, 0, sizeof(artik_bt_device));
+
 		v2 = g_variant_get_child_value(v1, 0);
-		_get_device_properties(v2, &d);
+		_get_device_properties(v2, device);
 
-		_user_callback(e, &d);
+		_user_callback(e, device);
 
-		g_free(d.uuid_list);
-		g_free(d.manufacturer_data);
-		g_free(d.svc_data);
+		bt_free_device(device);
 
 		g_variant_unref(v1);
 		g_variant_unref(v2);
@@ -838,6 +847,7 @@ void _on_interface_added(const gchar *sender_name,
 		}
 	}
 	g_variant_iter_free(iter);
+	g_variant_unref(device_array);
 }
 
 void _on_interface_removed(const gchar *sender_name,
@@ -845,35 +855,29 @@ void _on_interface_removed(const gchar *sender_name,
 	GVariant *parameters, gpointer user_data)
 {
 	GVariantIter *iter;
-	gchar *path = NULL;
-	gchar *interface = NULL;
+	gchar *path = NULL, *interface = NULL;
 
-	g_variant_get(parameters, "(oas)", &path, &iter);
-	log_dbg("InterfacesRemoved [%s]", path);
+	g_variant_get(parameters, "(&oas)", &path, &iter);
+	log_dbg("%s [%s]", __func__, path);
 
-	while (g_variant_iter_loop(iter, "s", &interface)) {
+	while (g_variant_iter_loop(iter, "&s", &interface)) {
 		if (g_strcmp0(interface, DBUS_IF_OBEX_SESSION) == 0) {
 			memset(session_path, 0, SESSION_PATH_LEN);
+
 		} else if (g_strcmp0(interface, DBUS_IF_OBEX_TRANSFER) == 0) {
-			if (transfer_property.object_path != NULL) {
-				free(transfer_property.object_path);
-				transfer_property.object_path = NULL;
-			}
 
-			if (transfer_property.file_name != NULL) {
-				free(transfer_property.file_name);
-				transfer_property.file_name = NULL;
-			}
+			g_free(transfer_property.object_path);
+			transfer_property.object_path = NULL;
 
-			if (transfer_property.name != NULL) {
-				free(transfer_property.name);
-				transfer_property.name = NULL;
-			}
+			g_free(transfer_property.file_name);
+			transfer_property.file_name = NULL;
 
-			if (transfer_property.status != NULL) {
-				free(transfer_property.status);
-				transfer_property.status = NULL;
-			}
+			g_free(transfer_property.name);
+			transfer_property.name = NULL;
+
+			g_free(transfer_property.status);
+			transfer_property.status = NULL;
+
 			transfer_property.transfered = 0;
 			transfer_property.size = 0;
 		}
@@ -893,14 +897,12 @@ void _on_properties_changed(const gchar *sender_name,
 	if (g_str_has_prefix(object_path, DBUS_BLUEZ_OBJECT_PATH)) {
 		log_dbg("%s %s %s", __func__, object_path, interface_name);
 		print_variant(parameters);
-		log_dbg("%s-interface: %s", __func__, interface);
 
 		if (g_strcmp0(DBUS_IF_DEVICE1, interface) == 0) {
 			_device_properties_changed(object_path, properties);
 
 		} else if (g_strcmp0(DBUS_IF_PROXIMITYREPORTER1, interface) == 0 ||
 				g_strcmp0(DBUS_IF_PROXIMITYMONITOR1, interface) == 0) {
-			g_print("interface : [%s]\n", interface);
 			_proximity_properties_changed(properties);
 
 		} else if (g_strcmp0(DBUS_IF_GATTCHARACTERISTIC1, interface) == 0) {
@@ -1053,16 +1055,12 @@ void _get_device_address(const gchar *path, gchar **address)
 	GVariant *tuple, *v;
 
 	tuple = g_dbus_connection_call_sync(hci.conn,
-					    DBUS_BLUEZ_BUS,
-					    path,
-					    DBUS_IF_PROPERTIES,
-					    "Get",
-					    g_variant_new("(ss)", DBUS_IF_DEVICE1, "Address"),
-					    NULL,
-					    G_DBUS_CALL_FLAGS_NONE,
-					    G_MAXINT,
-					    NULL,
-					    NULL);
+		DBUS_BLUEZ_BUS,
+		path,
+		DBUS_IF_PROPERTIES,
+		"Get",
+		g_variant_new("(ss)", DBUS_IF_DEVICE1, "Address"),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL);
 
 	g_variant_get(tuple, "(v)", &v);
 	g_variant_get(v, "s", address);

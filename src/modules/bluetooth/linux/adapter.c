@@ -32,7 +32,7 @@ artik_error bt_set_scan_filter(artik_bt_scan_filter * filter)
 {
 	GError *e = NULL;
 	GVariantBuilder *b, *b1;
-	GVariant *f;
+	GVariant *v, *f;
 	gchar *type;
 	guint i;
 
@@ -77,16 +77,24 @@ artik_error bt_set_scan_filter(artik_bt_scan_filter * filter)
 		f = g_variant_new("(a{sv})", NULL);
 	}
 
-	g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_ADAPTER1,
-			"SetDiscoveryFilter",
-			f, NULL,
-			G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+	v = g_dbus_connection_call_sync(
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_ADAPTER1,
+		"SetDiscoveryFilter",
+		f, NULL,
+		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
-	return bt_check_error(e);
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
+
+	g_variant_unref(v);
+
+	return S_OK;
 }
 
 artik_error bt_set_alias(const char *alias)
@@ -98,39 +106,49 @@ artik_error bt_set_alias(const char *alias)
 		return S_OK;
 
 	v = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_PROPERTIES,
-			"Set",
-			g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "Alias",
-					g_variant_new_string(alias)),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_PROPERTIES,
+		"Set",
+		g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "Alias",
+				g_variant_new_string(alias)),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	g_variant_unref(v);
 
-	return bt_check_error(e);
+	return S_OK;
 }
 
 artik_error bt_set_powered(bool powered)
 {
+	GVariant *v;
 	GError *e = NULL;
 
-	g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_PROPERTIES,
-			"Set",
-			g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "Powered",
-					g_variant_new_boolean(powered)),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+	v = g_dbus_connection_call_sync(
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_PROPERTIES,
+		"Set",
+		g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "Powered",
+				g_variant_new_boolean(powered)),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
 	if (e) {
-		log_err("Set powered failed: %s", e->message);
+		log_err(e->message);
 		g_error_free(e);
 		return E_BT_ERROR;
 	}
+
+	g_variant_unref(v);
+
 	return S_OK;
 }
 
@@ -140,18 +158,24 @@ artik_error bt_set_discoverable(bool discoverable)
 	GError *e = NULL;
 
 	v = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_PROPERTIES,
-			"Set",
-			g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "Discoverable",
-					g_variant_new_boolean(discoverable)),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_PROPERTIES,
+		"Set",
+		g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "Discoverable",
+				g_variant_new_boolean(discoverable)),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	g_variant_unref(v);
 
-	return bt_check_error(e);
+	return S_OK;
 }
 
 artik_error bt_set_pairable(bool pairable)
@@ -160,18 +184,24 @@ artik_error bt_set_pairable(bool pairable)
 	GError *e = NULL;
 
 	v = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_PROPERTIES,
-			"Set",
-			g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "Pairable",
-					g_variant_new_boolean(pairable)),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_PROPERTIES,
+		"Set",
+		g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "Pairable",
+				g_variant_new_boolean(pairable)),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	g_variant_unref(v);
 
-	return bt_check_error(e);
+	return S_OK;
 }
 
 artik_error bt_set_pairableTimeout(unsigned int timeout)
@@ -180,18 +210,24 @@ artik_error bt_set_pairableTimeout(unsigned int timeout)
 	GError *e = NULL;
 
 	v = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_PROPERTIES,
-			"Set",
-			g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "PairableTimeout",
-					g_variant_new_uint32(timeout)),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_PROPERTIES,
+		"Set",
+		g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "PairableTimeout",
+				g_variant_new_uint32(timeout)),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	g_variant_unref(v);
 
-	return bt_check_error(e);
+	return S_OK;
 }
 
 artik_error bt_set_discoverableTimeout(unsigned int timeout)
@@ -200,56 +236,78 @@ artik_error bt_set_discoverableTimeout(unsigned int timeout)
 	GError *e = NULL;
 
 	v = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_PROPERTIES,
-			"Set",
-			g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "DiscoverableTimeout",
-					g_variant_new_uint32(timeout)),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_PROPERTIES,
+		"Set",
+		g_variant_new("(ssv)", DBUS_IF_ADAPTER1, "DiscoverableTimeout",
+				g_variant_new_uint32(timeout)),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	g_variant_unref(v);
 
-	return bt_check_error(e);
+	return S_OK;
 }
 
 artik_error bt_start_scan(void)
 {
 	GError *e = NULL;
+	GVariant *v;
 
-	log_dbg("");
+	log_dbg("%s", __func__);
 
 	bt_remove_unpaired_devices();
-
-	log_dbg("bt_start_scan");
 
 	if (bt_is_scanning())
 		return E_BT_ERROR;
 
-	g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
+	v = g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0, DBUS_IF_ADAPTER1,
 		"StartDiscovery", NULL, G_VARIANT_TYPE("()"),
 		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
-	return bt_check_error(e);
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
+
+	g_variant_unref(v);
+
+	return S_OK;
 }
 
 artik_error bt_stop_scan(void)
 {
+	GVariant *v;
 	GError *e = NULL;
 
-	log_dbg("");
+	log_dbg("%s", __func__);
 
 	if (!bt_is_scanning())
 		return E_BT_ERROR;
 
-	g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
+	v = g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
 		DBUS_IF_ADAPTER1, "StopDiscovery", NULL,
 		G_VARIANT_TYPE("()"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, &e);
 
-	return bt_check_error(e);
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
+
+	g_variant_unref(v);
+
+	return S_OK;
 }
 
 bool bt_is_scanning(void)
@@ -257,6 +315,8 @@ bool bt_is_scanning(void)
 	GError *e = NULL;
 	GVariant *rst, *v;
 	gboolean b;
+
+	log_dbg("%s", __func__);
 
 	rst = g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0, DBUS_IF_PROPERTIES, "Get",
@@ -276,23 +336,30 @@ bool bt_is_scanning(void)
 
 artik_error bt_get_adapter_info(artik_bt_adapter *adapter)
 {
-	GVariant *r, *v;
+	GVariant *v;
+	GError *e = NULL;
+
+	log_dbg("%s", __func__);
 
 	if (adapter == NULL)
 		return E_BT_ERROR;
 
-	r = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_PROPERTIES, "GetAll",
-			g_variant_new("(s)", DBUS_IF_ADAPTER1),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL);
+	v = g_dbus_connection_call_sync(
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_PROPERTIES, "GetAll",
+		g_variant_new("(s)", DBUS_IF_ADAPTER1),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
-	v = g_variant_get_child_value(r, 0);
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
+
 	_get_adapter_properties(v, adapter);
 
-	g_variant_unref(r);
 	g_variant_unref(v);
 
 	return S_OK;

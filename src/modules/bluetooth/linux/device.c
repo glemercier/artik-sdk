@@ -75,7 +75,7 @@ artik_error bt_remove_unpaired_devices(void)
 	int i = 0;
 	artik_error ret = S_OK;
 
-	log_dbg("");
+	log_dbg("%s", __func__);
 
 	ret = _get_devices(BT_DEVICE_STATE_IDLE, &device_list, &count);
 	if (ret != S_OK)
@@ -119,7 +119,7 @@ artik_error bt_remove_device(const char *remote_address)
 	gchar *path = NULL;
 	artik_error ret = S_OK;
 
-	log_dbg("");
+	log_dbg("%s addr:%s", __func__, remote_address);
 
 	_get_object_path(remote_address, &path);
 
@@ -137,37 +137,21 @@ artik_error bt_remove_device(const char *remote_address)
 		g_variant_new("(o)", path),
 		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
 
-	ret = bt_check_error(error);
-	if (ret != S_OK)
-		goto exit;
-
 	g_free(path);
 
-exit:
-	if (result)
-		g_variant_unref(result);
+	ret = bt_check_error(error);
+	if (ret != S_OK)
+		return ret;
+
+	g_variant_unref(result);
 
 	return S_OK;
 }
 
-static void bt_bond_callback(GObject *source_object,
-		GAsyncResult *res, gpointer user_data)
-{
-	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
-	GError *error = NULL;
-
-	log_dbg("%s", __func__);
-
-	g_dbus_connection_call_finish(bus, res, &error);
-
-	if (error) {
-		log_err("Pair remote device failed :%s\n", error->message);
-		g_clear_error(&error);
-	}
-}
-
 artik_error bt_start_bond(const char *remote_address)
 {
+	GVariant *v;
+	GError *e = NULL;
 	gchar *path;
 
 	if (hci.state == BT_DEVICE_STATE_PAIRING)
@@ -184,45 +168,35 @@ artik_error bt_start_bond(const char *remote_address)
 		return S_OK;
 	}
 
-	g_dbus_connection_call(
-		hci.conn,
-		DBUS_BLUEZ_BUS,
-		path,
-		DBUS_IF_DEVICE1,
-		"Pair",
-		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-		bt_bond_callback, NULL);
+	v = g_dbus_connection_call_sync(hci.conn,
+			DBUS_BLUEZ_BUS,
+			path,
+			DBUS_IF_DEVICE1,
+			"Pair",
+			NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	g_free(path);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	hci.state = BT_DEVICE_STATE_PAIRING;
 
-	g_free(path);
+	g_variant_unref(v);
 
 	return S_OK;
 }
 
-static void bt_connect_callback(GObject *source_object,
-		GAsyncResult *res, gpointer user_data)
-{
-	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
-	GError *error = NULL;
-
-	_process_connection_cb((const gchar *)user_data, BT_EVENT_CONNECT);
-
-	g_dbus_connection_call_finish(bus, res, &error);
-
-	if (error) {
-		log_err("Connect remote device failed :%s\n", error->message);
-		g_clear_error(&error);
-	}
-
-	g_free(user_data);
-}
-
 artik_error bt_connect(const char *remote_address)
 {
+	GVariant *v;
+	GError *e = NULL;
 	gchar *path;
 
-	log_dbg("%s %s", __func__, remote_address);
+	log_dbg("%s addr: %s", __func__, remote_address);
 
 	if (hci.state == BT_DEVICE_STATE_CONNECTING)
 		return E_IN_PROGRESS;
@@ -238,26 +212,35 @@ artik_error bt_connect(const char *remote_address)
 		return S_OK;
 	}
 
-	g_dbus_connection_call(hci.conn,
+	v = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		path,
 		DBUS_IF_DEVICE1,
 		"Connect",
-		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL,
-		bt_connect_callback, g_strdup(path));
+		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	g_free(path);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	hci.state = BT_DEVICE_STATE_CONNECTING;
 
-	g_free(path);
+	g_variant_unref(v);
 
 	return S_OK;
 }
 
 artik_error bt_connect_profile(const char *remote_address, const char *uuid)
 {
+	GVariant *v;
+	GError *e = NULL;
 	gchar *path;
 
-	log_dbg("%s[%s]", __func__, uuid);
+	log_dbg("%s uuid: %s", __func__, uuid);
 
 	if (hci.state == BT_DEVICE_STATE_CONNECTING)
 		return E_IN_PROGRESS;
@@ -273,26 +256,33 @@ artik_error bt_connect_profile(const char *remote_address, const char *uuid)
 		return S_OK;
 	}
 
-	g_dbus_connection_call(hci.conn,
+	v = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		path,
 		DBUS_IF_DEVICE1,
 		"ConnectProfile",
 		g_variant_new("(s)", uuid),
-		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL,
-		bt_connect_callback, g_strdup(path));
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	g_free(path);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	hci.state = BT_DEVICE_STATE_CONNECTING;
 
-	g_free(path);
+	g_variant_unref(v);
 
 	return S_OK;
 }
 
 artik_error bt_disconnect(const char *remote_address)
 {
-	GVariant *result;
-	GError *error = NULL;
+	GVariant *v;
+	GError *e = NULL;
 	gchar *path;
 	artik_error ret = S_OK;
 
@@ -301,57 +291,59 @@ artik_error bt_disconnect(const char *remote_address)
 	if (path == NULL)
 		return E_BT_ERROR;
 
-	result = g_dbus_connection_call_sync(hci.conn,
+	v = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		path,
 		DBUS_IF_DEVICE1,
 		"Disconnect",
-		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
-	ret = bt_check_error(error);
-	if (ret != S_OK)
-		goto exit;
+	g_free(path);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	hci.state = BT_DEVICE_STATE_IDLE;
-	g_variant_unref(result);
 
-exit:
-	g_free(path);
+	g_variant_unref(v);
 
 	return ret;
 }
 
 artik_error bt_stop_bond(const char *remote_address)
 {
-	GVariant *result;
-	GError *error = NULL;
+	GVariant *v;
+	GError *e = NULL;
 	gchar *path;
-	artik_error ret = S_OK;
 
 	_get_object_path(remote_address, &path);
 
 	if (path == NULL)
 		return E_BT_ERROR;
 
-	result = g_dbus_connection_call_sync(hci.conn,
+	v = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		path,
 		DBUS_IF_DEVICE1,
 		"CancelPairing",
-		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	g_free(path);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
 
 	hci.state = BT_DEVICE_STATE_IDLE;
 
-	ret = bt_check_error(error);
-	if (ret != S_OK)
-		goto exit;
+	g_variant_unref(v);
 
-	g_variant_unref(result);
-
-exit:
-	g_free(path);
-
-	return ret;
+	return S_OK;
 }
 
 artik_error bt_set_trust(const char *remote_address)
@@ -551,7 +543,7 @@ bool bt_is_trusted(const char *remote_address)
 	gchar *path;
 	GVariant *rst = NULL;
 	GVariant *v = NULL;
-	GError *error = NULL;
+	GError *e = NULL;
 	bool trusted = false;
 
 	_get_object_path(remote_address, &path);
@@ -565,11 +557,15 @@ bool bt_is_trusted(const char *remote_address)
 		DBUS_IF_PROPERTIES,
 		"Get",
 		g_variant_new("(ss)", DBUS_IF_DEVICE1, "Trusted"),
-		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
 	g_free(path);
 
-	bt_check_error(error);
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return false;
+	}
 
 	g_variant_get(rst, "(v)", &v);
 	g_variant_get(v, "b", &trusted);
@@ -584,7 +580,7 @@ bool bt_is_blocked(const char *remote_address)
 	gchar *path;
 	GVariant *rst = NULL;
 	GVariant *v = NULL;
-	GError *error = NULL;
+	GError *e = NULL;
 	bool blocked = false;
 
 	_get_object_path(remote_address, &path);
@@ -598,11 +594,15 @@ bool bt_is_blocked(const char *remote_address)
 		DBUS_IF_PROPERTIES,
 		"Get",
 		g_variant_new("(ss)", DBUS_IF_DEVICE1, "Blocked"),
-		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
 	g_free(path);
 
-	bt_check_error(error);
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return false;
+	}
 
 	g_variant_get(rst, "(v)", &v);
 	g_variant_get(v, "b", &blocked);
