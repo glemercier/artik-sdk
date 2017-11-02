@@ -51,13 +51,13 @@ artik_error _read_value(const char *itf, const char *path,
 
 	log_dbg("bt_gatt_read_value [%s]", path);
 	r = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			path,
-			itf,
-			"ReadValue",
-			g_variant_new("(a{sv})", NULL),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		path,
+		itf,
+		"ReadValue",
+		g_variant_new("(a{sv})", NULL),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
 	if (e != NULL) {
 		log_dbg("%s", e->message);
@@ -95,13 +95,13 @@ artik_error _write_value(const char *itf, const char *path,
 
 	log_dbg("%s [%s]", __func__, path);
 	g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			path,
-			itf,
-			"WriteValue",
-			g_variant_new("(aya{sv})", b, NULL),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		path,
+		itf,
+		"WriteValue",
+		g_variant_new("(aya{sv})", b, NULL),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
 	if (e != NULL) {
 		log_dbg("%s", e->message);
@@ -114,93 +114,114 @@ artik_error _write_value(const char *itf, const char *path,
 	return S_OK;
 }
 
-artik_error bt_gatt_char_read_value(const char *addr, const char *srv_uuid, const char *char_uuid,
-		unsigned char **byte, int *byte_len)
+artik_error bt_gatt_char_read_value(const char *addr, const char *srv_uuid,
+		const char *char_uuid, unsigned char **byte, int *byte_len)
 {
 	gchar *srv_path, *char_path;
+	artik_error err;
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &char_path);
+
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &char_path);
 	g_free(srv_path);
 	if (char_path == NULL)
 		return E_BT_ERROR;
 
-
-	artik_error err =  _read_value(DBUS_IF_GATTCHARACTERISTIC1, char_path, byte, byte_len);
+	err = _read_value(DBUS_IF_GATTCHARACTERISTIC1, char_path, byte, byte_len);
 
 	g_free(char_path);
+
 	return err;
 }
 
-artik_error bt_gatt_char_write_value(const char *addr, const char *srv_uuid, const char *char_uuid,
+artik_error bt_gatt_char_write_value(const char *addr, const char *srv_uuid,
+		const char *char_uuid, const unsigned char byte[], int byte_len)
+{
+	gchar *srv_path, *char_path;
+	artik_error err;
+
+	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
+	if (srv_path == NULL)
+		return E_BT_ERROR;
+
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &char_path);
+	g_free(srv_path);
+	if (char_path == NULL)
+		return E_BT_ERROR;
+
+	err = _write_value(DBUS_IF_GATTCHARACTERISTIC1, char_path, byte, byte_len);
+
+	g_free(char_path);
+
+	return err;
+}
+
+artik_error bt_gatt_desc_read_value(const char *addr, const char *srv_uuid,
+		const char *char_uuid, const char *desc_uuid, unsigned char **byte,
+		int *byte_len)
+{
+	gchar *srv_path, *char_path, *desc_path;
+	artik_error err;
+
+	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
+	if (srv_path == NULL)
+		return E_BT_ERROR;
+
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &char_path);
+	g_free(srv_path);
+	if (char_path == NULL)
+		return E_BT_ERROR;
+
+	_get_gatt_path(addr, DBUS_IF_GATTDESCRIPTOR1, desc_uuid, "Characteristic",
+			char_path, &desc_path);
+	g_free(char_path);
+	if (desc_path == NULL)
+		return E_BT_ERROR;
+
+	err = _read_value(DBUS_IF_GATTDESCRIPTOR1, desc_path, byte, byte_len);
+
+	g_free(desc_path);
+
+	return err;
+}
+
+artik_error bt_gatt_desc_write_value(const char *addr, const char *srv_uuid,
+		const char *char_uuid, const char *desc_uuid,
 		const unsigned char byte[], int byte_len)
 {
-	gchar *srv_path, *char_path;
-
-	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
-	if (srv_path == NULL)
-		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &char_path);
-	g_free(srv_path);
-	if (char_path == NULL)
-		return E_BT_ERROR;
-
-
-	artik_error err = _write_value(DBUS_IF_GATTCHARACTERISTIC1, char_path, byte, byte_len);
-
-	g_free(char_path);
-	return err;
-}
-
-artik_error bt_gatt_desc_read_value(const char *addr, const char *srv_uuid, const char *char_uuid,
-		const char *desc_uuid, unsigned char **byte, int *byte_len)
-{
 	gchar *srv_path, *char_path, *desc_path;
+	artik_error err;
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &char_path);
+
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &char_path);
 	g_free(srv_path);
 	if (char_path == NULL)
 		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTDESCRIPTOR1, desc_uuid, "Characteristic", char_path, &desc_path);
+
+	_get_gatt_path(addr, DBUS_IF_GATTDESCRIPTOR1, desc_uuid, "Characteristic",
+			char_path, &desc_path);
 	g_free(char_path);
 	if (desc_path == NULL)
 		return E_BT_ERROR;
 
-	artik_error err = _read_value(DBUS_IF_GATTDESCRIPTOR1, desc_path, byte, byte_len);
+	err = _write_value(DBUS_IF_GATTDESCRIPTOR1, desc_path, byte, byte_len);
 
 	g_free(desc_path);
+
 	return err;
 }
 
-artik_error bt_gatt_desc_write_value(const char *addr, const char *srv_uuid, const char *char_uuid,
-		const char *desc_uuid, const unsigned char byte[], int byte_len)
-{
-	gchar *srv_path, *char_path, *desc_path;
-
-	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
-	if (srv_path == NULL)
-		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &char_path);
-	g_free(srv_path);
-	if (char_path == NULL)
-		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTDESCRIPTOR1, desc_uuid, "Characteristic", char_path, &desc_path);
-	g_free(char_path);
-	if (desc_path == NULL)
-		return E_BT_ERROR;
-
-	artik_error err = _write_value(DBUS_IF_GATTDESCRIPTOR1, desc_path, byte, byte_len);
-
-	g_free(desc_path);
-	return err;
-}
-
-artik_error bt_gatt_start_notify(const char *addr, const char *srv_uuid, const char *char_uuid)
+artik_error bt_gatt_start_notify(const char *addr, const char *srv_uuid,
+		const char *char_uuid)
 {
 	gchar *path = NULL;
 	gchar *srv_path = NULL;
@@ -209,7 +230,9 @@ artik_error bt_gatt_start_notify(const char *addr, const char *srv_uuid, const c
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &path);
+
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &path);
 	g_free(srv_path);
 	if (path == NULL)
 		return E_BT_ERROR;
@@ -222,20 +245,21 @@ artik_error bt_gatt_start_notify(const char *addr, const char *srv_uuid, const c
 
 	log_dbg("%s [%s]", __func__, path);
 	g_dbus_connection_call(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			path,
-			DBUS_IF_GATTCHARACTERISTIC1,
-			"StartNotify",
-			NULL, NULL, G_DBUS_CALL_FLAGS_NONE, -1,
-			NULL, NULL, NULL);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		path,
+		DBUS_IF_GATTCHARACTERISTIC1,
+		"StartNotify",
+		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, -1,
+		NULL, NULL, NULL);
 
 	g_free(path);
 
 	return S_OK;
 }
 
-artik_error bt_gatt_stop_notify(const char *addr, const char *srv_uuid, const char *char_uuid)
+artik_error bt_gatt_stop_notify(const char *addr, const char *srv_uuid,
+		const char *char_uuid)
 {
 	gchar *path = NULL;
 	gchar *srv_path = NULL;
@@ -243,20 +267,22 @@ artik_error bt_gatt_stop_notify(const char *addr, const char *srv_uuid, const ch
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &path);
+
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &path);
 	g_free(srv_path);
 	if (path == NULL)
 		return E_BT_ERROR;
 
 	log_dbg("%s [%s]", __func__, path);
 	g_dbus_connection_call(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			path,
-			DBUS_IF_GATTCHARACTERISTIC1,
-			"StopNotify",
-			NULL, NULL, G_DBUS_CALL_FLAGS_NONE, -1,
-			NULL, NULL, NULL);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		path,
+		DBUS_IF_GATTCHARACTERISTIC1,
+		"StopNotify",
+		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, -1,
+		NULL, NULL, NULL);
 
 	g_slist_foreach(hci.gatt_clients, _remove_notify, (char *)char_uuid);
 
@@ -277,20 +303,21 @@ artik_error bt_gatt_get_char_properties(const char *addr, const char *srv_uuid,
 	if (srv_path == NULL)
 		return E_BT_ERROR;
 
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &path);
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &path);
 	g_free(srv_path);
 	if (path == NULL)
 		return E_BT_ERROR;
 
 	log_dbg("bt_gatt_get_char_properties [%s]", path);
 	r = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			path,
-			DBUS_IF_PROPERTIES,
-			"Get",
-			g_variant_new("(ss)", DBUS_IF_GATTCHARACTERISTIC1, "Flags"),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		path,
+		DBUS_IF_PROPERTIES,
+		"Get",
+		g_variant_new("(ss)", DBUS_IF_GATTCHARACTERISTIC1, "Flags"),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
 	if (e != NULL) {
 		log_dbg("%s", e->message);
@@ -329,7 +356,8 @@ artik_error bt_gatt_get_char_properties(const char *addr, const char *srv_uuid,
 }
 
 artik_error bt_gatt_get_desc_properties(const char *addr, const char *srv_uuid,
-		const char *char_uuid, const char *desc_uuid, artik_bt_gatt_desc_properties *properties)
+		const char *char_uuid, const char *desc_uuid,
+		artik_bt_gatt_desc_properties *properties)
 {
 	GVariant *r, *v;
 	GVariantIter *iter;
@@ -339,24 +367,28 @@ artik_error bt_gatt_get_desc_properties(const char *addr, const char *srv_uuid,
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &char_path);
+
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &char_path);
 	g_free(srv_path);
 	if (char_path == NULL)
 		return E_BT_ERROR;
-	_get_gatt_path(addr, DBUS_IF_GATTDESCRIPTOR1, desc_uuid, "Characteristic", char_path, &desc_path);
+
+	_get_gatt_path(addr, DBUS_IF_GATTDESCRIPTOR1, desc_uuid, "Characteristic",
+			char_path, &desc_path);
 	g_free(char_path);
 	if (desc_path == NULL)
 		return E_BT_ERROR;
 
 	log_dbg("%s [%s]", __func__, desc_path);
 	r = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			desc_path,
-			DBUS_IF_PROPERTIES,
-			"Get",
-			g_variant_new("(ss)", DBUS_IF_GATTDESCRIPTOR1, "Flags"),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		desc_path,
+		DBUS_IF_PROPERTIES,
+		"Get",
+		g_variant_new("(ss)", DBUS_IF_GATTDESCRIPTOR1, "Flags"),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
 	if (e != NULL) {
 		log_dbg("%s", e->message);

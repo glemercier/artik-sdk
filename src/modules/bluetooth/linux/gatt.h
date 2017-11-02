@@ -37,10 +37,10 @@ artik_error bt_gatt_set_char_on_write_request(int svc_id, int char_id,
 		artik_bt_gatt_req_write callback, void *user_data);
 artik_error bt_gatt_set_char_on_notify_request(int svc_id, int char_id,
 		artik_bt_gatt_req_notify callback, void *user_data);
-artik_error bt_gatt_set_desc_on_read_request(int svc_id, int char_id, int desc_id,
-		artik_bt_gatt_req_read callback, void *user_data);
-artik_error bt_gatt_set_desc_on_write_request(int svc_id, int char_id, int desc_id,
-		artik_bt_gatt_req_write callback, void *user_data);
+artik_error bt_gatt_set_desc_on_read_request(int svc_id, int char_id,
+		int desc_id, artik_bt_gatt_req_read callback, void *user_data);
+artik_error bt_gatt_set_desc_on_write_request(int svc_id, int char_id,
+		int desc_id, artik_bt_gatt_req_write callback, void *user_data);
 artik_error bt_gatt_register_service(int id);
 artik_error bt_gatt_unregister_service(int id);
 artik_error bt_gatt_get_service_list(const char *addr,
@@ -49,26 +49,32 @@ artik_error bt_gatt_get_chracteristic_list(const char *addr,
 		const char *srv_uuid, artik_bt_uuid **uuid_list, int *len);
 artik_error bt_gatt_get_descriptor_list(const char *addr, const char *srv_uuid,
 		const char *char_uuid, artik_bt_uuid **uuid_list, int *len);
-artik_error bt_gatt_char_read_value(const char *addr, const char *srv_uuid, const char *char_uuid,
-		unsigned char **byte, int *byte_len);
-artik_error bt_gatt_char_write_value(const char *addr, const char *srv_uuid, const char *char_uuid,
+artik_error bt_gatt_char_read_value(const char *addr, const char *srv_uuid,
+		const char *char_uuid, unsigned char **byte, int *byte_len);
+artik_error bt_gatt_char_write_value(const char *addr, const char *srv_uuid,
+		const char *char_uuid, const unsigned char byte[], int byte_len);
+artik_error bt_gatt_desc_read_value(const char *addr, const char *srv_uuid,
+		const char *char_uuid, const char *desc_uuid, unsigned char **byte,
+		int *byte_len);
+artik_error bt_gatt_desc_write_value(const char *addr, const char *srv_uuid,
+		const char *char_uuid, const char *desc_uuid,
 		const unsigned char byte[], int byte_len);
-artik_error bt_gatt_desc_read_value(const char *addr, const char *srv_uuid, const char *char_uuid,
-		const char *desc_uuid, unsigned char **byte, int *byte_len);
-artik_error bt_gatt_desc_write_value(const char *addr, const char *srv_uuid, const char *char_uuid,
-		const char *desc_uuid, const unsigned char byte[], int byte_len);
-artik_error bt_gatt_start_notify(const char *addr, const char *srv_uuid, const char *char_uuid);
-artik_error bt_gatt_stop_notify(const char *addr, const char *srv_uuid, const char *char_uuid);
+artik_error bt_gatt_start_notify(const char *addr, const char *srv_uuid,
+		const char *char_uuid);
+artik_error bt_gatt_stop_notify(const char *addr, const char *srv_uuid,
+		const char *char_uuid);
 artik_error bt_gatt_get_char_properties(const char *addr, const char *srv_uuid,
 		const char *char_uuid, artik_bt_gatt_char_properties *properties);
 /* Bluez Not supported yet */
 artik_error bt_gatt_get_desc_properties(const char *addr, const char *srv_uuid,
-		const char *char_uuid, const char *desc_uuid, artik_bt_gatt_desc_properties *properties);
+		const char *char_uuid, const char *desc_uuid,
+		artik_bt_gatt_desc_properties *properties);
 artik_error bt_gatt_req_set_value(artik_bt_gatt_req request,
 		int len, const unsigned char *value);
 artik_error bt_gatt_req_set_result(artik_bt_gatt_req request,
 		artik_bt_gatt_req_state_type state, const char *err_msg);
-artik_error bt_gatt_notify(int svc_id, int char_id, unsigned char *byte, int len);
+artik_error bt_gatt_notify(int svc_id, int char_id, unsigned char *byte,
+		int len);
 
 #ifdef __cplusplus
 } $

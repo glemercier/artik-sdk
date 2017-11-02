@@ -36,7 +36,7 @@ static const gchar service_introspection_xml[] =
 "<node name='/'>"
 "\t<interface name='org.freedesktop.DBus.ObjectManager'>"
 "\t\t<method name='GetManagedObjects'>"
-"\t\t\t<arg type='a{oa{sa{sv}}}' name='object_paths_interfaces_and_properties' direction='out'/>"
+"\t\t\t<arg type='a{oa{sa{sv}}}' name='Objects' direction='out'/>"
 "\t\t</method>"
 "\t</interface>"
 "\t<interface name='org.bluez.GattService1'>"
@@ -283,7 +283,8 @@ static gint _compare_desc_path(gconstpointer a, gconstpointer b)
 		return 1;
 }
 
-static bt_gatt_char *_find_chr_list_by_id(unsigned int svc_id, unsigned int char_id)
+static bt_gatt_char *_find_chr_list_by_id(unsigned int svc_id,
+		unsigned int char_id)
 {
 	bt_gatt_service *svc = NULL;
 	bt_gatt_char *chr = NULL;
@@ -295,7 +296,8 @@ static bt_gatt_char *_find_chr_list_by_id(unsigned int svc_id, unsigned int char
 
 	svc = g_slist_nth_data(hci.gatt_services, svc_id);
 	if (g_slist_length(svc->char_data) < char_id) {
-		log_dbg("%s: GATT characteristic with id %d not found", __func__, char_id);
+		log_dbg("%s: GATT characteristic with id %d not found", __func__,
+				char_id);
 		return NULL;
 	}
 
@@ -304,7 +306,8 @@ static bt_gatt_char *_find_chr_list_by_id(unsigned int svc_id, unsigned int char
 	return chr;
 }
 
-static bt_gatt_desc *_find_desc_list_by_id(unsigned int svc_id, unsigned int char_id, unsigned int desc_id)
+static bt_gatt_desc *_find_desc_list_by_id(unsigned int svc_id,
+		unsigned int char_id, unsigned int desc_id)
 {
 	bt_gatt_char *chr = _find_chr_list_by_id(svc_id, char_id);
 	bt_gatt_desc *desc = NULL;
@@ -361,7 +364,8 @@ static GSList *_find_desc_list(const gchar *path)
 	return NULL;
 }
 
-static void _send_request(bt_gatt_req_handle *handle, guint len, const guchar *value)
+static void _send_request(bt_gatt_req_handle *handle, guint len,
+		const guchar *value)
 {
 	GVariantBuilder *b;
 
@@ -376,7 +380,8 @@ static void _send_request(bt_gatt_req_handle *handle, guint len, const guchar *v
 	g_variant_builder_unref(b);
 }
 
-static void _extract_value_parameter(GVariant *parameters, unsigned int *len, guchar **value)
+static void _extract_value_parameter(GVariant *parameters,
+		unsigned int *len, guchar **value)
 {
 	GVariant *v1 = NULL, *v2 = NULL;
 
@@ -497,7 +502,8 @@ static void _desc_method_call(GDBusConnection *connection,
 		_extract_value_parameter(parameters, &handle->len, &handle->value);
 
 		if (desc->write_callback)
-			desc->write_callback(handle, handle->value, handle->len, desc->write_user_data);
+			desc->write_callback(handle, handle->value, handle->len,
+					desc->write_user_data);
 		else
 			bt_gatt_req_set_result(handle, BT_GATT_REQ_STATE_TYPE_OK, NULL);
 	}
@@ -608,7 +614,8 @@ artik_error bt_gatt_add_service(artik_bt_gatt_service svc, int *id)
 
 	log_dbg("bt_gatt_add_service");
 
-	service_node_info = g_dbus_node_info_new_for_xml(service_introspection_xml, &error);
+	service_node_info = g_dbus_node_info_new_for_xml(service_introspection_xml,
+			&error);
 	ret = bt_check_error(error);
 	if (ret != S_OK)
 		goto exit;
@@ -641,7 +648,8 @@ exit:
 	return ret;
 }
 
-artik_error bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr, int *id)
+artik_error bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr,
+		int *id)
 {
 	GError *error = NULL;
 
@@ -668,7 +676,8 @@ artik_error bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr, int *i
 	path = g_strdup_printf("%s%d%s%d", GATT_SERVICE_PREFIX, svc_id,
 			GATT_CHARACTERISTIC_PREFIX, char_id);
 
-	characteristic_node_info = g_dbus_node_info_new_for_xml(char_introspection_xml, &error);
+	characteristic_node_info = g_dbus_node_info_new_for_xml(
+			char_introspection_xml, &error);
 
 	ret = bt_check_error(error);
 	if (ret != S_OK)
@@ -697,7 +706,8 @@ artik_error bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr, int *i
 	characteristic->char_props = prop_list;
 	characteristic->service = service;
 	if (chr.length > 0) {
-		characteristic->char_value = (guchar *)malloc(sizeof(guchar) * chr.length);
+		characteristic->char_value = (guchar *)malloc(sizeof(guchar)
+				* chr.length);
 		memcpy(characteristic->char_value, chr.value, chr.length);
 		characteristic->value_length = chr.length;
 	} else {
@@ -942,8 +952,8 @@ artik_error bt_gatt_set_char_on_notify_request(int svc_id, int char_id,
 	return S_OK;
 }
 
-artik_error bt_gatt_set_desc_on_read_request(int svc_id, int char_id, int desc_id,
-		artik_bt_gatt_req_read callback, void *user_data)
+artik_error bt_gatt_set_desc_on_read_request(int svc_id, int char_id,
+		int desc_id, artik_bt_gatt_req_read callback, void *user_data)
 {
 	bt_gatt_desc *desc = _find_desc_list_by_id(svc_id, char_id, desc_id);
 
@@ -956,8 +966,8 @@ artik_error bt_gatt_set_desc_on_read_request(int svc_id, int char_id, int desc_i
 	return S_OK;
 }
 
-artik_error bt_gatt_set_desc_on_write_request(int svc_id, int char_id, int desc_id,
-		artik_bt_gatt_req_write callback, void *user_data)
+artik_error bt_gatt_set_desc_on_write_request(int svc_id, int char_id,
+		int desc_id, artik_bt_gatt_req_write callback, void *user_data)
 {
 	bt_gatt_desc *desc = _find_desc_list_by_id(svc_id, char_id, desc_id);
 
@@ -1034,7 +1044,8 @@ void _free_service(int id)
 	g_free(serv_info);
 }
 
-artik_error bt_gatt_req_set_value(artik_bt_gatt_req request, int len, const unsigned char *value)
+artik_error bt_gatt_req_set_value(artik_bt_gatt_req request, int len,
+		const unsigned char *value)
 {
 	bt_gatt_req_handle *handle = request;
 	bt_gatt_char *chr = handle->chr;
@@ -1105,15 +1116,18 @@ static artik_error _return_dbus_state(
 		break;
 	}
 
-	g_dbus_method_invocation_return_dbus_error(handle->invocation, error_type, err_msg);
+	g_dbus_method_invocation_return_dbus_error(handle->invocation, error_type,
+			err_msg);
 	return S_OK;
 }
 
-artik_error bt_gatt_req_set_result(artik_bt_gatt_req request, artik_bt_gatt_req_state_type state, const char *err_msg)
+artik_error bt_gatt_req_set_result(artik_bt_gatt_req request,
+		artik_bt_gatt_req_state_type state, const char *err_msg)
 {
 	bt_gatt_req_handle *handle = request;
 
-	if (handle->type == BT_GATT_REQ_TYPE_WRITE && state == BT_GATT_REQ_STATE_TYPE_OK) {
+	if (handle->type == BT_GATT_REQ_TYPE_WRITE
+			&& state == BT_GATT_REQ_STATE_TYPE_OK) {
 		if (handle->chr) {
 			if (handle->chr->char_value)
 				free(handle->chr->char_value);

@@ -27,7 +27,8 @@
 #include "assigned_numbers.h"
 #include "gatt.h"
 
-artik_error bt_gatt_get_service_list(const char *addr, artik_bt_uuid * *uuid_list, int *len)
+artik_error bt_gatt_get_service_list(const char *addr,
+		artik_bt_uuid * *uuid_list, int *len)
 {
 	gchar *dev_path;
 
@@ -42,8 +43,8 @@ artik_error bt_gatt_get_service_list(const char *addr, artik_bt_uuid * *uuid_lis
 	return S_OK;
 }
 
-artik_error bt_gatt_get_chracteristic_list(const char *addr, const char *srv_uuid,
-		artik_bt_uuid **uuid_list, int *len)
+artik_error bt_gatt_get_chracteristic_list(const char *addr,
+		const char *srv_uuid, artik_bt_uuid **uuid_list, int *len)
 {
 	gchar *srv_path;
 
@@ -61,7 +62,8 @@ artik_error bt_gatt_get_chracteristic_list(const char *addr, const char *srv_uui
 }
 
 artik_error bt_gatt_get_descriptor_list(const char *addr,
-		const char *srv_uuid, const char *char_uuid, artik_bt_uuid **uuid_list, int *len)
+		const char *srv_uuid, const char *char_uuid, artik_bt_uuid **uuid_list,
+		int *len)
 {
 	gchar *char_path = NULL;
 	gchar *srv_path = NULL;
@@ -70,12 +72,14 @@ artik_error bt_gatt_get_descriptor_list(const char *addr,
 	if (srv_path == NULL)
 		return E_BT_ERROR;
 
-	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service", srv_path, &char_path);
+	_get_gatt_path(addr, DBUS_IF_GATTCHARACTERISTIC1, char_uuid, "Service",
+			srv_path, &char_path);
 	if (char_path == NULL)
 		return E_BT_ERROR;
 
 	_get_gatt_uuid_list(char_path, DBUS_IF_GATTDESCRIPTOR1, uuid_list, len);
 
 	g_free(char_path);
+
 	return S_OK;
 }
