@@ -131,14 +131,18 @@ static void _asyn_ready_cb(GObject *source_object,
 		GAsyncResult *res, gpointer user_data)
 {
 	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
+	GVariant *v;
 	GError *e = NULL;
 
-	g_dbus_connection_call_finish(bus, res, &e);
+	v = g_dbus_connection_call_finish(bus, res, &e);
 
 	if (e) {
 		log_err("%s failed :%s\n", user_data, e->message);
 		g_clear_error(&e);
+		return;
 	}
+
+	g_variant_unref(v);
 }
 
 static const GDBusInterfaceVTable interface_vtable = {

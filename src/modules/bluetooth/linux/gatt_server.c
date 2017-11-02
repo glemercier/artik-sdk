@@ -506,14 +506,17 @@ static void _desc_method_call(GDBusConnection *connection,
 static void register_service_cb(GObject *object, GAsyncResult *res,
 		gpointer user_data)
 {
+	GVariant *v;
 	GError *e = NULL;
 
-	g_dbus_connection_call_finish(hci.conn, res, &e);
+	v = g_dbus_connection_call_finish(hci.conn, res, &e);
 	if (e != NULL) {
 		log_dbg("%s", e->message);
 		g_clear_error(&e);
 	}
 	log_dbg("gatt service registered");
+
+	g_variant_unref(v);
 }
 
 static const GDBusInterfaceVTable serv_interface_vtable = {

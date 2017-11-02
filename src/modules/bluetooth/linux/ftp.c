@@ -532,9 +532,10 @@ static void _ftp_cancel_callback(GObject *source_object,
 		GAsyncResult *res, gpointer user_data)
 {
 	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
+	GVariant *v;
 	GError *error = NULL;
 
-	g_dbus_connection_call_finish(bus, res, &error);
+	v = g_dbus_connection_call_finish(bus, res, &error);
 	if (error) {
 		log_err("FTP cancel transport failed :%s\n", error->message);
 		g_clear_error(&error);
@@ -548,15 +549,18 @@ static void _ftp_cancel_callback(GObject *source_object,
 		ftp_req = BT_FTP_REQ_END;
 	}
 	_user_callback(BT_EVENT_FTP, &transfer_property);
+
+	g_variant_unref(v);
 }
 
 static void _ftp_resume_callback(GObject *source_object,
 		GAsyncResult *res, gpointer user_data)
 {
 	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
+	GVariant *v;
 	GError *error = NULL;
 
-	g_dbus_connection_call_finish(bus, res, &error);
+	v = g_dbus_connection_call_finish(bus, res, &error);
 	if (error) {
 		log_err("FTP resume transport failed :%s\n", error->message);
 		g_clear_error(&error);
@@ -577,15 +581,18 @@ static void _ftp_resume_callback(GObject *source_object,
 		}
 		ftp_state = BT_FTP_STATE_RESUMED;
 	}
+
+	g_variant_unref(v);
 }
 
 static void _ftp_suspend_callback(GObject *source_object,
 		GAsyncResult *res, gpointer user_data)
 {
 	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
+	GVariant *v;
 	GError *error = NULL;
 
-	g_dbus_connection_call_finish(bus, res, &error);
+	v = g_dbus_connection_call_finish(bus, res, &error);
 	if (error) {
 		log_err("FTP suspend transport failed :%s\n", error->message);
 		g_clear_error(&error);
@@ -593,6 +600,8 @@ static void _ftp_suspend_callback(GObject *source_object,
 		_change_property_status("error");
 		_user_callback(BT_EVENT_FTP, &transfer_property);
 	}
+
+	g_variant_unref(v);
 }
 
 artik_error bt_ftp_resume_transfer(void)
