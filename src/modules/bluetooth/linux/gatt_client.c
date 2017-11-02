@@ -85,6 +85,7 @@ artik_error _read_value(const char *itf, const char *path,
 artik_error _write_value(const char *itf, const char *path,
 		const unsigned char byte[], int byte_len)
 {
+	GVariant *v;
 	GVariantBuilder *b;
 	GError *e = NULL;
 	gint i = 0;
@@ -94,7 +95,7 @@ artik_error _write_value(const char *itf, const char *path,
 		g_variant_builder_add(b, "y", byte[i]);
 
 	log_dbg("%s [%s]", __func__, path);
-	g_dbus_connection_call_sync(
+	v = g_dbus_connection_call_sync(
 		hci.conn,
 		DBUS_BLUEZ_BUS,
 		path,
@@ -103,13 +104,15 @@ artik_error _write_value(const char *itf, const char *path,
 		g_variant_new("(aya{sv})", b, NULL),
 		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
 
+	g_variant_builder_unref(b);
+
 	if (e != NULL) {
 		log_dbg("%s", e->message);
 		g_error_free(e);
 		return E_BT_ERROR;
 	}
 
-	g_variant_builder_unref(b);
+	g_variant_unref(v);
 
 	return S_OK;
 }

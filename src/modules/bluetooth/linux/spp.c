@@ -173,6 +173,7 @@ static int _register_spp_object(void)
 
 artik_error bt_spp_register_profile(artik_bt_spp_profile_option *opt)
 {
+	GVariant *result;
 	GError *error = NULL;
 	GVariantBuilder *option = NULL;
 	int ret = -1;
@@ -209,7 +210,7 @@ artik_error bt_spp_register_profile(artik_bt_spp_profile_option *opt)
 			g_variant_new_uint16(opt->version));
 	g_variant_builder_add(option, "{sv}", "Features",
 			g_variant_new_uint16(opt->features));
-	g_dbus_connection_call_sync(hci.conn,
+	result = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH,
 		DBUS_IF_PROFILE_MANAGER1,
@@ -228,15 +229,18 @@ artik_error bt_spp_register_profile(artik_bt_spp_profile_option *opt)
 
 	ret = _register_spp_object();
 
+	g_variant_unref(result);
+
 	return ret;
 }
 
 artik_error bt_spp_unregister_profile(void)
 {
+	GVariant *result;
 	GError *error = NULL;
 	gboolean status;
 
-	g_dbus_connection_call_sync(hci.conn,
+	result = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH,
 		DBUS_IF_PROFILE_MANAGER1,
@@ -249,6 +253,8 @@ artik_error bt_spp_unregister_profile(void)
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}
+
+	g_variant_unref(result);
 
 	status = g_dbus_connection_unregister_object(
 		hci.conn, registration_id);

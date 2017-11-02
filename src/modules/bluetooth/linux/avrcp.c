@@ -432,13 +432,14 @@ bool bt_avrcp_controller_is_connected(void)
 
 static artik_error _invoke_remote_control(const char *command)
 {
+	GVariant *result;
 	GError *error = NULL;
 	char *player_path = NULL;
 	artik_error e = S_OK;
 
 	e = _get_player_path(&player_path);
 	if (e == S_OK && player_path) {
-		g_dbus_connection_call_sync(hci.conn,
+		result = g_dbus_connection_call_sync(hci.conn,
 				DBUS_BLUEZ_BUS,
 				player_path,
 				DBUS_IF_MEDIA_PLAYER1, command, NULL,
@@ -450,6 +451,9 @@ static artik_error _invoke_remote_control(const char *command)
 			g_clear_error(&error);
 			return E_BT_ERROR;
 		}
+
+		g_variant_unref(result);
+
 		return S_OK;
 	}
 	return E_BT_ERROR;

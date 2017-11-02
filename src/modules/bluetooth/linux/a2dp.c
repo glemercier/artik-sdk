@@ -228,6 +228,7 @@ artik_error bt_a2dp_source_register(unsigned char codec,
 		bool delay_reporting, const char *path,
 		const unsigned char *capabilities, int cap_size)
 {
+	GVariant *result;
 	GError *error = NULL;
 	GVariantBuilder *builder = NULL;
 	GVariantBuilder *cap_builder = NULL;
@@ -250,7 +251,7 @@ artik_error bt_a2dp_source_register(unsigned char codec,
 			g_variant_new("ay", cap_builder));
 	g_variant_builder_unref(cap_builder);
 
-	g_dbus_connection_call_sync(hci.conn,
+	result = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
 		DBUS_IF_MEDIA1,
@@ -265,6 +266,8 @@ artik_error bt_a2dp_source_register(unsigned char codec,
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}
+
+	g_variant_unref(result);
 
 	_introspection_data = g_dbus_node_info_new_for_xml(_introspection_xml,
 			NULL);
@@ -288,22 +291,26 @@ artik_error bt_a2dp_source_register(unsigned char codec,
 
 artik_error bt_a2dp_source_unregister(void)
 {
+	GVariant *result;
 	GError *error = NULL;
 
 	/*TODO:unregister the object path */
-	g_dbus_connection_call_sync(hci.conn,
+	result = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
 		DBUS_IF_MEDIA1,
 		"UnregisterEndpoint",
 		g_variant_new("(o)", _endpoint->endpoint_path),
 		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+
 	if (error) {
 		log_dbg("Register endpoint failed :%s\n", error->message);
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}
+
 	bt_a2dp_source_destroy();
+	g_variant_unref(result);
 	g_dbus_connection_unregister_object(hci.conn, registration_id);
 	g_dbus_node_info_unref(_introspection_data);
 	return S_OK;
@@ -483,10 +490,11 @@ artik_error bt_a2dp_source_get_properties(
 
 artik_error bt_a2dp_source_release(void)
 {
+	GVariant *result;
 	GError *error = NULL;
 
 	if (_endpoint->transport_path) {
-		g_dbus_connection_call_sync(hci.conn,
+		result = g_dbus_connection_call_sync(hci.conn,
 				DBUS_BLUEZ_BUS,
 				_endpoint->transport_path,
 				DBUS_IF_MEDIA_TRANSPORT1, "Release", NULL,
@@ -498,6 +506,8 @@ artik_error bt_a2dp_source_release(void)
 			g_clear_error(&error);
 			return E_BT_ERROR;
 		}
+
+		g_variant_unref(result);
 
 		return S_OK;
 	} else

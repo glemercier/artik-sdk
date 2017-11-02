@@ -205,12 +205,13 @@ artik_error bt_ftp_create_session(char *dest_addr)
 
 artik_error bt_ftp_remove_session(void)
 {
+	GVariant *result;
 	GError *error = NULL;
 
 	if (strlen(session_path) == 0)
 		return E_NOT_INITIALIZED;
 
-	g_dbus_connection_call_sync(hci.session_conn,
+	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS,
 		DBUS_BLUEZ_OBEX_PATH,
 		DBUS_IF_OBEX_CLIENT, "RemoveSession",
@@ -224,6 +225,9 @@ artik_error bt_ftp_remove_session(void)
 
 		return E_BT_ERROR;
 	}
+
+	g_variant_unref(result);
+
 	if (S_OK != (_destroy_exe(OBEXD_DESTROY_CMD))) {
 		log_dbg("Destroy obexd failed!\n");
 
@@ -238,6 +242,7 @@ artik_error bt_ftp_remove_session(void)
 
 artik_error bt_ftp_change_folder(char *folder)
 {
+	GVariant *result;
 	GError *error = NULL;
 	artik_error ret = S_OK;
 
@@ -251,7 +256,7 @@ artik_error bt_ftp_change_folder(char *folder)
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
 
-	g_dbus_connection_call_sync(hci.session_conn,
+	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "ChangeFolder",
 		g_variant_new("(s)", folder), NULL,
@@ -264,11 +269,14 @@ artik_error bt_ftp_change_folder(char *folder)
 		return E_BT_ERROR;
 	}
 
+	g_variant_unref(result);
+
 	return S_OK;
 }
 
 artik_error bt_ftp_create_folder(char *folder)
 {
+	GVariant *result;
 	GError *error = NULL;
 	artik_error ret = S_OK;
 
@@ -282,7 +290,7 @@ artik_error bt_ftp_create_folder(char *folder)
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
 
-	g_dbus_connection_call_sync(hci.session_conn,
+	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "CreateFolder",
 		g_variant_new("(s)", folder), NULL,
@@ -295,11 +303,14 @@ artik_error bt_ftp_create_folder(char *folder)
 		return E_BT_ERROR;
 	}
 
+	g_variant_unref(result);
+
 	return S_OK;
 }
 
 artik_error bt_ftp_delete_file(char *file)
 {
+	GVariant *result;
 	GError *error = NULL;
 	artik_error ret = S_OK;
 
@@ -313,7 +324,7 @@ artik_error bt_ftp_delete_file(char *file)
 	if (transfer_property.object_path != NULL)
 		return E_BUSY;
 
-	g_dbus_connection_call_sync(hci.session_conn,
+	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "Delete",
 		g_variant_new("(s)", file), NULL,
@@ -325,6 +336,8 @@ artik_error bt_ftp_delete_file(char *file)
 
 		return E_BT_ERROR;
 	}
+
+	g_variant_unref(result);
 
 	return S_OK;
 }

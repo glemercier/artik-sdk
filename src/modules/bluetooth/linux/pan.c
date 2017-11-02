@@ -98,6 +98,7 @@ artik_error _pan_parameter_check(const char *addr,
 
 artik_error bt_pan_register(const char *uuid, const char *bridge)
 {
+	GVariant *result;
 	GError *error = NULL;
 
 	if (!bridge)
@@ -106,7 +107,7 @@ artik_error bt_pan_register(const char *uuid, const char *bridge)
 	if (_pan_parameter_check(NULL, uuid) != S_OK)
 		return E_INVALID_VALUE;
 
-	g_dbus_connection_call_sync(hci.conn,
+	result = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
 		DBUS_IF_NETWORK_SERVER1,
@@ -119,17 +120,21 @@ artik_error bt_pan_register(const char *uuid, const char *bridge)
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}
+
+	g_variant_unref(result);
+
 	return S_OK;
 }
 
 artik_error bt_pan_unregister(const char *uuid)
 {
+	GVariant *result;
 	GError *error = NULL;
 
 	if (_pan_parameter_check(NULL, uuid) != S_OK)
 		return E_INVALID_VALUE;
 
-	g_dbus_connection_call_sync(hci.conn,
+	result = g_dbus_connection_call_sync(hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
 		DBUS_IF_NETWORK_SERVER1,
@@ -142,6 +147,9 @@ artik_error bt_pan_unregister(const char *uuid)
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}
+
+	g_variant_unref(result);
+
 	return S_OK;
 }
 
@@ -236,12 +244,13 @@ artik_error bt_pan_connect(const char *mac_addr,
 
 artik_error bt_pan_disconnect(void)
 {
+	GVariant *result;
 	GError *error = NULL;
 
 	if (_is_network_path_valid() == 0)
 		return E_NOT_INITIALIZED;
 
-	g_dbus_connection_call_sync(
+	result = g_dbus_connection_call_sync(
 			hci.conn,
 			DBUS_BLUEZ_BUS,
 			_network_path,
@@ -258,6 +267,9 @@ artik_error bt_pan_disconnect(void)
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}
+
+	g_variant_unref(result);
+
 	return S_OK;
 }
 
