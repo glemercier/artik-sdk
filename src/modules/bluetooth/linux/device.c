@@ -82,7 +82,9 @@ artik_error bt_remove_unpaired_devices(void)
 		return ret;
 
 	for (i = 0; i < count; i++) {
-		if (!bt_is_paired(device_list[i].remote_address))
+		if (!bt_is_paired(device_list[i].remote_address)
+			|| !bt_is_connected(device_list[i].remote_address))
+
 			bt_remove_device(device_list[i].remote_address);
 	}
 
@@ -525,6 +527,8 @@ bool bt_is_connected(const char *remote_address)
 {
 	gchar *path;
 	bool connected = false;
+
+	log_dbg("%s addr: %s", __func__, remote_address);
 
 	_get_object_path(remote_address, &path);
 
