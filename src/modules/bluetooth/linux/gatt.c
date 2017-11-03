@@ -48,6 +48,8 @@ artik_error bt_gatt_get_chracteristic_list(const char *addr,
 {
 	gchar *srv_path;
 
+	log_dbg("%s addr:%s, suuid:%s", __func__, addr, srv_uuid);
+
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 
 	if (srv_path == NULL)
@@ -67,6 +69,9 @@ artik_error bt_gatt_get_descriptor_list(const char *addr,
 {
 	gchar *char_path = NULL;
 	gchar *srv_path = NULL;
+
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s", __func__, addr, srv_uuid,
+			char_uuid);
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)

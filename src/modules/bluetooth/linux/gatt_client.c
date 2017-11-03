@@ -49,7 +49,7 @@ artik_error _read_value(const char *itf, const char *path,
 	GError *e = NULL;
 	guint i = 0, len = 0;
 
-	log_dbg("bt_gatt_read_value [%s]", path);
+	log_dbg("%s [%s]", __func__, path);
 	r = g_dbus_connection_call_sync(
 		hci.conn,
 		DBUS_BLUEZ_BUS,
@@ -123,6 +123,9 @@ artik_error bt_gatt_char_read_value(const char *addr, const char *srv_uuid,
 	gchar *srv_path, *char_path;
 	artik_error err;
 
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s", __func__, addr, srv_uuid,
+			char_uuid);
+
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
@@ -145,6 +148,9 @@ artik_error bt_gatt_char_write_value(const char *addr, const char *srv_uuid,
 {
 	gchar *srv_path, *char_path;
 	artik_error err;
+
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s", __func__, addr, srv_uuid,
+			char_uuid);
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
@@ -169,6 +175,9 @@ artik_error bt_gatt_desc_read_value(const char *addr, const char *srv_uuid,
 {
 	gchar *srv_path, *char_path, *desc_path;
 	artik_error err;
+
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s duuid:%s", __func__, addr, srv_uuid,
+			char_uuid, desc_uuid);
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
@@ -200,6 +209,9 @@ artik_error bt_gatt_desc_write_value(const char *addr, const char *srv_uuid,
 	gchar *srv_path, *char_path, *desc_path;
 	artik_error err;
 
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s duuid:%s", __func__, addr, srv_uuid,
+			char_uuid, desc_uuid);
+
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
@@ -229,6 +241,9 @@ artik_error bt_gatt_start_notify(const char *addr, const char *srv_uuid,
 	gchar *path = NULL;
 	gchar *srv_path = NULL;
 	bt_gatt_client *client;
+
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s", __func__, addr, srv_uuid,
+			char_uuid);
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
@@ -267,6 +282,9 @@ artik_error bt_gatt_stop_notify(const char *addr, const char *srv_uuid,
 	gchar *path = NULL;
 	gchar *srv_path = NULL;
 
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s", __func__, addr, srv_uuid,
+			char_uuid);
+
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
 		return E_BT_ERROR;
@@ -301,6 +319,9 @@ artik_error bt_gatt_get_char_properties(const char *addr, const char *srv_uuid,
 	GVariantIter *iter;
 	GError *e = NULL;
 	gchar *path = NULL, *str, *srv_path = NULL;
+
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s", __func__, addr, srv_uuid,
+			char_uuid);
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
@@ -366,6 +387,9 @@ artik_error bt_gatt_get_desc_properties(const char *addr, const char *srv_uuid,
 	GVariantIter *iter;
 	GError *e = NULL;
 	gchar *srv_path, *char_path, *desc_path, *str;
+
+	log_dbg("%s addr:%s, suuid:%s, cuuid:%s, duuid:%s", __func__, addr,
+			srv_uuid, char_uuid, desc_uuid);
 
 	_get_gatt_path(addr, DBUS_IF_GATTSERVICE1, srv_uuid, NULL, NULL, &srv_path);
 	if (srv_path == NULL)
