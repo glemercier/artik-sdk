@@ -450,13 +450,22 @@ static void _char_method_call(GDBusConnection *connection, const gchar *sender,
 			bt_gatt_req_set_result(handle, BT_GATT_REQ_STATE_TYPE_OK, NULL);
 
 	} else if (g_strcmp0(method_name, "StartNotify") == 0) {
-		if (chr->notify_callback)
+		if (chr->notify_callback) {
 			chr->notify_callback(true, chr->notify_user_data);
+			g_dbus_method_invocation_return_value(invocation, NULL);
+		} else {
+			g_dbus_method_invocation_return_dbus_error(invocation,
+				"org.bluez.Error.NotPermitted", "Not Permitted");
+		}
 
 	} else if (g_strcmp0(method_name, "StopNotify") == 0) {
-		if (chr->notify_callback)
+		if (chr->notify_callback) {
 			chr->notify_callback(false, chr->notify_user_data);
-
+			g_dbus_method_invocation_return_value(invocation, NULL);
+		} else {
+			g_dbus_method_invocation_return_dbus_error(invocation,
+				"org.bluez.Error.NotPermitted", "Not Permitted");
+		}
 	} else if (g_strcmp0(method_name, "IndicateConfirm") == 0) {
 		/* TODO */
 	}
