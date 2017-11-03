@@ -57,8 +57,11 @@ static void _on_gatt_data_received(GVariant *properties, gchar *srv_uuid, gchar 
 
 	prop = g_variant_get_child_value(properties, 0);
 	g_variant_get(prop, "{&sv}", &key, &v);
-	if (g_strcmp0(key, "Value") != 0)
+	if (g_strcmp0(key, "Value") != 0) {
+		g_variant_unref(prop);
+		g_variant_unref(v);
 		return;
+	}
 
 	len = g_variant_n_children(v);
 
@@ -752,36 +755,19 @@ static void _gatt_properties_changed(const gchar *object_path,
 	log_dbg("%s path: %s", __func__, object_path);
 
 	r = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			object_path,
-			DBUS_IF_PROPERTIES,
-			"Get",
-			g_variant_new("(ss)", DBUS_IF_GATTCHARACTERISTIC1, "Notifying"),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL);
-
-	g_variant_get(r, "(v)", &v);
-	if (!g_variant_get_boolean(v)) {
-		g_variant_unref(r);
-		g_variant_unref(v);
-		return;
-	}
-
-	r = g_dbus_connection_call_sync(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			object_path,
-			DBUS_IF_PROPERTIES,
-			"Get",
-			g_variant_new("(ss)", DBUS_IF_GATTCHARACTERISTIC1, "UUID"),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		object_path,
+		DBUS_IF_PROPERTIES,
+		"Get",
+		g_variant_new("(ss)", DBUS_IF_GATTCHARACTERISTIC1, "UUID"),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL);
 
 	g_variant_get(r, "(v)", &v);
 	if (g_strcmp0(g_variant_get_string(v, NULL),
-			UUID_HEART_RATE_MEASUREMENT) == 0) {
+			UUID_HEART_RATE_MEASUREMENT) == 0)
 		_on_hrp_measurement_received(properties);
-
-	} else {
+	else {
 		len = g_slist_length(hci.gatt_clients);
 		for (i = 0; i < len; i++) {
 			client =  g_slist_nth_data(hci.gatt_clients, i);
@@ -792,6 +778,7 @@ static void _gatt_properties_changed(const gchar *object_path,
 			}
 		}
 	}
+
 	g_variant_unref(r);
 	g_variant_unref(v);
 }
