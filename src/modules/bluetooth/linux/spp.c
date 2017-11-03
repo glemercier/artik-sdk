@@ -86,6 +86,7 @@ static void _handle_new_connection(GVariant *parameters,
 				g_variant_get(value, "q", &version);
 			if (g_strcmp0(key, "Features") == 0)
 				g_variant_get(value, "q", &features);
+			g_variant_unref(g_property_dic);
 		}
 	}
 	message = g_dbus_method_invocation_get_message(invocation);
@@ -93,8 +94,6 @@ static void _handle_new_connection(GVariant *parameters,
 	fd = g_unix_fd_list_get(fd_list, fd_handler, &error);
 	if (g_property)
 		g_variant_unref(g_property);
-	if (g_property_dic)
-		g_variant_unref(g_property_dic);
 	if (value)
 		g_variant_unref(value);
 

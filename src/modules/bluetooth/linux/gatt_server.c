@@ -384,19 +384,21 @@ static void _extract_value_parameter(GVariant *parameters,
 		unsigned int *len, guchar **value)
 {
 	GVariant *v1 = NULL, *v2 = NULL;
+	guchar *extracted_value;
 
 	g_variant_get(parameters, "(@aya{sv})", &v1, NULL);
 	*len = g_variant_n_children(v1);
-	guchar *extracted_value = (guchar *)malloc(sizeof(guchar) * *len);
+	extracted_value = (guchar *)malloc(sizeof(guchar) * *len);
 
 	for (guint i = 0; i < *len; i++) {
 		v2 = g_variant_get_child_value(v1, i);
 		extracted_value[i] = g_variant_get_byte(v2);
+		g_variant_unref(v2);
 	}
 
 	*value = extracted_value;
+
 	g_variant_unref(v1);
-	g_variant_unref(v2);
 }
 
 static void _char_method_call(GDBusConnection *connection, const gchar *sender,
@@ -1129,13 +1131,11 @@ artik_error bt_gatt_req_set_result(artik_bt_gatt_req request,
 	if (handle->type == BT_GATT_REQ_TYPE_WRITE
 			&& state == BT_GATT_REQ_STATE_TYPE_OK) {
 		if (handle->chr) {
-			if (handle->chr->char_value)
-				free(handle->chr->char_value);
+			g_free(handle->chr->char_value);
 			handle->chr->value_length = handle->len;
 			handle->chr->char_value = handle->value;
 		} else if (handle->desc) {
-			if (handle->desc->desc_value)
-				free(handle->desc->desc_value);
+			g_free(handle->desc->desc_value);
 			handle->desc->value_length = handle->len;
 			handle->desc->desc_value = handle->value;
 		}
@@ -1146,10 +1146,11 @@ artik_error bt_gatt_req_set_result(artik_bt_gatt_req request,
 	if (err != S_OK)
 		return err;
 
-	if (state != BT_GATT_REQ_STATE_TYPE_OK && handle->value)
-		free(handle->value);
+	if (state != BT_GATT_REQ_STATE_TYPE_OK)
+		g_free(handle->value);
 
-	free(handle);
+	g_free(handle);
+
 	return S_OK;
 }
 

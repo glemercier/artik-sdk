@@ -70,13 +70,13 @@ static void _on_gatt_data_received(GVariant *properties, gchar *srv_uuid, gchar 
 	for (i = 0; i < len; i++) {
 		v1 = g_variant_get_child_value(v, i);
 		data.bytes[i] = g_variant_get_byte(v1);
+		g_variant_unref(v1);
 	}
 
 	_user_callback(BT_EVENT_GATT_CHARACTERISTIC, &data);
 
 	g_variant_unref(prop);
 	g_variant_unref(v);
-	g_variant_unref(v1);
 	g_free(data.bytes);
 }
 

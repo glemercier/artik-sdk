@@ -73,11 +73,11 @@ artik_error _read_value(const char *itf, const char *path,
 	for (i = 0; i < len; i++) {
 		v2 = g_variant_get_child_value(v1, i);
 		(*byte)[i] = g_variant_get_byte(v2);
+		g_variant_unref(v2);
 	}
 
 	g_variant_unref(r);
 	g_variant_unref(v1);
-	g_variant_unref(v2);
 
 	return S_OK;
 }
