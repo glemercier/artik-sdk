@@ -993,23 +993,22 @@ artik_error bt_gatt_set_desc_on_write_request(int svc_id, int char_id,
 
 int bt_gatt_register_service(int id)
 {
-	GError *e = NULL;
 	gchar *path = NULL;
 
 	path = g_strdup_printf("%s%d", GATT_SERVICE_PREFIX, id);
 	g_dbus_connection_call(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_GATTMANAGER1,
-			"RegisterApplication",
-			g_variant_new("(oa{sv})", path, NULL),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL,
-			(GAsyncReadyCallback)register_service_cb, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_GATTMANAGER1,
+		"RegisterApplication",
+		g_variant_new("(oa{sv})", path, NULL),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL,
+		(GAsyncReadyCallback)register_service_cb, NULL);
 
 	g_free(path);
 
-	return bt_check_error(e);
+	return S_OK;
 }
 
 void _free_service(int id)
@@ -1165,28 +1164,21 @@ artik_error bt_gatt_req_set_result(artik_bt_gatt_req request,
 
 int bt_gatt_unregister_service(int id)
 {
-	GError *e = NULL;
 	gchar *path = NULL;
 
 	log_dbg("%s id:%d", __func__, id);
 
 	path = g_strdup_printf("%s%d", GATT_SERVICE_PREFIX, id);
 	g_dbus_connection_call(
-			hci.conn,
-			DBUS_BLUEZ_BUS,
-			DBUS_BLUEZ_OBJECT_PATH_HCI0,
-			DBUS_IF_GATTMANAGER1,
-			"UnregisterApplication",
-			g_variant_new("(o)", path, NULL),
-			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL, &e);
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_GATTMANAGER1,
+		"UnregisterApplication",
+		g_variant_new("(o)", path, NULL),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL, NULL);
 
 	g_free(path);
-
-	if (e != NULL) {
-		log_dbg("%s", e->message);
-		g_clear_error(&e);
-		return E_BT_ERROR;
-	}
 
 	_free_service(id);
 
