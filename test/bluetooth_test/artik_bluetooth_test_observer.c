@@ -107,5 +107,8 @@ int main(int argc, char *argv[])
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 
+	if (filter.uuid_list)
+		free(filter.uuid_list);
+
 	return 0;
 }

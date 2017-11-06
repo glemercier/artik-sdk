@@ -111,11 +111,20 @@ int main(void)
 	loop->run();
 
 	bt->unregister_advertisement(adv_id);
+	bt->gatt_remove_characteristic(svc_id, char_id1);
+	bt->gatt_remove_characteristic(svc_id, char_id2);
+	bt->gatt_remove_service(svc_id);
 	bt->gatt_unregister_service(svc_id);
 
 	bt->deinit();
+
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);
+
+	if (chr.value)
+		free(chr.value);
+	if (adv.svc_uuid)
+		free(adv.svc_uuid);
 
 	return 0;
 }

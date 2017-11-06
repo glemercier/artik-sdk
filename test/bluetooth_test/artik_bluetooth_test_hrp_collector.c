@@ -110,9 +110,9 @@ static void on_gatt_property(artik_bt_event event, void *data, void *user_data)
 {
 	int uuid_len = 0, byte_len = 0;
 	int i = 0;
-	unsigned char *byte;
+	unsigned char *byte = NULL;
 
-	artik_bt_uuid *uuid_list;
+	artik_bt_uuid *uuid_list = NULL;
 	artik_bt_gatt_char_properties prop;
 
 	fprintf(stdout, "Get GATT Services\n");
@@ -122,7 +122,9 @@ static void on_gatt_property(artik_bt_event event, void *data, void *user_data)
 		free(uuid_list[i].uuid);
 		free(uuid_list[i].uuid_name);
 	}
-	free(uuid_list);
+	if (uuid_list)
+		free(uuid_list);
+	uuid_list = NULL;
 
 	fprintf(stdout, "Get GATT Chracteristics\n");
 	bt->gatt_get_characteristic_list(remote_address, HEART_RATE_SERVICE,
@@ -132,7 +134,8 @@ static void on_gatt_property(artik_bt_event event, void *data, void *user_data)
 		free(uuid_list[i].uuid);
 		free(uuid_list[i].uuid_name);
 	}
-	free(uuid_list);
+	if (uuid_list)
+		free(uuid_list);
 
 	fprintf(stdout, "Get heart rate measurement Properties\n");
 	prop = 0;
@@ -158,7 +161,8 @@ static void on_gatt_property(artik_bt_event event, void *data, void *user_data)
 			if (bt->gatt_char_read_value(remote_address,
 					HEART_RATE_SERVICE, HEART_RATE_SENSOR_LOCATION, &byte, &byte_len) == 0) {
 				print_location(byte);
-				free(byte);
+				if (byte)
+					free(byte);
 			}
 		}
 	} else {

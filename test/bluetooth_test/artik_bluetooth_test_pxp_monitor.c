@@ -68,7 +68,7 @@ static void on_connect(artik_bt_event event, void *data, void *user_data)
 
 static void get_properties(const char *srv_uuid, const char *char_uuid)
 {
-	artik_bt_gatt_char_properties prop;
+	artik_bt_gatt_char_properties prop = 0;
 
 	if (bt->gatt_get_char_properties(addr, srv_uuid, char_uuid, &prop) == 0) {
 
@@ -92,8 +92,8 @@ static void get_properties(const char *srv_uuid, const char *char_uuid)
 static void on_service(artik_bt_event event, void *data, void *user_data)
 {
 	unsigned char b[2] = {0};
-	unsigned char *alert_level;
-	unsigned char *power_level;
+	unsigned char *alert_level = NULL;
+	unsigned char *power_level = NULL;
 	int len = 0;
 
 	printf("> service resolved\n");
@@ -110,6 +110,10 @@ static void on_service(artik_bt_event event, void *data, void *user_data)
 	for (int i = 0; i < len; i++)
 		printf("> read link loss alert level:%d\n", (int8_t)alert_level[0]);
 
+	if (alert_level)
+		free(alert_level);
+	len = 0;
+
 	printf("> %s %s properties:\n", "IMMEDIATE_ALERT_SERVICE", "ALERT_LEVEL");
 	get_properties(IMMEDIATE_ALERT_SERVICE, ALERT_LEVEL);
 
@@ -120,6 +124,9 @@ static void on_service(artik_bt_event event, void *data, void *user_data)
 			&power_level, &len);
 	for (int i = 0; i < len; i++)
 		printf("> read Tx power level: %d dBm\n", (int8_t)power_level[i]);
+
+	if (power_level)
+		free(power_level);
 }
 
 static void set_user_callbacks(void)

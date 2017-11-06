@@ -65,7 +65,7 @@ static void on_service_resolved(artik_bt_event event, void *data, void *user_dat
 {
 	artik_bt_gatt_char_properties prop1;
 	unsigned char byte[3] = {0xff, 0xff, 0xff};
-	unsigned char *b;
+	unsigned char *b = NULL;
 	int i, len;
 
 	printf("> %s\n", __func__);
@@ -85,12 +85,19 @@ static void on_service_resolved(artik_bt_event event, void *data, void *user_dat
 			for (i = 0; i < len; i++)
 				printf("> characteristic value[%d]: 0x%02X\n", i, b[i]);
 
+			if (b)
+				free(b);
+			len = 0;
+
 			bt->gatt_desc_read_value(addr, TEST_SERVICE,
 					TEST_CHARACTERISTIC, TEST_DESCRIPTOR, &b, &len);
 			printf("> descriptor value: ");
 			for (i = 0; i < len; i++)
 				printf("%c", b[i]);
 			printf("\n");
+
+			if (b)
+				free(b);
 		}
 
 		if (prop1 & BT_GATT_CHAR_PROPERTY_NOTIFY) {
@@ -138,6 +145,7 @@ static int on_signal(void *user_data)
 int main(int argc, char *argv[])
 {
 	artik_bt_scan_filter filter = {0};
+	int signal_id;
 
 	filter.type = BT_SCAN_LE;
 	filter.uuid_length = 1;
@@ -155,12 +163,12 @@ int main(int argc, char *argv[])
 
 	printf("> start scan\n");
 
-	bt->remove_devices();
 	bt->set_scan_filter(&filter);
 	bt->start_scan();
 
-	loop->add_signal_watch(SIGINT, on_signal, NULL, NULL);
+	loop->add_signal_watch(SIGINT, on_signal, NULL, &signal_id);
 	loop->run();
+	loop->remove_signal_watch(signal_id);
 
 	bt->gatt_stop_notify(addr, TEST_SERVICE, TEST_CHARACTERISTIC);
 	bt->disconnect(addr);
