@@ -248,6 +248,7 @@ static void _serv_method_call(GDBusConnection * connection, const gchar *sender,
 				g_variant_builder_unref(b_desc);
 				g_variant_builder_unref(b_desc1);
 				g_variant_builder_unref(b_desc11);
+				g_variant_builder_unref(b_desc12);
 			}
 
 			g_variant_builder_unref(b_char);
