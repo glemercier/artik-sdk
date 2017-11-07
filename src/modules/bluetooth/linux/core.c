@@ -44,6 +44,55 @@ void _set_device_class(artik_bt_class *class, uint32_t cod)
 		class->service_class |= BT_SERVICE_CLASS_LIMITED_DISCOVERABLE_MODE;
 }
 
+static void _hrp_callback(GVariant *v)
+{
+	GVariant *v0, *v1, *v2, *v3;
+	guchar flags = 0, hr = 0, ee = 0, ee_val = 0, format = 0, sc_status = 0,
+			ee_status = 0;
+	artik_bt_hrp_data data;
+
+	memset(&data, 0x00, sizeof(artik_bt_hrp_data));
+
+	v0 = g_variant_get_child_value(v, 0);
+	v1 = g_variant_get_child_value(v, 1);
+	v2 = g_variant_get_child_value(v, 2);
+	v3 = g_variant_get_child_value(v, 3);
+
+	g_variant_get(v0, "y", &flags);
+	g_variant_get(v1, "y", &hr);
+	g_variant_get(v2, "y", &ee);
+	g_variant_get(v3, "y", &ee_val);
+
+	g_variant_unref(v0);
+	g_variant_unref(v1);
+	g_variant_unref(v2);
+	g_variant_unref(v3);
+
+	format = flags & 0x01;
+	sc_status = (flags >> 1) & 0x03;
+	ee_status = flags & 0x08;
+	log_dbg("flags: 0x%02x, format: 0x%02x, sc_st: 0x%02x, ee_st: 0x%02x",
+			flags, format, sc_status, ee_status);
+
+	if (format != 0x00)
+		hr = hr | (ee << 8);
+
+	if (ee_status) {
+		log_dbg("energy extended : %d", ee_val);
+		data.energy = ee_val;
+	}
+
+	log_dbg("heart rate: %d", hr);
+
+	data.bpm = hr;
+	if (sc_status == 3)
+		data.contact = true;
+	else
+		data.contact = false;
+
+	_user_callback(BT_EVENT_PF_HEARTRATE, &data);
+}
+
 static void _on_gatt_data_received(GVariant *properties, gchar *srv_uuid, gchar *char_uuid)
 {
 	GVariant *prop = NULL, *v = NULL, *v1 = NULL;
@@ -85,61 +134,25 @@ static void _on_gatt_data_received(GVariant *properties, gchar *srv_uuid, gchar 
 
 static void _on_hrp_measurement_received(GVariant *properties)
 {
-	GVariant *prop, *val, *v0, *v1, *v2, *v3;
+	GVariant *v;
+	GVariantIter *iter;
 	gchar *key;
-	guchar flags = 0, hr = 0, ee = 0, ee_val = 0, format = 0,
-			sc_status = 0, ee_status = 0;
-	artik_bt_hrp_data data;
 
-	memset(&data, 0x00, sizeof(artik_bt_hrp_data));
+	log_dbg("%s", __func__);
 
-	prop = g_variant_get_child_value(properties, 0);
-	g_variant_get(prop, "{&sv}", &key, &val);
-	if (g_strcmp0(key, "Value") != 0)
-		return;
+	g_variant_get(properties, "a{sv}", &iter);
+	while (g_variant_iter_loop(iter, "{&sv}", &key, &v)) {
+		if (g_strcmp0(key, "Value") == 0) {
+			if (g_variant_n_children(v) < 4) {
+				log_err("invalid HRP data");
+				g_variant_unref(v);
+				break;
+			}
 
-	if (g_variant_n_children(val) < 3)
-		return;
-	v0 = g_variant_get_child_value(val, 0);
-	v1 = g_variant_get_child_value(val, 1);
-	v2 = g_variant_get_child_value(val, 2);
-	v3 = g_variant_get_child_value(val, 3);
-
-	g_variant_get(v0, "y", &flags);
-	g_variant_get(v1, "y", &hr);
-	g_variant_get(v2, "y", &ee);
-	g_variant_get(v3, "y", &ee_val);
-
-	format = flags & 0x01;
-	sc_status = (flags >> 1) & 0x03;
-	ee_status = flags & 0x08;
-	log_dbg("flags: 0x%02x, format: 0x%02x, sc_status: 0x%02x, ee_status: 0x%02x",
-			flags, format, sc_status, ee_status);
-
-	if (format != 0x00)
-		hr = hr | (ee << 8);
-
-	if (ee_status) {
-		log_dbg("energy extended : %d", ee_val);
-		data.energy = ee_val;
+			_hrp_callback(v);
+		}
 	}
-
-	log_dbg("heart rate: %d", hr);
-
-	data.bpm = hr;
-	if (sc_status == 3)
-		data.contact = true;
-	else
-		data.contact = false;
-
-	_user_callback(BT_EVENT_PF_HEARTRATE, &data);
-
-	g_variant_unref(prop);
-	g_variant_unref(val);
-	g_variant_unref(v0);
-	g_variant_unref(v1);
-	g_variant_unref(v2);
-	g_variant_unref(v3);
+	g_variant_iter_free(iter);
 }
 
 void _user_callback(artik_bt_event event, void *data)
