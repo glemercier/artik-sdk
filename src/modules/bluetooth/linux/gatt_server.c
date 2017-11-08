@@ -268,6 +268,30 @@ static void _serv_method_call(GDBusConnection * connection, const gchar *sender,
 	}
 }
 
+static gint _compare_svc_id(gconstpointer a, gconstpointer b)
+{
+	if (((bt_gatt_service *)a)->serv_id == GPOINTER_TO_INT(b))
+		return 0;
+	else
+		return 1;
+}
+
+static gint _compare_chr_id(gconstpointer a, gconstpointer b)
+{
+	if (((bt_gatt_char *)a)->char_id == GPOINTER_TO_INT(b))
+		return 0;
+	else
+		return 1;
+}
+
+static gint _compare_desc_id(gconstpointer a, gconstpointer b)
+{
+	if (((bt_gatt_desc *)a)->desc_id == GPOINTER_TO_INT(b))
+		return 0;
+	else
+		return 1;
+}
+
 static gint _compare_char_path(gconstpointer a, gconstpointer b)
 {
 	if (strcmp(((bt_gatt_char *)a)->char_path, b) == 0)
@@ -284,45 +308,65 @@ static gint _compare_desc_path(gconstpointer a, gconstpointer b)
 		return 1;
 }
 
-static bt_gatt_char *_find_chr_list_by_id(unsigned int svc_id,
-		unsigned int char_id)
+static bt_gatt_service *_find_svc_list_by_id(unsigned int sid)
 {
-	bt_gatt_service *svc = NULL;
-	bt_gatt_char *chr = NULL;
+	GSList *list = NULL;
 
-	if (g_slist_length(hci.gatt_services) < svc_id) {
-		log_dbg("%s: GATT service with id %d not found", __func__, svc_id);
+	list = g_slist_find_custom(hci.gatt_services, GINT_TO_POINTER(sid),
+			_compare_svc_id);
+
+	if (!list) {
+		log_err("%s not found service id %d", __func__, sid);
 		return NULL;
 	}
 
-	svc = g_slist_nth_data(hci.gatt_services, svc_id);
-	if (g_slist_length(svc->char_data) < char_id) {
-		log_dbg("%s: GATT characteristic with id %d not found", __func__,
-				char_id);
-		return NULL;
-	}
-
-	chr = g_slist_nth_data(svc->char_data, char_id);
-
-	return chr;
+	return list->data;
 }
 
-static bt_gatt_desc *_find_desc_list_by_id(unsigned int svc_id,
-		unsigned int char_id, unsigned int desc_id)
+static bt_gatt_char *_find_chr_list_by_id(unsigned int sid, unsigned int cid)
 {
-	bt_gatt_char *chr = _find_chr_list_by_id(svc_id, char_id);
-	bt_gatt_desc *desc = NULL;
+	GSList *list = NULL;
+	bt_gatt_service *svc;
 
+	svc = _find_svc_list_by_id(sid);
+	if (!svc)
+		return NULL;
+
+	list = g_slist_find_custom(svc->char_data, GINT_TO_POINTER(cid),
+			_compare_chr_id);
+
+	if (!list) {
+		log_err("%s not found characteristic id %d", __func__, cid);
+		return NULL;
+	}
+
+	return list->data;
+}
+
+static bt_gatt_desc *_find_desc_list_by_id(unsigned int sid, unsigned int cid,
+		unsigned int did)
+{
+	GSList *list = NULL;
+	bt_gatt_service *svc;
+	bt_gatt_char *chr;
+
+	svc = _find_svc_list_by_id(sid);
+	if (!svc)
+		return NULL;
+
+	chr = _find_chr_list_by_id(sid, cid);
 	if (!chr)
 		return NULL;
 
-	if (g_slist_length(chr->desc_data) < desc_id) {
-		log_dbg("%s: GATT descriptor with id %d not found", __func__, desc_id);
+	list = g_slist_find_custom(chr->desc_data, GINT_TO_POINTER(did),
+			_compare_desc_id);
+
+	if (!list) {
+		log_err("%s not found descriptor id %d", __func__, did);
 		return NULL;
 	}
 
-	desc = g_slist_nth_data(chr->desc_data, desc_id);
-	return desc;
+	return list->data;
 }
 
 static GSList *_find_chr_list_by_path(const gchar *path)
@@ -619,12 +663,12 @@ static void _set_desc_properties(int properties, GSList **list)
 artik_error bt_gatt_add_service(artik_bt_gatt_service svc, int *id)
 {
 	GError *error = NULL;
-	guint object_id, serv_id;
+	guint object_id, num;
 	gchar *path = NULL;
 	bt_gatt_service *serv_info = NULL;
 	artik_error ret = S_OK;
 
-	log_dbg("bt_gatt_add_service");
+	log_dbg("%s", __func__);
 
 	service_node_info = g_dbus_node_info_new_for_xml(service_introspection_xml,
 			&error);
@@ -632,8 +676,8 @@ artik_error bt_gatt_add_service(artik_bt_gatt_service svc, int *id)
 	if (ret != S_OK)
 		goto exit;
 
-	serv_id = g_slist_length(hci.gatt_services);
-	path = g_strdup_printf("%s%d", GATT_SERVICE_PREFIX, serv_id);
+	num = g_slist_length(hci.gatt_services);
+	path = g_strdup_printf("%s%d", GATT_SERVICE_PREFIX, num);
 
 	object_id = g_dbus_connection_register_object(hci.conn, path,
 			service_node_info->interfaces[0], &serv_interface_vtable,
@@ -652,7 +696,7 @@ artik_error bt_gatt_add_service(artik_bt_gatt_service svc, int *id)
 
 	hci.gatt_services = g_slist_append(hci.gatt_services, serv_info);
 
-	*id = serv_id;
+	*id = object_id;
 
 exit:
 	g_free(path);
@@ -664,31 +708,29 @@ artik_error bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr,
 		int *id)
 {
 	GError *error = NULL;
-
 	GSList *prop_list = NULL;
 	gchar *path = NULL;
-	guint object_id, char_id;
+	guint object_id, num;
 	bt_gatt_service *service = NULL;
 	bt_gatt_char *characteristic = NULL;
 	artik_error ret = S_OK;
 
+	log_dbg("%s sid: %d", __func__, svc_id);
+
 	if (chr.uuid == NULL)
 		return E_BT_ERROR;
 
-	/* TODO: service id */
-	svc_id = 0;
-	service = g_slist_nth_data(hci.gatt_services, svc_id);
-	if (service == NULL) {
-		log_err("no service was found");
+	service = _find_svc_list_by_id(svc_id);
+	if (!service)
 		return E_BT_ERROR;
-	}
 
-	char_id = g_slist_length(service->char_data);
+	num = g_slist_length(service->char_data);
 
 	path = g_strdup_printf("%s%d%s%d", GATT_SERVICE_PREFIX, svc_id,
-			GATT_CHARACTERISTIC_PREFIX, char_id);
+			GATT_CHARACTERISTIC_PREFIX, num);
 
-	characteristic_node_info = g_dbus_node_info_new_for_xml(
+	if (!characteristic_node_info)
+		characteristic_node_info = g_dbus_node_info_new_for_xml(
 			char_introspection_xml, &error);
 
 	ret = bt_check_error(error);
@@ -732,7 +774,7 @@ artik_error bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr,
 	if (ret != S_OK)
 		goto exit;
 
-	*id = char_id;
+	*id = object_id;
 
 exit:
 	g_free(path);
@@ -747,34 +789,31 @@ artik_error bt_gatt_add_descriptor(int service_id, int char_id,
 
 	GSList *prop_list = NULL;
 	gchar *path = NULL;
-	guint object_id, desc_id;
+	guint object_id, num;
 	bt_gatt_service *service = NULL;
 	bt_gatt_char *characteristic = NULL;
 	bt_gatt_desc *descriptor = NULL;
 	artik_error ret = S_OK;
 
-	log_dbg("bt_gatt_add_descriptor");
+	log_dbg("%s sid: %d, cid: %d", __func__, service_id, char_id);
 
-	service = g_slist_nth_data(hci.gatt_services, service_id);
-	if (service == NULL) {
-		log_err("no service was found");
+	service = _find_svc_list_by_id(service_id);
+	if (!service)
 		return E_BT_ERROR;
-	}
 
-	characteristic = g_slist_nth_data(service->char_data, char_id);
-	if (characteristic == NULL) {
-		log_err("no characteristic was found");
+	characteristic = _find_chr_list_by_id(service_id, char_id);
+	if (!characteristic)
 		return E_BT_ERROR;
-	}
 
-	desc_id = g_slist_length(characteristic->desc_data);
+	num = g_slist_length(characteristic->desc_data);
 
 	path = g_strdup_printf("%s%d%s%d%s%d",
 			GATT_SERVICE_PREFIX, service_id,
 			GATT_CHARACTERISTIC_PREFIX, char_id,
-			GATT_DESCRIPTOR_PREFIX, desc_id);
+			GATT_DESCRIPTOR_PREFIX, num);
 
-	descriptor_node_info = g_dbus_node_info_new_for_xml(
+	if (!descriptor_node_info)
+		descriptor_node_info = g_dbus_node_info_new_for_xml(
 			descriptor_introspection_xml, &error);
 
 	ret = bt_check_error(error);
@@ -818,7 +857,7 @@ artik_error bt_gatt_add_descriptor(int service_id, int char_id,
 	characteristic->desc_data = g_slist_append(characteristic->desc_data,
 			descriptor);
 
-	*id = desc_id;
+	*id = object_id;
 
 exit:
 	g_free(path);
@@ -832,20 +871,19 @@ artik_error bt_gatt_remove_service(int sid)
 
 	log_dbg("%s sid: %d", __func__, sid);
 
-	svc = g_slist_nth_data(hci.gatt_services, sid);
-	if (svc == NULL) {
-		log_err("no service was found");
+	svc = _find_svc_list_by_id(sid);
+	if (!svc)
 		return E_BT_ERROR;
-	}
 
 	hci.gatt_services = g_slist_remove(hci.gatt_services, svc);
-
-	g_dbus_node_info_unref(service_node_info);
 	g_dbus_connection_unregister_object(hci.conn, svc->serv_id);
 
 	g_free(svc->serv_path);
 	g_free(svc->service_uuid);
 	g_free(svc);
+
+	if (g_slist_length(hci.gatt_services) == 0)
+		g_dbus_node_info_unref(service_node_info);
 
 	return S_OK;
 }
@@ -857,21 +895,15 @@ artik_error bt_gatt_remove_characteristic(int sid, int cid)
 
 	log_dbg("%s sid: %d, cid: %d", __func__, sid, cid);
 
-	svc = g_slist_nth_data(hci.gatt_services, sid);
-	if (svc == NULL) {
-		log_err("no service was found");
+	svc = _find_svc_list_by_id(sid);
+	if (!svc)
 		return E_BT_ERROR;
-	}
 
-	chr = g_slist_nth_data(svc->char_data, cid);
-	if (chr == NULL) {
-		log_err("no characteristic was found");
+	chr = _find_chr_list_by_id(sid, cid);
+	if (!chr)
 		return E_BT_ERROR;
-	}
 
-	g_dbus_node_info_unref(characteristic_node_info);
 	g_dbus_connection_unregister_object(hci.conn, chr->char_id);
-
 	g_slist_free(chr->char_props);
 	svc->char_data = g_slist_remove(svc->char_data, chr);
 
@@ -879,6 +911,9 @@ artik_error bt_gatt_remove_characteristic(int sid, int cid)
 	g_free(chr->char_uuid);
 	g_free(chr->char_value);
 	g_free(chr);
+
+	if (g_slist_length(svc->char_data) == 0)
+		g_dbus_node_info_unref(characteristic_node_info);
 
 	return S_OK;
 }
@@ -891,25 +926,18 @@ artik_error bt_gatt_remove_descriptor(int sid, int cid, int did)
 
 	log_dbg("%s sid: %d, cid: %d, did: %d", __func__, sid, cid, did);
 
-	svc = g_slist_nth_data(hci.gatt_services, sid);
-	if (svc == NULL) {
-		log_err("no service was found");
+	svc = _find_svc_list_by_id(sid);
+	if (!svc)
 		return E_BT_ERROR;
-	}
 
-	chr = g_slist_nth_data(svc->char_data, cid);
-	if (chr == NULL) {
-		log_err("no characteristic was found");
+	chr = _find_chr_list_by_id(sid, cid);
+	if (!chr)
 		return E_BT_ERROR;
-	}
 
-	desc = g_slist_nth_data(chr->desc_data, did);
-	if (desc == NULL) {
-		log_err("no descriptor was found");
+	desc = _find_desc_list_by_id(sid, cid, did);
+	if (!desc)
 		return E_BT_ERROR;
-	}
 
-	g_dbus_node_info_unref(descriptor_node_info);
 	g_dbus_connection_unregister_object(hci.conn, desc->desc_id);
 	chr->desc_data = g_slist_remove(chr->desc_data, desc);
 
@@ -918,6 +946,9 @@ artik_error bt_gatt_remove_descriptor(int sid, int cid, int did)
 	g_free(desc->desc_uuid);
 	g_free(desc->desc_value);
 	g_free(desc);
+
+	if (g_slist_length(chr->desc_data) == 0)
+		g_dbus_node_info_unref(descriptor_node_info);
 
 	return S_OK;
 }
@@ -994,65 +1025,25 @@ artik_error bt_gatt_set_desc_on_write_request(int svc_id, int char_id,
 
 int bt_gatt_register_service(int id)
 {
-	gchar *path = NULL;
+	bt_gatt_service *svc = NULL;
 
-	path = g_strdup_printf("%s%d", GATT_SERVICE_PREFIX, id);
+	svc = _find_svc_list_by_id(id);
+	if (!svc)
+		return E_BT_ERROR;
+
+	log_dbg("%s sid: %d, path: %s", __func__, id, svc->serv_path);
+
 	g_dbus_connection_call(
 		hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
 		DBUS_IF_GATTMANAGER1,
 		"RegisterApplication",
-		g_variant_new("(oa{sv})", path, NULL),
+		g_variant_new("(oa{sv})", svc->serv_path, NULL),
 		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL,
 		(GAsyncReadyCallback)register_service_cb, NULL);
 
-	g_free(path);
-
 	return S_OK;
-}
-
-void _free_service(int id)
-{
-	GSList *l1, *l2;
-	bt_gatt_service *serv_info = NULL;
-	bt_gatt_char *char_info = NULL;
-	bt_gatt_desc *desc_info = NULL;
-
-	log_dbg("%s id:%d", __func__, id);
-	serv_info = g_slist_nth_data(hci.gatt_services, id);
-	if (serv_info == NULL)
-		return;
-
-	l1 = serv_info->char_data;
-	while (l1 != NULL) {
-		char_info = l1->data;
-
-		l2 = char_info->desc_data;
-		while (l2 != NULL) {
-			desc_info = l2->data;
-			l2 = g_slist_remove(l2, desc_info);
-
-			g_free(desc_info->desc_path);
-			g_free(desc_info->desc_uuid);
-			if (desc_info->value_length > 0)
-				g_free(desc_info->desc_value);
-			g_free(desc_info);
-		}
-
-		l1 = g_slist_remove(l1, char_info);
-
-		g_free(char_info->char_path);
-		g_free(char_info->char_uuid);
-		if (char_info->value_length > 0)
-			g_free(char_info->char_value);
-		g_free(char_info);
-	}
-
-	hci.gatt_services = g_slist_remove(hci.gatt_services, serv_info);
-	g_free(serv_info->serv_path);
-	g_free(serv_info->service_uuid);
-	g_free(serv_info);
 }
 
 artik_error bt_gatt_req_set_value(artik_bt_gatt_req request, int len,
@@ -1165,23 +1156,22 @@ artik_error bt_gatt_req_set_result(artik_bt_gatt_req request,
 
 int bt_gatt_unregister_service(int id)
 {
-	gchar *path = NULL;
+	bt_gatt_service *svc = NULL;
 
-	log_dbg("%s id:%d", __func__, id);
+	svc = _find_svc_list_by_id(id);
+	if (!svc)
+		return E_BT_ERROR;
 
-	path = g_strdup_printf("%s%d", GATT_SERVICE_PREFIX, id);
+	log_dbg("%s sid:%d, path: %s", __func__, id, svc->serv_path);
+
 	g_dbus_connection_call(
 		hci.conn,
 		DBUS_BLUEZ_BUS,
 		DBUS_BLUEZ_OBJECT_PATH_HCI0,
 		DBUS_IF_GATTMANAGER1,
 		"UnregisterApplication",
-		g_variant_new("(o)", path, NULL),
+		g_variant_new("(o)", svc->serv_path, NULL),
 		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL, NULL);
-
-	g_free(path);
-
-	_free_service(id);
 
 	return S_OK;
 }
