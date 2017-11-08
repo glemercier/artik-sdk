@@ -1,4 +1,4 @@
-Summary:            A SDK library for easing up development on Samsung's ARTIK IoT platform  
+Summary:            A SDK library for easing up development on Samsung's ARTIK IoT platform
 Name:               libartik-sdk
 Version:            1.6
 Release:            0%{?dist}
@@ -248,9 +248,9 @@ cd %{_builddir}
 
 echo %{_host_cpu}
 %if %(echo %arm | egrep -c %{_host_cpu})
-cmake %{_srcdir} -DCMAKE_BUILD_TEST=1
+cmake %{_srcdir} -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TEST=1
 %else
-cmake %{_srcdir} -DCMAKE_TOOLCHAIN_FILE=%{_srcdir}/target/toolchain-cross-arm.cmake -DCMAKE_SYSROOT=%{_sysrootdir} -DCMAKE_BUILD_TEST=1
+cmake %{_srcdir} -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_TOOLCHAIN_FILE=%{_srcdir}/target/toolchain-cross-arm.cmake -DCMAKE_SYSROOT=%{_sysrootdir} -DCMAKE_BUILD_TEST=1
 %endif
 
 make %{?_smp_mflags}

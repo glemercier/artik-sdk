@@ -1,7 +1,7 @@
 prefix=/usr
 exec_prefix=/usr
-libdir=/usr/lib
-includedir=/usr/include/artik/connectivity
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/artik/connectivity
 version=1.6
 
 Name: ARTIK SDK Connectivity

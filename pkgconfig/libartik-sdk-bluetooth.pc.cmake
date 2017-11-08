@@ -1,7 +1,7 @@
 prefix=/usr
 exec_prefix=/usr
-libdir=/usr/lib
-includedir=/usr/include/artik/bluetooth
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/artik/bluetooth
 version=1.6
 
 Name: ARTIK SDK Bluetooth

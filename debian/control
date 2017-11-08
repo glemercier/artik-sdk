@@ -3,7 +3,7 @@ Section: libs
 Priority: optional
 Maintainer: Gregory Lemercier <g.lemercier@samsung.com>
 Uploaders: Chanho Park <chanho61.park@samsung.com>
-Build-Depends: debhelper (>=9),
+Build-Depends: debhelper (>=10.2.1),
 	cmake,
 	libcurl4-openssl-dev,
 	libglib2.0-dev,

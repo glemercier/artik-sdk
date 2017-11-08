@@ -1,1 +1,1 @@
-usr/lib/libartik-sdk-mqtt.so.*
+usr/lib/*/libartik-sdk-mqtt.so.*

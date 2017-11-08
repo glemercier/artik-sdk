@@ -18,7 +18,7 @@ TARGET_LINK_LIBRARIES ( bluetooth-test
 	${ARTIK_BASE_LIBRARIES}
 )
 
-INSTALL ( TARGETS bluetooth-test RUNTIME DESTINATION lib/artik-sdk/tests )
+INSTALL ( TARGETS bluetooth-test RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/artik-sdk/tests" )
 
 SET( TESTS
 	avrcp
@@ -56,5 +56,5 @@ FOREACH ( test ${TESTS})
 		${CUNIT_LIBRARIES}
 	)
 
-	INSTALL ( TARGETS ${TARGET} RUNTIME DESTINATION lib/artik-sdk/tests )
+	INSTALL ( TARGETS ${TARGET} RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/artik-sdk/tests" )
 ENDFOREACH ( test )
