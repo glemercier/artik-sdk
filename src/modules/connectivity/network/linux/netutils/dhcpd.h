@@ -65,8 +65,8 @@ extern "C"
 #else
 #endif
 
-int dhcpd_run(artik_network_dhcp_server_config * config,
-	int *sockfd, int *watch_id);
+void *dhcpd_start(artik_network_dhcp_server_config *config);
+void dhcpd_stop(void *handle);
 
 #ifdef __cplusplus
 }

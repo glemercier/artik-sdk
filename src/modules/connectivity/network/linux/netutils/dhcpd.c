@@ -230,6 +230,10 @@ typedef struct {
 	in_addr_t gw_addr;
 	in_addr_t *dns_addr;
 
+	artik_loop_module *loop;
+	int sockfd;
+	int watch_id;
+
 } dhcp_server_handle;
 
 /****************************************************************************
@@ -1425,29 +1429,23 @@ static int loop_handler(int fd, enum watch_io io, void *arg)
  * Name: dhcpd_run
  ****************************************************************************/
 
-int dhcpd_run(artik_network_dhcp_server_config *config,
-	int *sockfd, int *watch_id)
+void *dhcpd_start(artik_network_dhcp_server_config *config)
 {
-	artik_loop_module *loop = (artik_loop_module *)
-					artik_request_api_module("loop");
 	unsigned int num_leases = config->num_leases;
 	dhcp_server_handle *server = NULL;
 
 	server = malloc(sizeof(dhcp_server_handle));
 
 	memset(server, 0, sizeof(dhcp_server_handle));
-
-	server->interface = config->interface == ARTIK_WIFI ? "wlan0" : "eth0";
-
+	server->interface = (config->interface == ARTIK_WIFI) ? "wlan0" : "eth0";
 	server->num_leases = num_leases;
 	server->startip = htonl(inet_addr(config->start_addr.address));
 	server->endip = server->startip + server->num_leases - 1;
 	server->netmask = inet_addr(config->netmask.address);
 	server->gw_addr = inet_addr(config->gw_addr.address);
-	server->dns_addr = NULL;
-
-	server->dns_addr = (in_addr_t *)malloc(MAX_DNS_ADDRESSES*
-							sizeof(in_addr_t));
+	server->dns_addr = (in_addr_t *)malloc(
+			MAX_DNS_ADDRESSES * sizeof(in_addr_t));
+	server->loop = (artik_loop_module *)artik_request_api_module("loop");
 
 	for (int i = 0; i < MAX_DNS_ADDRESSES; i++) {
 		if (strcmp(config->dns_addr[i].address, "") == 0)
@@ -1460,31 +1458,40 @@ int dhcpd_run(artik_network_dhcp_server_config *config,
 	log_dbg("Started\n");
 
 	/* Initialize everything to zero */
-
 	memset(&g_state, 0, sizeof(struct dhcpd_state_s));
+	g_state.ds_leases = (struct lease_s *)malloc(
+			num_leases * sizeof(struct lease_s));
+	memset(g_state.ds_leases, 0, num_leases * sizeof(struct lease_s));
 
-	g_state.ds_leases = (struct lease_s *)malloc(num_leases*
-							sizeof(struct lease_s));
-
-	memset(g_state.ds_leases, 0, sizeof(struct lease_s));
-
-	for (int i = 0; i < num_leases; i++)
-		memset(&g_state.ds_leases[i], 0, sizeof(struct lease_s));
-
-	/* Now loop indefinitely, reading packets from the DHCP server socket */
-
-	*sockfd = -1;
 	/* Create a socket to listen for requests from DHCP clients */
-
-	if (*sockfd < 0) {
-		*sockfd = dhcpd_openlistener(server->interface);
-		if (*sockfd < 0)
-			log_err("ERROR: Failed to create socket\n");
+	server->sockfd = dhcpd_openlistener(server->interface);
+	if (server->sockfd < 0) {
+		log_err("ERROR: Failed to create socket\n");
+		artik_release_api_module(server->loop);
+		free(g_state.ds_leases);
+		free(server);
+		return NULL;
 	}
 
-	loop->add_fd_watch(*sockfd,
-		WATCH_IO_IN | WATCH_IO_ERR | WATCH_IO_HUP | WATCH_IO_NVAL,
-		loop_handler, server, watch_id);
+	server->loop->add_fd_watch(server->sockfd,
+			WATCH_IO_IN | WATCH_IO_ERR | WATCH_IO_HUP | WATCH_IO_NVAL,
+			loop_handler, server, &server->watch_id);
 
-	return OK;
+	return (void *)server;
+}
+
+void dhcpd_stop(void *handle)
+{
+	dhcp_server_handle *server = (dhcp_server_handle *)handle;
+
+	if (!handle)
+		return;
+
+	close(server->sockfd);
+
+	server->loop->remove_fd_watch(server->watch_id);
+
+	artik_release_api_module(server->loop);
+	free(g_state.ds_leases);
+	free(server);
 }
