@@ -706,25 +706,26 @@ void _process_connection_cb(const gchar *path, artik_bt_event e)
 	if (!(e & (BT_EVENT_BOND | BT_EVENT_CONNECT)))
 		return;
 
-	device = g_try_new0(artik_bt_device, 1);
-	if (!device)
-		return;
-	memset(device, 0, sizeof(artik_bt_device));
-
 	hci.state = BT_DEVICE_STATE_IDLE;
 
 	if (_get_all_device_properties(path, &v1) == S_OK) {
+		device = g_try_new0(artik_bt_device, 1);
+		if (!device)
+			return;
+		memset(device, 0, sizeof(artik_bt_device));
 
 		v2 = g_variant_get_child_value(v1, 0);
 		_get_device_properties(v2, device);
 
+		_user_callback(e, device);
+
+		bt_free_device(device);
+
 		g_variant_unref(v1);
 		g_variant_unref(v2);
+	} else {
+		log_err("can not find device %s", path);
 	}
-
-	_user_callback(e, device);
-
-	bt_free_device(device);
 }
 
 void _process_service_cb(const gchar *path, artik_bt_event e)
@@ -755,6 +756,8 @@ void _process_service_cb(const gchar *path, artik_bt_event e)
 
 		g_variant_unref(v1);
 		g_variant_unref(v2);
+	} else {
+		log_err("can not find device %s", path);
 	}
 }
 
