@@ -32,6 +32,30 @@ typedef struct {
 	void *user_data;
 } os_serial_data;
 
+static const unsigned int baudrate_value[] = {
+	B4800,
+	B9600,
+	14400,
+	B19200,
+	B38400,
+	B57600,
+	B115200,
+	B230400,
+	B460800,
+	B500000,
+	B576000,
+	B921600,
+	B1000000,
+	B1152000,
+	B1500000,
+	B2000000,
+	B2500000,
+	B3000000,
+	0,
+	0,
+	0
+};
+
 artik_error os_serial_request(artik_serial_config *config)
 {
 	os_serial_data *data_user = NULL;
@@ -60,31 +84,16 @@ artik_error os_serial_request(artik_serial_config *config)
 		return E_ACCESS_DENIED;
 	}
 
-	/* Configure baudrate */
-	switch (config->baudrate) {
-	case ARTIK_SERIAL_BAUD_4800:
-		tty.c_speed = 4800;
-		break;
-	case ARTIK_SERIAL_BAUD_9600:
-		tty.c_speed = 9600;
-		break;
-	case ARTIK_SERIAL_BAUD_14400:	/*Not Support 14400 Baud*/
-		break;
-	case ARTIK_SERIAL_BAUD_19200:
-		tty.c_speed = 19200;
-		break;
-	case ARTIK_SERIAL_BAUD_38400:
-		tty.c_speed = 38400;
-		break;
-	case ARTIK_SERIAL_BAUD_57600:
-		tty.c_speed = 57600;
-		break;
-	case ARTIK_SERIAL_BAUD_115200:
-		tty.c_speed = 115200;
-		break;
-	default:
-		break;
+	/* Check if baudrate is supported */
+	if ((config->baudrate >= ARTIK_SERIAL_BAUD_NUM ) ||
+			!baudrate_value[config->baudrate]) {
+		log_err("Requested baudrate is not supported");
+		os_serial_release(config);
+		return E_BAD_ARGS;
 	}
+
+	/* Configure baudrate */
+	tty.c_speed = baudrate_value[config->baudrate];
 
 	/* Configure flow control */
 	switch (config->flowctrl) {

@@ -58,13 +58,29 @@ static char *const plat_port[] = {
 };
 
 /* Must strictly follow enum artik_serial_baudrate_t in artik_serial.h */
-static const unsigned int baudrate_value[] = { B4800,
-						B9600,
-						14400,
-						B19200,
-						B38400,
-						B57600,
-						B115200 };
+static const unsigned int baudrate_value[] = {
+	B4800,
+	B9600,
+	14400,
+	B19200,
+	B38400,
+	B57600,
+	B115200,
+	B230400,
+	B460800,
+	B500000,
+	B576000,
+	B921600,
+	B1000000,
+	B1152000,
+	B1500000,
+	B2000000,
+	B2500000,
+	B3000000,
+	B3500000,
+	B4000000,
+	0
+};
 
 artik_error os_serial_request(artik_serial_config *config)
 {
@@ -99,6 +115,12 @@ artik_error os_serial_request(artik_serial_config *config)
 	tty.c_cflag |= (CREAD | CLOCAL);
 	tty.c_cc[VMIN] = 1;
 	tty.c_cc[VTIME] = 5;
+
+	/* Check if baudrate is valid */
+	if (config->baudrate >= ARTIK_SERIAL_BAUD_NUM) {
+		os_serial_release(config);
+		return E_BAD_ARGS;
+	}
 
 	/* Configure baudrate */
 	cfsetispeed(&tty, baudrate_value[config->baudrate]);
