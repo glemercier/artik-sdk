@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef CONNECTIVITY_CPP_ARTIK_SECURITY_HH_
-#define CONNECTIVITY_CPP_ARTIK_SECURITY_HH_
+#ifndef BASE_CPP_ARTIK_SECURITY_HH_
+#define BASE_CPP_ARTIK_SECURITY_HH_
 
 #include <artik_security.h>
 #include <artik_module.h>
@@ -52,4 +52,4 @@ class Security {
 
 }  // namespace artik
 
-#endif  // CONNECTIVITY_CPP_ARTIK_SECURITY_HH_
+#endif  // BASE_CPP_ARTIK_SECURITY_HH_

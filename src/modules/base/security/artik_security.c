@@ -37,7 +37,7 @@ static artik_error verify_signature_update(artik_security_handle handle,
 		unsigned char *data, unsigned int data_len);
 static artik_error verify_signature_final(artik_security_handle handle);
 
-const artik_security_module security_module = {
+EXPORT_API const artik_security_module security_module = {
 	request,
 	release,
 	get_certificate,

@@ -39,7 +39,7 @@ static const artik_api_module artik_api_a530_modules[] = {
 	{ARTIK_MODULE_WIFI,	 (char *)"wifi",      (char *)"wifi"},
 	{ARTIK_MODULE_MEDIA,	 (char *)"media",     (char *)"media"},
 	{ARTIK_MODULE_TIME,	 (char *)"time",      (char *)"base"},
-	{ARTIK_MODULE_SECURITY,	 (char *)"security",  (char *)"connectivity"},
+	{ARTIK_MODULE_SECURITY,	 (char *)"security",  (char *)"base"},
 	{ARTIK_MODULE_SPI,       (char *)"spi",	      (char *)"systemio"},
 	{ARTIK_MODULE_BLUETOOTH, (char *)"bluetooth", (char *)"bluetooth"},
 	{ARTIK_MODULE_SENSOR,	 (char *)"sensor",    (char *)"sensor"},

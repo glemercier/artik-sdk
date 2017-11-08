@@ -2,7 +2,6 @@ CMAKE_MINIMUM_REQUIRED	( VERSION 2.8 )
 PROJECT			( artik-sdk-connectivity C CXX )
 
 FIND_PACKAGE ( CURL )
-FIND_PACKAGE ( OpenSSL )
 FIND_PACKAGE (PkgConfig)
 PKG_CHECK_MODULES ( LIBWEBSOCKETS REQUIRED libwebsockets )
 
@@ -14,8 +13,6 @@ SET ( SRC_CONNECTIVITY
 					cloud/artik_cloud.c
 					http/linux_http.c
 					http/artik_http.c
-					security/linux_security.c
-					security/artik_security.c
 					network/linux_network.c
 					network/artik_network.c
 					network/linux/netutils/dhcpc.c
@@ -27,7 +24,6 @@ SET ( SRC_CONNECTIVITY
 					http/cpp/artik_http.cpp
 					network/cpp/artik_network.cpp
 					websocket/cpp/artik_websocket.cpp
-					security/cpp/artik_security.cpp
 )
 
 ADD_LIBRARY ( ${LIB_CONNECTIVITY} SHARED ${SRC_CONNECTIVITY} )
@@ -36,7 +32,6 @@ TARGET_INCLUDE_DIRECTORIES ( ${LIB_CONNECTIVITY} PUBLIC
 							 ${ARTIK_BASE_INCLUDE_DIR}
 							 ${ARTIK_CONNECTIVITY_INCLUDE_DIR}
 							 ${CURL_INCLUDE_DIRS}
-							 ${OPENSSL_INCLUDE_DIR}
 							 ${LIBWEBSOCKETS_INCLUDE_DIRS}
 							 ${ARTIK_BASE_INCLUDE_DIR}/cpp
 							 ${ARTIK_CONNECTIVITY_INCLUDE_DIR}/cpp
@@ -47,7 +42,6 @@ INCLUDE_DIRECTORIES ( linux/netutils )
 TARGET_LINK_LIBRARIES ( ${LIB_CONNECTIVITY}
 						${LIB_BASE}
 						curl
-						${OPENSSL_LIBRARIES}
 						${LIBWEBSOCKETS_LIBRARIES}
 )
 

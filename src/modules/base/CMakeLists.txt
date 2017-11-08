@@ -3,6 +3,7 @@ PROJECT			( artik-sdk-base C CXX )
 
 PKG_CHECK_MODULES ( GLIB REQUIRED glib-2.0 )
 FIND_PACKAGE ( Dl )
+FIND_PACKAGE ( OpenSSL )
 
 SET ( LIB_BASE artik-sdk-base CACHE INTERNAL "" FORCE )
 SET ( ARTIK_BASE_INCLUDE_DIR ${LIB_INC}/base CACHE INTERNAL "" FORCE )
@@ -17,11 +18,14 @@ SET ( SRC_BASE
 					loop/linux_loop.c
 					time/linux_time.c
 					time/artik_time.c
+					security/linux_security.c
+					security/artik_security.c
 )
 
 SET ( SRC_BASE_CPP
 					time/cpp/artik_time.cpp
 					loop/cpp/artik_loop.cpp
+					security/cpp/artik_security.cpp
 )
 
 ADD_LIBRARY ( ${LIB_BASE}_c OBJECT ${SRC_BASE} )
@@ -31,21 +35,24 @@ TARGET_INCLUDE_DIRECTORIES ( ${LIB_BASE}_c PUBLIC
 							 ${LIB_INC}
 							 ${ARTIK_BASE_INCLUDE_DIR}
 							 ${GLIB_INCLUDE_DIRS}
+							 ${OPENSSL_INCLUDE_DIR}
 )
-
 
 ADD_LIBRARY ( ${LIB_BASE} SHARED $<TARGET_OBJECTS:${LIB_BASE}_c> ${SRC_BASE_CPP} )
 TARGET_INCLUDE_DIRECTORIES ( ${LIB_BASE} PUBLIC
 							 ${LIB_INC}
 							 ${ARTIK_BASE_INCLUDE_DIR}
 							 ${GLIB_INCLUDE_DIRS}
+							 ${OPENSSL_INCLUDE_DIR}
 							 ${ARTIK_BASE_INCLUDE_DIR}/cpp
 )
 TARGET_LINK_LIBRARIES ( ${LIB_BASE}
 						${GLIB_LIBRARIES}
 						${DL_LIBRARIES}
+						${OPENSSL_LIBRARIES}
 )
 
+MESSAGE("LINK ${OPENSSL_LIBRARIES}")
 SET_TARGET_PROPERTIES ( ${LIB_BASE} PROPERTIES VERSION ${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH} SOVERSION ${LIB_VERSION_MAJOR} OUTPUT_NAME ${LIB_BASE})
 
 INSTALL ( TARGETS ${LIB_BASE} LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" )
