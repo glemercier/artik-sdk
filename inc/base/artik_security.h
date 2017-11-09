@@ -57,6 +57,16 @@ extern "C" {
  */
 typedef void *artik_security_handle;
 
+/*!
+ * \brief Certificate identifier
+ *
+ * This enum type is used to define the available certificate in the Secure Element
+ */
+typedef enum {
+	CERT_ID_ARTIK, /*!< Artik certificate. */
+	CERT_ID_MANUFACTURER /*!< Post-provisioned certificate. */
+} artik_security_certificate_id;
+
 /*! \struct artik_security_module
  *
  *  \brief Security module operations
@@ -70,6 +80,11 @@ typedef struct {
 	 *
 	 *  \param[out] handle Handle tied to the requested security
 	 *              instance returned by the function.
+	 *
+	 *  This function loads the 'artiksee' OpenSSL engine. Loading this engine
+	 *  allows performing TLS handshake with the client certificate stored in
+	 *  SE. You can change the certificate used in the handshake by calling
+	 *  \ref get_certificate. By default the ARTIK certificate is used.
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
@@ -86,22 +101,27 @@ typedef struct {
 	 */
 	artik_error(*release) (artik_security_handle handle);
 	/*!
-	 *  \brief Get the certificate stored in the SE
+	 *  \brief Get the certificate \ref cert_id stored in the SE
 	 *
 	 *  \param[in] handle Handle tied to a requested security
 	 *             instance.
 	 *             This handle is returned by the request
 	 *             function.
+	 *  \param[in] Certificate identifier
 	 *  \param[out] cert Pointer to a string that will be
 	 *              allocated by the function
 	 *              and filled with the content of the
 	 *              certificate. This string must
 	 *              be freed by the calling function.
 	 *
+	 *  This function get the certificate stored in the SE and
+	 *  change the certifcate used in artiksee to perform signature
+	 *  with ECDSA algorithm.
+	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
 	artik_error(*get_certificate) (artik_security_handle handle,
-				       char **cert);
+					artik_security_certificate_id cert_id, char **cert);
 	/*!
 	 *  \brief Get private key from the certificate stored in the
 	 *         SE
@@ -124,21 +144,22 @@ typedef struct {
 					 const char *cert, char **key);
 
 	/*!
-	 *  \brief Get root CA stored in the SE
+	 *  \brief Get the root CA and the intermediate certificates stored in the SE
 	 *
 	 *  \param[in] handle Handle tied to a requested security
 	 *             instance.
 	 *             This handle is returned by the request function.
+	 *  \param[in] Certificate identifier
 	 *  \param[out] chain Pointer to a string that will be
 	 *              allocated by the function
 	 *              and filled with the content of the CA and
-	 *              the intermediate certificate in PEM format.
+	 *              the intermediate certificates in PEM format.
 	 *              This string must be freed by the calling function.
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
 	artik_error(*get_ca_chain) (artik_security_handle handle,
-						char **chain);
+					artik_security_certificate_id cert_id, char **chain);
 
 	/*!
 	 *  \brief Generate true random bytes
@@ -162,6 +183,7 @@ typedef struct {
 	 *  \param[in] handle Handle tied to a requested security
 	 *             instance.
 	 *             This handle is returned by the request function.
+	 *  \param[in] Certificate identifier
 	 *  \param[out] sn preallocated array provided by the user
 	 *  \param[in,out] len size of the pointer preallocated and
 	 *                 set after the pointer was filled.
@@ -169,7 +191,8 @@ typedef struct {
 	 *  \return S_OK on success, error code otherwise
 	 */
 	artik_error(*get_certificate_sn) (artik_security_handle handle,
-				unsigned char *sn, unsigned int *len);
+					artik_security_certificate_id cert_id, unsigned char *sn,
+					unsigned int *len);
 
 	/*!
 	 *  \brief Initialize verification of PKCS7 signature against a signed

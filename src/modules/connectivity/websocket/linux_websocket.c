@@ -385,7 +385,7 @@ SSL_CTX *setup_ssl_ctx(os_websocket_security_data **security_data,
 		x509_cert = NULL;
 	}
 
-	if (ssl_config->use_se == false) {
+	if (ssl_config->se_config.use_se == false) {
 
 		log_dbg("");
 
@@ -479,7 +479,7 @@ SSL_CTX *setup_ssl_ctx(os_websocket_security_data **security_data,
 
 	/* Get a certificate in SE as a string */
 	ret = security_data[0]->security->get_certificate(
-				security_data[0]->sec_handle, &raw_cert);
+				security_data[0]->sec_handle, ssl_config->se_config.certificate_id, &raw_cert);
 	if (ret != S_OK) {
 		log_err("Failed to get certificate (err=%d)\n", ret);
 		goto exit;

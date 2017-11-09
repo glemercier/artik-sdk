@@ -79,7 +79,7 @@ static artik_error test_cloud_sdr_registration(void)
 	fprintf(stdout, "TEST: %s starting\n", __func__);
 
 	/* Start registration process */
-	ret = cloud->sdr_start_registration(sdr_device_type_id, sdr_vendor_id,
+	ret = cloud->sdr_start_registration(CERT_ID_ARTIK, sdr_device_type_id, sdr_vendor_id,
 								&response);
 	if (ret != S_OK) {
 		if (response)
@@ -116,7 +116,7 @@ static artik_error test_cloud_sdr_registration(void)
 
 	/* Wait for user to enter the PIN */
 	while (true) {
-		ret = cloud->sdr_registration_status(reg_id, &response);
+		ret = cloud->sdr_registration_status(CERT_ID_ARTIK, reg_id, &response);
 		if (ret != S_OK) {
 			fprintf(stdout,
 				"TEST: %s failed to get status (err=%d)\n",
@@ -164,7 +164,7 @@ static artik_error test_cloud_sdr_registration(void)
 	}
 
 	/* Finalize the registration */
-	ret = cloud->sdr_complete_registration(reg_id, reg_nonce, &response);
+	ret = cloud->sdr_complete_registration(CERT_ID_ARTIK, reg_id, reg_nonce, &response);
 	if (ret != S_OK) {
 		fprintf(stdout,
 			"TEST: %s Complete registration failed (err=%d)\n",
@@ -307,7 +307,8 @@ static artik_error test_websocket_sdr(void)
 
 	/* Prepare the SSL configuration */
 	memset(&ssl_config, 0, sizeof(ssl_config));
-	ssl_config.use_se = true;
+	ssl_config.se_config.use_se = true;
+	ssl_config.se_config.certificate_id = CERT_ID_ARTIK;
 
 	fprintf(stdout, "TEST: %s starting\n", __func__);
 

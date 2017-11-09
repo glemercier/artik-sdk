@@ -34,6 +34,10 @@ static artik_error test_security_get_serial_number(void)
 	int i = 0;
 
 	fprintf(stdout, "TEST: %s starting\n", __func__);
+	if (!security) {
+		fprintf(stderr, "Failed to load security module");
+		return -1;
+	}
 
 	ret = security->request(&handle);
 	if (ret != S_OK) {
@@ -41,12 +45,14 @@ static artik_error test_security_get_serial_number(void)
 									ret);
 		return ret;
 	}
-	ret = security->get_certificate_sn(handle, serial_number, &lenSN);
+
+	ret = security->get_certificate_sn(handle, CERT_ID_ARTIK, serial_number, &lenSN);
 	if (ret != S_OK) {
 		fprintf(stderr, "Failed to get serial number from certificate"\
 			" (err=%d)\n", ret);
 		goto exit;
 	}
+
 	fprintf(stdout, "Serial Number :\n");
 	while (i < lenSN) {
 
@@ -86,14 +92,14 @@ static artik_error test_security_get_certificate_and_key(void)
 		return ret;
 	}
 
-	ret = security->get_ca_chain(handle, &chain);
+	ret = security->get_ca_chain(handle, CERT_ID_ARTIK, &chain);
 	if (ret != S_OK) {
 		fprintf(stderr, "Failed to get ca chain (err=%d)\n", ret);
 		goto exit;
 	}
 	fprintf(stdout, "Chain:\n%s\n", chain);
 
-	ret = security->get_certificate(handle, &cert);
+	ret = security->get_certificate(handle, CERT_ID_ARTIK, &cert);
 	if (ret != S_OK) {
 		fprintf(stderr, "Failed to get certificate (err=%d)\n",
 									ret);

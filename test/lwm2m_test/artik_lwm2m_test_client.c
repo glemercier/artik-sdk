@@ -306,7 +306,8 @@ artik_error test_lwm2m_default(void)
 	}
 
 	if (akc_use_se) {
-		ssl_config.use_se = true;
+		ssl_config.se_config.use_se = true;
+		ssl_config.se_config.certificate_id = CERT_ID_ARTIK;
 		fprintf(stdout, "TEST: device certificate from SE\n");
 	} else if (strlen(akc_device_certificate_path) > 0 && strlen(akc_device_private_key_path) > 0) {
 		if (!fill_buffer_from_file(akc_device_certificate_path, &ssl_config.client_cert.data)) {

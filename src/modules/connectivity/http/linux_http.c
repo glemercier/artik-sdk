@@ -474,7 +474,8 @@ artik_error os_http_get_stream(const char *url, artik_http_headers *headers,
 	}
 
 	/* If we use the Secure Element, setup proper certificate/key pair */
-	if (ssl && ssl->use_se) {
+
+	if (ssl && ssl->se_config.use_se) {
 		security = (artik_security_module *)
 					artik_request_api_module("security");
 
@@ -484,7 +485,7 @@ artik_error os_http_get_stream(const char *url, artik_http_headers *headers,
 			goto exit;
 		}
 
-		if (security->get_certificate(sec_handle, &params.cert) !=
+		if (security->get_certificate(sec_handle, ssl->se_config.certificate_id, &params.cert) !=
 									S_OK) {
 			log_err("Failed to get certificate from the"\
 				" security module");
@@ -666,7 +667,7 @@ artik_error os_http_get(const char *url, artik_http_headers *headers,
 	}
 
 	/* If we use the Secure Element, setup proper certificate/key pair */
-	if (ssl && ssl->use_se) {
+	if (ssl && ssl->se_config.use_se) {
 		security = (artik_security_module *)
 					artik_request_api_module("security");
 
@@ -676,7 +677,7 @@ artik_error os_http_get(const char *url, artik_http_headers *headers,
 			goto exit;
 		}
 
-		if (security->get_certificate(sec_handle, &params.cert)
+		if (security->get_certificate(sec_handle, ssl->se_config.certificate_id, &params.cert)
 								!= S_OK) {
 			log_err("Failed to get certificate");
 			log_err("from the security module");
@@ -856,7 +857,7 @@ artik_error os_http_post(const char *url, artik_http_headers *headers,
 	}
 
 	/* If we use the Secure Element, setup proper certificate/key pair */
-	if (ssl && ssl->use_se) {
+	if (ssl && ssl->se_config.use_se) {
 		security = (artik_security_module *)
 					artik_request_api_module("security");
 
@@ -866,7 +867,7 @@ artik_error os_http_post(const char *url, artik_http_headers *headers,
 			goto exit;
 		}
 
-		if (security->get_certificate(sec_handle, &params.cert)
+		if (security->get_certificate(sec_handle, ssl->se_config.certificate_id, &params.cert)
 								!= S_OK) {
 			log_err("Failed to get certificate");
 			log_err("from the security module");
@@ -1050,7 +1051,7 @@ artik_error os_http_put(const char *url, artik_http_headers *headers,
 	}
 
 	/* If we use the Secure Element, setup proper certificate/key pair */
-	if (ssl && ssl->use_se) {
+	if (ssl && ssl->se_config.use_se) {
 		security = (artik_security_module *)
 					artik_request_api_module("security");
 
@@ -1060,7 +1061,7 @@ artik_error os_http_put(const char *url, artik_http_headers *headers,
 			goto exit;
 		}
 
-		if (security->get_certificate(sec_handle, &params.cert)
+		if (security->get_certificate(sec_handle, ssl->se_config.certificate_id, &params.cert)
 								!= S_OK) {
 			log_err("Failed to get certificate");
 			log_err("from the security module");
@@ -1242,7 +1243,7 @@ artik_error os_http_delete(const char *url, artik_http_headers *headers,
 	}
 
 	/* If we use the Secure Element, setup proper certificate/key pair */
-	if (ssl && ssl->use_se) {
+	if (ssl && ssl->se_config.use_se) {
 		security = (artik_security_module *)
 					artik_request_api_module("security");
 
@@ -1252,7 +1253,7 @@ artik_error os_http_delete(const char *url, artik_http_headers *headers,
 			goto exit;
 		}
 
-		if (security->get_certificate(sec_handle, &params.cert)
+		if (security->get_certificate(sec_handle, ssl->se_config.certificate_id, &params.cert)
 								!= S_OK) {
 			log_err("Failed to get certificate");
 			log_err("from the security module");

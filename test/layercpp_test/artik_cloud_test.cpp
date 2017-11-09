@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
   int32_t fsize;
   char *root_ca = NULL;
 
-  ssl_config.use_se = false;
+  ssl_config.se_config.use_se = false;
 
   while ((opt = getopt(argc, argv, "t:d:m:r:sv")) != -1) {
     switch (opt) {
@@ -120,7 +120,8 @@ int main(int argc, char *argv[]) {
       strncpy(test_message, optarg, MAX_MESSAGE_LEN);
       break;
     case 's':
-      ssl_config.use_se = true;
+      ssl_config.se_config.use_se = true;
+      ssl_config.se_config.certificate_id = CERT_ID_ARTIK;
       break;
     case 'v':
       ssl_config.verify_cert = ARTIK_SSL_VERIFY_REQUIRED;

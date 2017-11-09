@@ -71,10 +71,14 @@ class Cloud {
       bool timestamp, char **response, artik_ssl_config *ssl);
   artik_error set_device_server_properties(const char *device_id,
       const char *data, char **response, artik_ssl_config *ssl_config);
-  artik_error sdr_start_registration(const char* device_type_id,
+  artik_error sdr_start_registration(
+      artik_security_certificate_id cert_id, const char* device_type_id,
       const char* vendor_id, char **response);
-  artik_error sdr_registration_status(const char* reg_id, char **response);
-  artik_error sdr_complete_registration(const char* reg_id,
+  artik_error sdr_registration_status(
+      artik_security_certificate_id cert_id, const char* reg_id,
+      char **response);
+  artik_error sdr_complete_registration(
+      artik_security_certificate_id cert_id, const char* reg_id,
       const char* reg_nonce, char **response);
   artik_error websocket_open_stream(const char *access_token,
       const char *device_id, artik_ssl_config *ssl);

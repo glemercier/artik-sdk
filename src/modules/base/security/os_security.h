@@ -24,15 +24,16 @@
 artik_error os_security_request(artik_security_handle *handle);
 artik_error os_security_release(artik_security_handle handle);
 artik_error os_security_get_certificate(artik_security_handle handle,
-					char **cert);
+					artik_security_certificate_id cert_id, char **cert);
 artik_error os_security_get_key_from_cert(artik_security_handle handle,
 					const char *cert, char **key);
 artik_error os_security_get_ca_chain(artik_security_handle handle,
-					char **chain);
+					artik_security_certificate_id cert_id, char **chain);
 artik_error os_get_random_bytes(artik_security_handle handle,
 					unsigned char *rand, int len);
 artik_error os_get_certificate_sn(artik_security_handle handle,
-					unsigned char *sn, unsigned int *len);
+					artik_security_certificate_id cert_id, unsigned char *sn,
+					unsigned int *len);
 artik_error os_verify_signature_init(artik_security_handle *handle,
 		const char *signature_pem, const char *root_ca,
 		const artik_time *signing_time_in, artik_time *signing_time_out);

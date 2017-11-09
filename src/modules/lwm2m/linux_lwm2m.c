@@ -231,13 +231,13 @@ artik_error os_lwm2m_client_request(artik_lwm2m_handle *handle,
 
 		server->verifyCert = config->ssl_config->verify_cert == ARTIK_SSL_VERIFY_REQUIRED;
 
-		if (!config->ssl_config->use_se
+		if (!config->ssl_config->se_config.use_se
 			&& config->ssl_config->client_cert.data && config->ssl_config->client_cert.len
 			&& config->ssl_config->client_key.data && config->ssl_config->client_key.len) {
 			server->clientCertificateOrPskId = strdup(config->ssl_config->client_cert.data);
 			server->privateKey = strdup(config->ssl_config->client_key.data);
 			server->securityMode = LWM2M_SEC_MODE_CERT;
-		} else if (config->ssl_config->use_se) {
+		} else if (config->ssl_config->se_config.use_se) {
 			security = (artik_security_module *)artik_request_api_module("security");
 			if (!security) {
 				log_dbg("Unable to request security module");
@@ -252,7 +252,9 @@ artik_error os_lwm2m_client_request(artik_lwm2m_handle *handle,
 				goto exit;
 			}
 
-			ret = security->get_certificate(sec_handle, &server->clientCertificateOrPskId);
+			ret = security->get_certificate(sec_handle,
+						config->ssl_config->se_config.certificate_id,
+						&server->clientCertificateOrPskId);
 			if (ret != S_OK) {
 				security->release(sec_handle);
 				artik_release_api_module(security);

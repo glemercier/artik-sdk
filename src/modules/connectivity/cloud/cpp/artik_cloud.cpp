@@ -111,19 +111,25 @@ artik_error artik::Cloud::set_device_server_properties(const char *device_id,
       response, ssl);
 }
 
-artik_error artik::Cloud::sdr_start_registration(const char* device_type_id,
-    const char* vendor_id, char **response) {
-  return m_module->sdr_start_registration(device_type_id, vendor_id, response);
+artik_error artik::Cloud::sdr_start_registration(
+    artik_security_certificate_id cert_id,
+    const char* device_type_id, const char* vendor_id, char **response) {
+  return m_module->sdr_start_registration(cert_id, device_type_id, vendor_id,
+                                          response);
 }
 
-artik_error artik::Cloud::sdr_registration_status(const char* reg_id,
+artik_error artik::Cloud::sdr_registration_status(
+    artik_security_certificate_id cert_id,
+    const char* reg_id,
     char **response) {
-  return m_module->sdr_registration_status(reg_id, response);
+  return m_module->sdr_registration_status(cert_id, reg_id, response);
 }
 
-artik_error artik::Cloud::sdr_complete_registration(const char* reg_id,
-    const char* reg_nonce, char **response) {
-  return m_module->sdr_complete_registration(reg_id, reg_nonce, response);
+artik_error artik::Cloud::sdr_complete_registration(
+    artik_security_certificate_id cert_id,
+    const char* reg_id, const char* reg_nonce, char **response) {
+  return m_module->sdr_complete_registration(cert_id, reg_id, reg_nonce,
+                                             response);
 }
 
 artik_error artik::Cloud::websocket_open_stream(const char *access_token,

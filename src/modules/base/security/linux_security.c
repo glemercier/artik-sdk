@@ -41,8 +41,13 @@ enum CertificateType {
 	CertificateChain = 1
 };
 
+enum CertificateId {
+	ArtikCertificate = 0,
+	ManufacturerCertificate = 1
+};
+
 struct cert_params {
-	const char *cert_id;
+	enum CertificateId certificate_id;
 	enum CertificateType certificate_type;
 	int ncerts;
 	X509 * certs[5];
@@ -277,7 +282,7 @@ artik_error os_security_release(artik_security_handle handle)
 }
 
 artik_error os_security_get_certificate(artik_security_handle handle,
-					char **cert)
+				artik_security_certificate_id cert_id, char **cert)
 {
 	security_node *node = (security_node *)
 		artik_list_get_by_handle(requested_node,
@@ -291,7 +296,17 @@ artik_error os_security_get_certificate(artik_security_handle handle,
 		return E_BAD_ARGS;
 
 	memset(&params, 0, sizeof(params));
-	params.cert_id = "ARTIK/0";
+	switch (cert_id) {
+	case CERT_ID_ARTIK:
+		params.certificate_id = ArtikCertificate;
+		break;
+	case CERT_ID_MANUFACTURER:
+		params.certificate_id = ManufacturerCertificate;
+		break;
+	default:
+		return E_BAD_ARGS;
+	}
+
 	params.certificate_type = EndCertificate;
 
 	/* Get the certificate from the SE */
@@ -386,7 +401,7 @@ exit:
 }
 
 artik_error os_security_get_ca_chain(artik_security_handle handle,
-					char **chain)
+					artik_security_certificate_id cert_id, char **chain)
 {
 	security_node *node = (security_node *)
 		artik_list_get_by_handle(requested_node,
@@ -401,7 +416,17 @@ artik_error os_security_get_ca_chain(artik_security_handle handle,
 		return E_BAD_ARGS;
 
 	memset(&params, 0, sizeof(params));
-	params.cert_id = "ARTIK/0";
+	switch (cert_id) {
+	case CERT_ID_ARTIK:
+		params.certificate_id = ArtikCertificate;
+		break;
+	case CERT_ID_MANUFACTURER:
+		params.certificate_id = ManufacturerCertificate;
+		break;
+	default:
+		return E_BAD_ARGS;
+	}
+
 	params.certificate_type = CertificateChain;
 
 	/* Get the certificate from the SE */
@@ -452,7 +477,8 @@ artik_error os_get_random_bytes(artik_security_handle handle,
 }
 
 artik_error os_get_certificate_sn(artik_security_handle handle,
-				unsigned char *sn, unsigned int *len)
+					artik_security_certificate_id cert_id,
+					unsigned char *sn, unsigned int *len)
 {
 	X509		*x509 = NULL;
 	BIO		*ibio = NULL;
@@ -464,7 +490,7 @@ artik_error os_get_certificate_sn(artik_security_handle handle,
 	if (!sn || !len || (*len == 0))
 		return E_BAD_ARGS;
 
-	ret = os_security_get_certificate(handle, &cert);
+	ret = os_security_get_certificate(handle, cert_id, &cert);
 	if (ret != S_OK)
 		return ret;
 

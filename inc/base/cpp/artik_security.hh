@@ -43,11 +43,12 @@ class Security {
   Security();
   ~Security();
 
-  artik_error get_certificate(char **);
-  artik_error get_ca_chain(char **);
+  artik_error get_certificate(artik_security_certificate_id, char **);
+  artik_error get_ca_chain(artik_security_certificate_id, char **);
   artik_error get_key_from_cert(const char *, char **);
   artik_error get_random_bytes(unsigned char*, int);
-  artik_error get_certificate_sn(unsigned char*, unsigned int *);
+  artik_error get_certificate_sn(artik_security_certificate_id,
+      unsigned char*, unsigned int *);
 };
 
 }  // namespace artik

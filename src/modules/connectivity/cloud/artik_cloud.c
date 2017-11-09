@@ -165,11 +165,18 @@ static artik_error set_device_server_properties(const char *access_token,
 	const char *data,
 	char **response,
 	artik_ssl_config *ssl_config);
-static artik_error sdr_start_registration(const char *device_type_id,
+static artik_error sdr_start_registration(
+	artik_security_certificate_id cert_id,
+	const char *device_type_id,
 	const char *vendor_id,
 	char **response);
-static artik_error sdr_registration_status(const char *reg_id, char **response);
-static artik_error sdr_complete_registration(const char *reg_id,
+static artik_error sdr_registration_status(
+	artik_security_certificate_id cert_id,
+	const char *reg_id,
+	char **response);
+static artik_error sdr_complete_registration(
+	artik_security_certificate_id cert_id,
+	const char *reg_id,
 	const char *reg_nonce,
 	char **response);
 static artik_error websocket_open_stream(artik_websocket_handle *handle,
@@ -956,9 +963,9 @@ exit:
 	return ret;
 }
 
-static artik_error sdr_start_registration(const char *device_type_id,
-					  const char *vendor_id,
-					  char **response)
+static artik_error sdr_start_registration(
+	artik_security_certificate_id cert_id,
+	const char *device_type_id, const char *vendor_id, char **response)
 {
 	artik_http_module *http = (artik_http_module *)
 					artik_request_api_module("http");
@@ -996,7 +1003,8 @@ static artik_error sdr_start_registration(const char *device_type_id,
 	/* Prepare the SSL configuration */
 	memset(&ssl_config, 0, sizeof(ssl_config));
 	ssl_config.verify_cert = ARTIK_SSL_VERIFY_NONE;
-	ssl_config.use_se = true;
+	ssl_config.se_config.use_se = true;
+	ssl_config.se_config.certificate_id = cert_id;
 
 	/* Perform the request */
 	ret =
@@ -1019,7 +1027,10 @@ exit:
 	return ret;
 }
 
-static artik_error sdr_registration_status(const char *reg_id, char **response)
+static artik_error sdr_registration_status(
+	artik_security_certificate_id cert_id,
+	const char *reg_id,
+	char **response)
 {
 	artik_http_module *http = (artik_http_module *)
 					artik_request_api_module("http");
@@ -1047,7 +1058,8 @@ static artik_error sdr_registration_status(const char *reg_id, char **response)
 	/* Prepare the SSL configuration */
 	memset(&ssl_config, 0, sizeof(ssl_config));
 	ssl_config.verify_cert = ARTIK_SSL_VERIFY_NONE;
-	ssl_config.use_se = true;
+	ssl_config.se_config.use_se = true;
+	ssl_config.se_config.certificate_id = cert_id;
 
 	/* Perform the request */
 	ret = http->get(url, &headers, response, &status, &ssl_config);
@@ -1066,9 +1078,11 @@ exit:
 	return ret;
 }
 
-static artik_error sdr_complete_registration(const char *reg_id,
-					     const char *reg_nonce,
-					     char **response)
+static artik_error sdr_complete_registration(
+					artik_security_certificate_id cert_id,
+					const char *reg_id,
+					const char *reg_nonce,
+					char **response)
 {
 	artik_http_module *http = (artik_http_module *)
 					artik_request_api_module("http");
@@ -1111,7 +1125,8 @@ static artik_error sdr_complete_registration(const char *reg_id,
 	/* Prepare the SSL configuration */
 	memset(&ssl_config, 0, sizeof(ssl_config));
 	ssl_config.verify_cert = ARTIK_SSL_VERIFY_NONE;
-	ssl_config.use_se = true;
+	ssl_config.se_config.use_se = true;
+	ssl_config.se_config.certificate_id = cert_id;
 
 	/* Perform the request */
 	ret = http->put(url, &headers, body, response, &status, &ssl_config);
@@ -1182,7 +1197,7 @@ artik_error websocket_open_stream(artik_websocket_handle *handle,
 	artik_websocket_config config;
 	cloud_node *node;
 	char port[4];
-	char *host = (ssl_config != NULL && ssl_config->use_se) ?
+	char *host = (ssl_config != NULL && ssl_config->se_config.use_se) ?
 			ARTIK_CLOUD_SECURE_WEBSOCKET_HOST :	ARTIK_CLOUD_WEBSOCKET_HOST;
 	char *path = ARTIK_CLOUD_WEBSOCKET_PATH;
 
@@ -1204,7 +1219,7 @@ artik_error websocket_open_stream(artik_websocket_handle *handle,
 	if (ssl_config != NULL)
 		config.ssl_config = *ssl_config;
 	else {
-		config.ssl_config.use_se = false;
+		config.ssl_config.se_config.use_se = false;
 		config.ssl_config.verify_cert = ARTIK_SSL_VERIFY_NONE;
 		config.ssl_config.client_cert.data = NULL;
 		config.ssl_config.client_cert.len = 0;

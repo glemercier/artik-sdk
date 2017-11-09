@@ -16,19 +16,20 @@
  *
  */
 
-
 #include <artik_security.h>
 #include "os_security.h"
 
 static artik_error request(artik_security_handle *handle);
 static artik_error release(artik_security_handle handle);
-static artik_error get_certificate(artik_security_handle handle, char **cert);
+static artik_error get_certificate(artik_security_handle handle,
+		artik_security_certificate_id cert_id, char **cert);
 static artik_error get_key_from_cert(artik_security_handle handle,
 		const char *cert, char **key);
-static artik_error get_ca_chain(artik_security_handle handle, char **chain);
+static artik_error get_ca_chain(artik_security_handle handle,
+		artik_security_certificate_id cert_id, char **chain);
 static artik_error get_random_bytes(artik_security_handle handle,
 		unsigned char *rand, int len);
-static artik_error get_certificate_sn(artik_security_handle handle,
+static artik_error get_certificate_sn(artik_security_handle handle, artik_security_certificate_id cert_id,
 		unsigned char *sn, unsigned int *len);
 static artik_error verify_signature_init(artik_security_handle *handle,
 		const char *signature_pem, const char *root_ca,
@@ -60,9 +61,10 @@ artik_error release(artik_security_handle handle)
 	return os_security_release(handle);
 }
 
-artik_error get_certificate(artik_security_handle handle, char **cert)
+artik_error get_certificate(artik_security_handle handle,
+		artik_security_certificate_id cert_id, char **cert)
 {
-	return os_security_get_certificate(handle, cert);
+	return os_security_get_certificate(handle, cert_id, cert);
 }
 
 artik_error get_key_from_cert(artik_security_handle handle, const char *cert,
@@ -71,9 +73,10 @@ artik_error get_key_from_cert(artik_security_handle handle, const char *cert,
 	return os_security_get_key_from_cert(handle, cert, key);
 }
 
-artik_error get_ca_chain(artik_security_handle handle, char **chain)
+artik_error get_ca_chain(artik_security_handle handle,
+		artik_security_certificate_id cert_id, char **chain)
 {
-	return os_security_get_ca_chain(handle, chain);
+	return os_security_get_ca_chain(handle, cert_id, chain);
 }
 
 artik_error get_random_bytes(artik_security_handle handle, unsigned char *rand,
@@ -82,10 +85,10 @@ artik_error get_random_bytes(artik_security_handle handle, unsigned char *rand,
 	return os_get_random_bytes(handle, rand, len);
 }
 
-artik_error get_certificate_sn(artik_security_handle handle, unsigned char *sn,
-		unsigned int *len)
+artik_error get_certificate_sn(artik_security_handle handle,
+		artik_security_certificate_id cert_id, unsigned char *sn, unsigned int *len)
 {
-	return os_get_certificate_sn(handle, sn, len);
+	return os_get_certificate_sn(handle, cert_id, sn, len);
 }
 
 artik_error verify_signature_init(artik_security_handle *handle,

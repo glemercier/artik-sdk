@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 	FILE *f;
 	char *root_ca = NULL; // Root CA certificate
 
-	ssl_config.use_se = false;
+	ssl_config.se_config.use_se = false;
 
 	while ((opt = getopt(argc, argv, "t:d:m:svr:")) != -1) {
 		switch (opt) {
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 			test_message = strndup(optarg, strlen(optarg));
 			break;
 		case 's':
-			ssl_config.use_se = true;
+			ssl_config.se_config.use_se = true;
 			break;
 		case 'v':
 			ssl_config.verify_cert = ARTIK_SSL_VERIFY_REQUIRED;

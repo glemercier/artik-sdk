@@ -29,16 +29,20 @@ artik::Security::~Security() {
   m_module->release(m_handle);
 }
 
-artik_error artik::Security::get_certificate(char **cert) {
+artik_error artik::Security::get_certificate(
+    artik_security_certificate_id cert_id,
+    char **cert) {
   if (!m_handle)
     return E_NOT_INITIALIZED;
-  return m_module->get_certificate(m_handle, cert);
+  return m_module->get_certificate(m_handle, cert_id, cert);
 }
 
-artik_error artik::Security::get_ca_chain(char **chain) {
+artik_error artik::Security::get_ca_chain(
+    artik_security_certificate_id cert_id,
+    char **chain) {
   if (!m_handle)
     return E_NOT_INITIALIZED;
-  return m_module->get_ca_chain(m_handle, chain);
+  return m_module->get_ca_chain(m_handle, cert_id, chain);
 }
 
 artik_error artik::Security::get_key_from_cert(const char *cert, char **key) {
@@ -53,9 +57,10 @@ artik_error artik::Security::get_random_bytes(unsigned char *rand, int len) {
   return m_module->get_random_bytes(m_handle, rand, len);
 }
 
-artik_error artik::Security::get_certificate_sn(unsigned char *sn,
-    unsigned int *len) {
+artik_error artik::Security::get_certificate_sn(
+    artik_security_certificate_id cert_id,
+    unsigned char *sn, unsigned int *len) {
   if (!m_handle)
     return E_NOT_INITIALIZED;
-  return m_module->get_certificate_sn(m_handle, sn, len);
+  return m_module->get_certificate_sn(m_handle, cert_id, sn, len);
 }

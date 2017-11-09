@@ -33,7 +33,7 @@ int main(int ac, char **av) {
     artik_error res = S_OK;
 
     memset(sn, 0, ARTIK_CERT_SN_MAXLEN);
-    res = security.get_certificate_sn(sn, &lenSN);
+    res = security.get_certificate_sn(CERT_ID_ARTIK, sn, &lenSN);
     if (res == S_OK) {
       std::cout << "Certificate Serial Number: " << std::endl;
       for (unsigned int i = 0; i < lenSN; ++i)
@@ -43,7 +43,7 @@ int main(int ac, char **av) {
       std::cout << "Unable to get the serial number of the certificate."
           << std::endl;
     }
-    res = security.get_certificate(&cert);
+    res = security.get_certificate(CERT_ID_ARTIK, &cert);
     if ( res == S_OK)
       std::cout << "Certificate: " << std::endl << cert << std::endl;
     else
