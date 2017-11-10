@@ -1,6 +1,6 @@
 Summary:            A SDK library for easing up development on Samsung's ARTIK IoT platform
 Name:               libartik-sdk
-Version:            1.6
+Version:            1.7
 Release:            0%{?dist}
 License:            Proprietary
 Group:              Development/Libraries

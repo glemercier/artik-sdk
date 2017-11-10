@@ -2,7 +2,7 @@ prefix=/usr
 exec_prefix=/usr
 libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
 includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/artik/sensor
-version=1.6
+version=1.7
 
 Name: ARTIK SDK Sensor
 Description: SDK Sensor Library for Samsung's ARTIK platforms

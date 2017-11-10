@@ -2,7 +2,7 @@ prefix=/usr
 exec_prefix=/usr
 libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
 includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/artik/media
-version=1.6
+version=1.7
 
 Name: ARTIK SDK Media
 Description: SDK Media Library for Samsung's ARTIK platforms
