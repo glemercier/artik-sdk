@@ -225,6 +225,15 @@ typedef struct {
 	 */
 	artik_error (*get_scan_result)(artik_wifi_ap **aps, int *num_aps);
 	/*!
+	 * \brief Get wifi information
+	 *
+	 * \param[out] info get wifi connection information.
+	 * \param[out] ap Information about the current access point.
+	 * \return S_OK on success, otherwise a negative error value.
+	 */
+	artik_error (*get_info)(artik_wifi_connection_info *info, artik_wifi_ap *ap);
+
+	/*!
 	 * \brief Configure an access Point.
 	 *
 	 *  'hostapd' must run & 'connman' should be stopped.

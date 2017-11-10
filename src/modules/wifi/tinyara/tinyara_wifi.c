@@ -307,6 +307,11 @@ artik_error os_wifi_get_scan_result(artik_wifi_ap **aps, int *num_aps)
 	return S_OK;
 }
 
+artik_error os_wifi_get_info(artik_wifi_connection_info *info, artik_wifi_ap *aps)
+{
+    return E_NOT_SUPPORTED;
+}
+
 artik_error os_wifi_start_ap(const char *ssid, const char *password,
 	unsigned int channel, unsigned int encryption_flags)
 {

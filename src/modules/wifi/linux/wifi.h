@@ -39,6 +39,8 @@ extern "C" {
 
 #define MAC_ADDR_FIELD		6
 #define SSID_LENGTH			32
+#define WPA_STATE_LENGTH	32
+#define IP_ADDR_LENGTH	    16
 #define PASSPHRASE_MIN_LEN	8
 #define PASSPHRASE_MAX_LEN	64
 
@@ -150,6 +152,16 @@ typedef struct wifi_scan_bssinfo {
 } wifi_scan_bssinfo;
 
 /**
+ * @brief	basic service set information structure
+ */
+typedef struct wifi_info {
+	wifi_scan_bss bss;
+	char wpa_state[WPA_STATE_LENGTH];
+	char mode[WPA_STATE_LENGTH];
+	char ip_address[IP_ADDR_LENGTH];
+} wifi_info;
+
+/**
  * @brief	soft ap config structure
  */
 typedef struct softap_config {
@@ -207,6 +219,17 @@ int wifi_scan_request(void);
  * @see		enum wifi_result
  */
 int wifi_get_scan_result(wifi_scan_bssinfo **bssinfo);
+
+/**
+ * @brief	Get wifi information
+ * @param[out]	info information of the current access point. This pointer
+ *			must be pre-allocated.
+ * @return	int
+ * @see		struct wifi_info
+ * @see		enum wifi_result
+ */
+int wifi_get_info(wifi_info *info);
+
 
 /**
  * @brief	free a bssinfo structure

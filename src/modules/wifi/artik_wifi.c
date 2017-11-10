@@ -23,6 +23,8 @@
 static artik_error artik_wifi_scan_request(void);
 static artik_error artik_wifi_get_scan_result(artik_wifi_ap **aps,
 					      int *num_aps);
+static artik_error artik_wifi_get_info(artik_wifi_connection_info *info,
+									   artik_wifi_ap *ap);
 static artik_error artik_wifi_start_ap(const char *ssid, const char *password,
 					   unsigned int channel,
 					   unsigned int encryption_flags);
@@ -43,6 +45,7 @@ artik_wifi_module wifi_module = {
 	artik_wifi_deinit,
 	artik_wifi_scan_request,
 	artik_wifi_get_scan_result,
+	artik_wifi_get_info,
 	artik_wifi_start_ap,
 	artik_wifi_connect,
 	artik_wifi_disconnect,
@@ -68,6 +71,12 @@ artik_error artik_wifi_scan_request(void)
 artik_error artik_wifi_get_scan_result(artik_wifi_ap **aps, int *num_aps)
 {
 	return os_wifi_get_scan_result(aps, num_aps);
+}
+
+artik_error artik_wifi_get_info(artik_wifi_connection_info *info,
+								artik_wifi_ap *ap)
+{
+	return os_wifi_get_info(info, ap);
 }
 
 artik_error artik_wifi_start_ap(const char *ssid, const char *password,

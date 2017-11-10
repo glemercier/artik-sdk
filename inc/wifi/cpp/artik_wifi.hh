@@ -50,6 +50,7 @@ class Wifi {
   artik_error deinit();
   artik_error scan_request();
   artik_error get_scan_result(artik_wifi_ap** aps, int* num_aps);
+  artik_error get_info(artik_wifi_connection_info *info, artik_wifi_ap* ap);
   artik_error start_ap(const char *ssid, const char *passphrase,
       unsigned int channel, unsigned int encryption_flags = 0);
   artik_error connect(const char* ssid, const char* password, bool persistent);

@@ -130,6 +130,44 @@ exit:
 	return ret;
 }
 
+artik_error test_wifi_info(void)
+{
+
+	artik_wifi_connection_info info;
+	artik_wifi_ap ap;
+	artik_wifi_module *wifi = (artik_wifi_module *)
+					artik_request_api_module("wifi");
+	artik_error ret;
+
+	fprintf(stdout, "TEST: %s starting\n", __func__);
+
+	memset(&info, 0, sizeof(artik_wifi_connection_info));
+	memset(&ap, 0, sizeof(artik_wifi_ap));
+
+	ret = wifi->init(ARTIK_WIFI_MODE_STATION);
+	if (ret != S_OK)
+		goto exit;
+	ret = wifi->get_info(&info, &ap);
+	if (ret != S_OK)
+		goto exit;
+
+	fprintf(stdout, "%s - err=%d, connected=%s\n", __func__, info.error,
+		info.connected ? "true" : "false");
+
+	if (info.connected)
+		fprintf(stdout, "%s %-20s %s %d 0x%X\n", __func__, ap.bssid, ap.name,
+				ap.frequency, ap.encryption_flags);
+
+exit:
+	fprintf(stdout, "TEST: %s %s\n", __func__,
+		(ret == S_OK) ? "succeeded" : "failed");
+
+	artik_release_api_module(wifi);
+
+	return ret;
+
+}
+
 static void on_connect(void *result, void *user_data)
 {
 	artik_loop_module *loop = (artik_loop_module *)
@@ -207,6 +245,10 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 	}
+
+	ret = test_wifi_info();
+	if (ret != S_OK)
+		goto exit;
 
 	ret = test_wifi_scan();
 	if (ret != S_OK)

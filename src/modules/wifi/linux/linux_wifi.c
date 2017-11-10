@@ -271,6 +271,70 @@ artik_error os_wifi_get_scan_result(artik_wifi_ap **aps, int *num_aps)
 	return S_OK;
 }
 
+artik_error os_wifi_get_info(artik_wifi_connection_info *connection_info, artik_wifi_ap *ap)
+{
+	wifi_info info;
+	int ret;
+
+	if (wifi_mode != ARTIK_WIFI_MODE_STATION)
+		return E_NOT_INITIALIZED;
+
+	if (!ap || !connection_info)
+		return E_BAD_ARGS;
+
+	memset(&info, 0, sizeof(wifi_info));
+	ret = wifi_get_info(&info);
+
+	if (ret != WIFI_SUCCESS)
+		return E_WIFI_ERROR;
+
+	connection_info->connected = (strcmp(info.wpa_state, "COMPLETED")) ? false : true;
+	connection_info->error = S_OK;
+
+	snprintf(ap->name, MAX_AP_NAME_LEN, "%s", info.bss.ssid);
+	snprintf(ap->bssid, MAX_AP_BSSID_LEN, "%x:%x:%x:%x:%x:%x",
+		info.bss.bssid[0],
+		info.bss.bssid[1],
+		info.bss.bssid[2],
+		info.bss.bssid[3],
+		info.bss.bssid[4],
+		info.bss.bssid[5]);
+	ap->frequency = info.bss.freq;
+	ap->signal_level = info.bss.rssi;
+
+	switch (info.bss.encrypt) {
+	case WIFI_SECURITY_MODE_AUTH_OPEN:
+		ap->encryption_flags = WIFI_ENCRYPTION_OPEN;
+		break;
+	case WIFI_SECURITY_MODE_AUTH_WPA_PSK:
+		ap->encryption_flags = WIFI_ENCRYPTION_WPA;
+		break;
+	case WIFI_SECURITY_MODE_AUTH_WPA_EAP:
+		ap->encryption_flags = WIFI_ENCRYPTION_WPA;
+		break;
+	case WIFI_SECURITY_MODE_AUTH_WPA2_PSK:
+		ap->encryption_flags = WIFI_ENCRYPTION_WPA2;
+		break;
+	case WIFI_SECURITY_MODE_AUTH_WPA2_EAP:
+		ap->encryption_flags = WIFI_ENCRYPTION_WPA2;
+		break;
+	case WIFI_SECURITY_MODE_ENCRYPT_WEP:
+		ap->encryption_flags = WIFI_ENCRYPTION_WEP;
+		break;
+	case WIFI_SECURITY_MODE_ENCRYPT_CCMP:
+		ap->encryption_flags = WIFI_ENCRYPTION_WPA2;
+		break;
+	case WIFI_SECURITY_MODE_ENCRYPT_TKIP:
+		ap->encryption_flags = WIFI_ENCRYPTION_WPA;
+		break;
+	default:
+		ap->encryption_flags = 0;
+		break;
+	}
+
+	return S_OK;
+}
+
 artik_error os_wifi_connect(const char *ssid, const char *password,
 				bool persistent)
 {

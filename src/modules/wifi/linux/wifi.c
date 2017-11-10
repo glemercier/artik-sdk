@@ -134,6 +134,43 @@ static bool _is_unicode(const char *buf)
 	return (buf[0] == '\\');
 }
 
+static void _get_ini_string_value(char *buf, char *key, char *value)
+{
+	char *pos = NULL, *pos_end = NULL, *pos_next = NULL;
+
+	pos_next = buf;
+	do {
+		pos = os_strstr(pos_next, key);
+		if ((pos == NULL) || (pos == buf) || *(pos - 1) == '\n')
+			break;
+		pos_next = pos + strlen(key);
+	} while (pos != NULL);
+
+	if (pos != NULL) {
+		pos += strlen(key) + 1;
+		pos_end = os_strchr(pos, '\n');
+		memcpy(value, pos, pos_end - pos);
+	}
+}
+
+static void _get_ini_int_value(char *buf, char *key, int *value)
+{
+	char *pos = NULL, *pos_next = NULL;
+
+	pos_next = buf;
+	do {
+		pos = os_strstr(pos_next, key);
+		if ((pos == NULL) || (pos == buf) || *(pos - 1) == '\n')
+			break;
+		pos_next = pos + strlen(key);
+	} while (pos != NULL);
+
+	if (pos != NULL) {
+		pos += strlen(key) + 1;
+		*value = atoi(pos);
+	}
+}
+
 static int _wifi_set_security_mode(char *chflag, wifi_scan_bss *bss)
 {
 	int ret = WIFI_ERROR;
@@ -256,6 +293,70 @@ int wifi_get_scan_result(wifi_scan_bssinfo **bssinfo)
 		pos += eol + 1;
 	}
 	(*bssinfo)->bss_list = bss;
+
+	return WIFI_SUCCESS;
+}
+
+int wifi_get_info(wifi_info *info)
+{
+	int ret = WIFI_ERROR;
+	size_t len = 4096;
+	char buf[4096], strflag[32];
+	char *pos = NULL;
+
+	if (!info)
+		return WIFI_ERROR;
+
+	os_memset(buf, 0, len);
+
+	ret = _wifi_send_cmd(ctrl_conn, "STATUS", buf, &len);
+	if (ret != WIFI_SUCCESS)
+		return ret;
+
+	_get_ini_string_value(buf, "wpa_state", info->wpa_state);
+	_get_ini_string_value(buf, "mode", info->mode);
+	_get_ini_string_value(buf, "ssid", info->bss.ssid);
+	_get_ini_string_value(buf, "ip_address", info->ip_address);
+	_get_ini_int_value(buf, "freq", &info->bss.freq);
+
+	/* get bssid */
+	pos = os_strstr(buf, "bssid");
+	if (pos != NULL) {
+		pos += strlen("bssid=");
+		_atomac(pos, info->bss.bssid);
+	}
+
+	/* authentication flags */
+	os_memset(strflag, 0, 32);
+	_get_ini_string_value(buf, "key_mgmt", strflag);
+	if (os_strstr(strflag, "WPA2"))	{
+		if (os_strstr(strflag, "PSK"))
+			info->bss.auth = WIFI_SECURITY_MODE_AUTH_WPA2_PSK;
+		else if (os_strstr(strflag, "EAP"))
+			info->bss.auth = WIFI_SECURITY_MODE_AUTH_WPA2_EAP;
+	} else if (os_strstr(strflag, "WPA")) {
+		if (os_strstr(strflag, "PSK"))
+			info->bss.auth = WIFI_SECURITY_MODE_AUTH_WPA_PSK;
+		else if (os_strstr(strflag, "EAP"))
+			info->bss.auth = WIFI_SECURITY_MODE_AUTH_WPA_EAP;
+	} else
+		info->bss.auth = WIFI_SECURITY_MODE_AUTH_OPEN;
+
+	/* encryption flags */
+	os_memset(strflag, 0, 32);
+	_get_ini_string_value(buf, "group_cipher", strflag);
+	if (os_strstr(strflag, "CCMP"))
+		info->bss.encrypt = WIFI_SECURITY_MODE_ENCRYPT_CCMP;
+	else if (os_strstr(strflag, "TKIP"))
+		info->bss.encrypt = WIFI_SECURITY_MODE_ENCRYPT_TKIP;
+	else if (os_strstr(strflag, "WEP"))
+		info->bss.encrypt = WIFI_SECURITY_MODE_ENCRYPT_WEP;
+
+	/* WPS flags */
+	if (os_strstr(buf, "WPS"))
+		info->bss.wps = WIFI_SECURITY_MODE_WPS_ON;
+
+	info->bss.rssi = -1; // no rssi value obtained using this method
 
 	return WIFI_SUCCESS;
 }
