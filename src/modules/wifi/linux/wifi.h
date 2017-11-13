@@ -240,6 +240,11 @@ int wifi_get_info(wifi_info *info);
  * @see		struct wifi_scan_bssinfo
  */
 void wifi_free_bssinfo(wifi_scan_bssinfo *bssinfo);
+/**
+ * @brief	force the connect callback to be executed
+ *              boot.
+ */
+void wifi_force_connect_callback(void);
 
 /**
  * @brief	Connect to access point

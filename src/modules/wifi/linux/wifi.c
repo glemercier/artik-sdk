@@ -319,13 +319,6 @@ int wifi_get_info(wifi_info *info)
 	_get_ini_string_value(buf, "ip_address", info->ip_address);
 	_get_ini_int_value(buf, "freq", &info->bss.freq);
 
-	/* get bssid */
-	pos = os_strstr(buf, "bssid");
-	if (pos != NULL) {
-		pos += strlen("bssid=");
-		_atomac(pos, info->bss.bssid);
-	}
-
 	/* authentication flags */
 	os_memset(strflag, 0, 32);
 	_get_ini_string_value(buf, "key_mgmt", strflag);
@@ -344,7 +337,7 @@ int wifi_get_info(wifi_info *info)
 
 	/* encryption flags */
 	os_memset(strflag, 0, 32);
-	_get_ini_string_value(buf, "group_cipher", strflag);
+	_get_ini_string_value(buf, "pairwise_cipher", strflag);
 	if (os_strstr(strflag, "CCMP"))
 		info->bss.encrypt = WIFI_SECURITY_MODE_ENCRYPT_CCMP;
 	else if (os_strstr(strflag, "TKIP"))
@@ -355,6 +348,13 @@ int wifi_get_info(wifi_info *info)
 	/* WPS flags */
 	if (os_strstr(buf, "WPS"))
 		info->bss.wps = WIFI_SECURITY_MODE_WPS_ON;
+
+	/* get bssid */
+	pos = os_strstr(buf, "bssid");
+	if (pos != NULL) {
+		pos += strlen("bssid=");
+		_atomac(pos, info->bss.bssid);
+	}
 
 	info->bss.rssi = -1; // no rssi value obtained using this method
 
@@ -510,6 +510,11 @@ int wifi_connect(const char *ssid, const char *psk, int save_profile)
 	os_free(buf);
 
 	return ret;
+}
+
+void wifi_force_connect_callback(void)
+{
+	wpa_cli_force_connect_callback();
 }
 
 int wifi_disconnect(void)

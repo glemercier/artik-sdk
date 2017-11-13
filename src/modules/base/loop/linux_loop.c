@@ -404,7 +404,8 @@ artik_error os_add_idle_callback(int *idle_id, idle_callback func,
 	idle->id = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, _idle_callback,
 				idle, _idle_destroy_callback);
 
-	*idle_id = (int)idle->id;
+	if (idle_id)
+		*idle_id = (int)idle->id;
 
 	return S_OK;
 }

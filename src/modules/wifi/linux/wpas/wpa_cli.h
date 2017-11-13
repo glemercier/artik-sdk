@@ -32,6 +32,7 @@ void set_connect_callback(
 			wifi_connect_callback callback,
 			void *user_data);
 
+void wpa_cli_force_connect_callback(void);
 int wpa_cli_open_connection(const char *ifname, int attach);
 void wpa_cli_close_connection(void);
 int str_starts(const char *src, const char *match);

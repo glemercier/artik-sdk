@@ -158,6 +158,8 @@ artik_error test_wifi_info(void)
 		fprintf(stdout, "%s %-20s %s %d 0x%X\n", __func__, ap.bssid, ap.name,
 				ap.frequency, ap.encryption_flags);
 
+	wifi->deinit();
+
 exit:
 	fprintf(stdout, "TEST: %s %s\n", __func__,
 		(ret == S_OK) ? "succeeded" : "failed");

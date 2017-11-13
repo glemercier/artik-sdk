@@ -29,10 +29,13 @@
 
 #include <artik_log.h>
 #include <artik_wifi.h>
+#include <artik_loop.h>
+#include <artik_module.h>
 
 static const char *ctrl_iface_dir = "/var/run/wpa_supplicant";
 static const char *client_socket_dir = NULL;
 static int wpa_cli_attached = 0;
+static int idle_cb_id = 0;
 
 static const char *ctrl_ifname;
 static struct wpa_ctrl *ctrl_conn = NULL;
@@ -186,6 +189,36 @@ static int check_terminating(const char *msg)
 
 	return 0;
 }
+
+static int on_connect_force_callback(void *user_data)
+{
+	if (wifi_cb.connect_callback) {
+		artik_wifi_connection_info info;
+		artik_loop_module *loop = NULL;
+
+		info.connected = true;
+		info.error = S_OK;
+		wifi_cb.connect_callback((void *)&info,
+				wifi_cb.connect_user_data);
+
+		loop = (artik_loop_module *)artik_request_api_module("loop");
+		loop->remove_idle_callback(idle_cb_id);
+		artik_release_api_module(loop);
+	}
+	return 0;
+}
+
+void wpa_cli_force_connect_callback(void)
+{
+	if (wifi_cb.connect_callback) {
+		artik_loop_module *loop = NULL;
+
+		loop = (artik_loop_module *)artik_request_api_module("loop");
+		loop->add_idle_callback(&idle_cb_id, on_connect_force_callback, NULL);
+		artik_release_api_module(loop);
+	}
+}
+
 
 int wpa_cli_open_connection(const char *ifname, int attach)
 {

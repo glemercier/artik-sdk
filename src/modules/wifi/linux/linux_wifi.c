@@ -339,12 +339,26 @@ artik_error os_wifi_connect(const char *ssid, const char *password,
 				bool persistent)
 {
 	int ret;
+	artik_wifi_connection_info info;
+	artik_wifi_ap ap;
 
 	if (wifi_mode != ARTIK_WIFI_MODE_STATION)
 		return E_NOT_INITIALIZED;
 
-	if (wifi_connected)
-		return E_BUSY;
+
+	memset(&info, 0, sizeof(artik_wifi_connection_info));
+	memset(&ap, 0, sizeof(artik_wifi_ap));
+
+	ret = os_wifi_get_info(&info, &ap);
+
+	if (ret != WIFI_SUCCESS)
+		return E_WIFI_ERROR;
+
+	if (info.connected && !strncmp(ap.name, ssid, MAX_AP_NAME_LEN-1)) {
+		wifi_connected = true;
+		wifi_force_connect_callback();
+		return S_OK;
+	}
 
 	ret = wifi_connect(ssid, password, persistent);
 	if (ret != WIFI_SUCCESS)
