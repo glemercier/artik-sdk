@@ -81,6 +81,12 @@ IF ( NOT CMAKE_BUILD_TYPE )
 	SET ( CMAKE_BUILD_TYPE Release CACHE STRING "Build configuration (Release|Debug)" FORCE)
 ENDIF ( )
 
+option (CMAKE_ENABLE_SANITIZER "" OFF)
+if (CMAKE_ENABLE_SANITIZER)
+    SET ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -fno-common -fsanitize=address -fsanitize=undefined -static-libasan" )
+    SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fno-common -fsanitize=address -fsanitize=undefined -static-libasan" )
+endif ()
+
 SET ( CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DCONFIG_RELEASE" )
 SET ( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DCONFIG_RELEASE" )
 
