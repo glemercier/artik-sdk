@@ -114,7 +114,7 @@ static void wifi_save_scan_results(void)
 	slsi_scan_info_t *scan_results = NULL;
 	slsi_scan_info_t *head = NULL;
 	int bss_count = 1;
-	int i = 0;
+	int i = 0, j = 0;
 
 	ret = WiFiGetScanResults(&scan_results);
 	if (ret != SLSI_STATUS_SUCCESS) {
@@ -158,21 +158,22 @@ static void wifi_save_scan_results(void)
 				scan_results->bssid);
 		g_saved_aps[i].frequency = 2407 + 5 * scan_results->channel;
 		g_saved_aps[i].signal_level = scan_results->rssi;
+		g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_OPEN;
 
-		if (scan_results->sec_modes->secmode == SLSI_SEC_MODE_OPEN)
-			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_OPEN;
-		else if (scan_results->sec_modes->secmode & SLSI_SEC_MODE_WPA2_MIXED)
-			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_WPA2;
-		else if (scan_results->sec_modes->secmode & SLSI_SEC_MODE_WPA_MIXED)
-			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_WPA;
-		else if (scan_results->sec_modes->secmode &
-				(SLSI_SEC_MODE_WEP|SLSI_SEC_MODE_WEP_SHARED))
-			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_WEP;
-		else if (scan_results->sec_modes->secmode & SLSI_SEC_MODE_EAP)
-			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_WPA2_ENTERPRISE;
-		else
-			g_saved_aps[i].encryption_flags = 0;
-
+		for (j = 0; j < scan_results->num_sec_modes; j++) {
+			if (scan_results->sec_modes[j].secmode &
+					SLSI_SEC_MODE_WPA2_MIXED)
+				g_saved_aps[i].encryption_flags |= WIFI_ENCRYPTION_WPA2;
+			else if (scan_results->sec_modes[j].secmode &
+					SLSI_SEC_MODE_WPA_MIXED)
+				g_saved_aps[i].encryption_flags |= WIFI_ENCRYPTION_WPA;
+			else if (scan_results->sec_modes[j].secmode &
+					(SLSI_SEC_MODE_WEP | SLSI_SEC_MODE_WEP_SHARED))
+				g_saved_aps[i].encryption_flags |= WIFI_ENCRYPTION_WEP;
+			else if (scan_results->sec_modes[j].secmode & SLSI_SEC_MODE_EAP)
+				g_saved_aps[i].encryption_flags |=
+					WIFI_ENCRYPTION_WPA2_ENTERPRISE;
+		}
 		scan_results = scan_results->next;
 	}
 
