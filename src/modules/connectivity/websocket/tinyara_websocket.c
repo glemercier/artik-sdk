@@ -390,7 +390,7 @@ static artik_error ssl_setup(struct websocket_priv *priv,
 	mbedtls_ssl_conf_dbg(ctx->conf, websocket_tls_debug, stdout);
 	mbedtls_ssl_conf_rng(ctx->conf, mbedtls_ctr_drbg_random, ctx->ctr_drbg);
 
-	if (ssl_config->use_se) {
+	if (ssl_config->se_config.use_se) {
 		artik_security_module *security = (artik_security_module *)
 					artik_request_api_module("security");
 		artik_security_handle handle;
@@ -425,7 +425,7 @@ static artik_error ssl_setup(struct websocket_priv *priv,
 			return ret;
 		}
 
-		err = security->get_certificate(handle, &dev_cert);
+		err = security->get_certificate(handle, CERT_ID_ARTIK, &dev_cert);
 		if (ret != S_OK) {
 			log_err("Failed to get device certificate (err=%d)",
 									err);

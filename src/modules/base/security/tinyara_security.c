@@ -83,7 +83,7 @@ artik_error os_security_release(artik_security_handle handle)
 }
 
 artik_error os_security_get_certificate(artik_security_handle handle,
-					char **cert)
+		artik_security_certificate_id cert_id, char **cert)
 {
 	security_node *node = (security_node *)artik_list_get_by_handle(
 				requested_nodes, (ARTIK_LIST_HANDLE)handle);
@@ -100,6 +100,9 @@ artik_error os_security_get_certificate(artik_security_handle handle,
 
 	if (!node || !cert || *cert)
 		return E_BAD_ARGS;
+
+	if (cert_id != CERT_ID_ARTIK)
+		return E_NOT_SUPPORTED;
 
 	cert_data = zalloc(cert_len);
 	if (!cert_data)
@@ -239,7 +242,7 @@ exit:
 }
 
 artik_error os_security_get_ca_chain(artik_security_handle handle,
-								char **chain)
+		artik_security_certificate_id cert_id, char **chain)
 {
 	security_node *node = (security_node *)artik_list_get_by_handle(
 				requested_nodes, (ARTIK_LIST_HANDLE)handle);
@@ -257,6 +260,9 @@ artik_error os_security_get_ca_chain(artik_security_handle handle,
 
 	if (!node || !chain || *chain)
 		return E_BAD_ARGS;
+
+	if (cert_id != CERT_ID_ARTIK)
+		return E_NOT_SUPPORTED;
 
 	cert_data = zalloc(cert_len);
 	if (!cert_data)
@@ -362,7 +368,8 @@ exit:
 }
 
 artik_error os_get_certificate_sn(artik_security_handle handle,
-				unsigned char *sn, unsigned int *len)
+		artik_security_certificate_id cert_id, unsigned char *sn,
+		unsigned int *len)
 {
 	security_node *node = (security_node *)artik_list_get_by_handle(
 				requested_nodes, (ARTIK_LIST_HANDLE)handle);
@@ -377,6 +384,9 @@ artik_error os_get_certificate_sn(artik_security_handle handle,
 
 	if (!node || !sn || !len || (*len == 0))
 		return E_BAD_ARGS;
+
+	if (cert_id != CERT_ID_ARTIK)
+		return E_NOT_SUPPORTED;
 
 	cert_data = zalloc(cert_len);
 	if (!cert_data)

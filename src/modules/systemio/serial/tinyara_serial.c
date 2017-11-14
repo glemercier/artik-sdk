@@ -87,7 +87,6 @@ artik_error os_serial_request(artik_serial_config *config)
 	/* Check if baudrate is supported */
 	if ((config->baudrate >= ARTIK_SERIAL_BAUD_NUM ) ||
 			!baudrate_value[config->baudrate]) {
-		log_err("Requested baudrate is not supported");
 		os_serial_release(config);
 		return E_BAD_ARGS;
 	}

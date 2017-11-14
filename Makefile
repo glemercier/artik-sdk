@@ -66,6 +66,9 @@ CSRCS += $(ARTIK_SDK_DIR)/src/modules/base/module/artik_module.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/base/module/tinyara_module.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/base/time/tinyara_time.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/base/time/artik_time.c
+CSRCS += $(ARTIK_SDK_DIR)/src/modules/base/security/artik_security.c
+CSRCS += $(ARTIK_SDK_DIR)/src/modules/base/security/tinyara_security.c
+CSRCS += $(ARTIK_SDK_DIR)/src/modules/base/security/tinyara/mbedtls_pkcs7_parser.c
 
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/systemio/adc/artik_adc.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/systemio/adc/tinyara_adc.c
@@ -88,9 +91,6 @@ CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/http/tinyara/webclient.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/websocket/artik_websocket.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/websocket/tinyara_websocket.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/cloud/artik_cloud.c
-CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/security/artik_security.c
-CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/security/tinyara_security.c
-CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/security/tinyara/mbedtls_pkcs7_parser.c
 
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/wifi/artik_wifi.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/wifi/tinyara/tinyara_wifi.c

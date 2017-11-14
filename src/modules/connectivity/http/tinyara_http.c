@@ -238,7 +238,7 @@ static artik_error init_client_ssl_config(
 //	mbedtls_debug_set_threshold(MBED_DEBUG_LEVEL);
 #endif
 
-	if (a_ssl_config->use_se) {
+	if (a_ssl_config->se_config.use_se) {
 		artik_security_handle handle;
 		artik_error err = S_OK;
 		char *se_cert = NULL;
@@ -272,7 +272,7 @@ static artik_error init_client_ssl_config(
 			goto exit;
 		}
 
-		err = security->get_certificate(handle, &se_cert);
+		err = security->get_certificate(handle, CERT_ID_ARTIK, &se_cert);
 		if (err != S_OK || !se_cert) {
 			log_err("Failed to get certificate (err=%d)\n", err);
 			ret = E_ACCESS_DENIED;
