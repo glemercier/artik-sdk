@@ -509,6 +509,9 @@ artik_error os_http_get_stream(const char *url, artik_http_headers *headers,
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, stream_callback);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&cb_params);
+#ifndef NDEBUG
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
 
 	if (ssl && ssl->verify_cert == ARTIK_SSL_VERIFY_REQUIRED) {
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
@@ -702,6 +705,9 @@ artik_error os_http_get(const char *url, artik_http_headers *headers,
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, response_callback);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)response);
+#ifndef NDEBUG
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
 
 	if (ssl && ssl->verify_cert == ARTIK_SSL_VERIFY_REQUIRED) {
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
@@ -892,6 +898,9 @@ artik_error os_http_post(const char *url, artik_http_headers *headers,
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, response_callback);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)response);
+#ifndef NDEBUG
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
 
 	if (ssl && ssl->verify_cert == ARTIK_SSL_VERIFY_REQUIRED) {
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
@@ -1086,6 +1095,9 @@ artik_error os_http_put(const char *url, artik_http_headers *headers,
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, response_callback);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)response);
+#ifndef NDEBUG
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
 
 	if (ssl && ssl->verify_cert == ARTIK_SSL_VERIFY_REQUIRED) {
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
@@ -1278,6 +1290,9 @@ artik_error os_http_delete(const char *url, artik_http_headers *headers,
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, response_callback);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)response);
+#ifndef NDEBUG
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
 
 	if (ssl && ssl->verify_cert == ARTIK_SSL_VERIFY_REQUIRED) {
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
