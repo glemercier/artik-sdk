@@ -190,6 +190,19 @@ artik_error artik::Bluetooth::gatt_add_descriptor(int service_id, int char_id,
   return m_module->gatt_add_descriptor(service_id, char_id, desc, id);
 }
 
+artik_error artik::Bluetooth::gatt_remove_service(int sid) {
+  return m_module->gatt_remove_service(sid);
+}
+
+artik_error artik::Bluetooth::gatt_remove_characteristic(int sid, int cid) {
+  return m_module->gatt_remove_characteristic(sid, cid);
+}
+
+artik_error artik::Bluetooth::gatt_remove_descriptor(int sid, int cid,
+    int did) {
+  return m_module->gatt_remove_descriptor(sid, cid, did);
+}
+
 artik_error artik::Bluetooth::gatt_set_char_on_read_request(int svc_id,
     int char_id, artik_bt_gatt_req_read callback, void *user_data) {
   return m_module->gatt_set_char_on_read_request(svc_id, char_id, callback,
