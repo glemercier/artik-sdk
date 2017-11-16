@@ -11,6 +11,7 @@ SET ( ARTIK_CONNECTIVITY_LIBRARIES ${LIB_CONNECTIVITY} CACHE INTERNAL "" FORCE )
 
 SET ( SRC_CONNECTIVITY
 					cloud/artik_cloud.c
+					http/common_http.c
 					http/linux_http.c
 					http/artik_http.c
 					network/linux_network.c

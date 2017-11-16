@@ -30,6 +30,7 @@
 #include <artik_loop.h>
 #include <artik_ssl.h>
 #include "os_http.h"
+#include "common_http.h"
 
 #define WAIT_CONNECT_POLLING_MS	500
 #define FLAG_EVENT		(0x1 << 0)
@@ -70,40 +71,6 @@ typedef struct {
 
 static pthread_mutex_t lock;
 static bool lock_initialized = false;
-
-static artik_ssl_config *copy_ssl_config(artik_ssl_config *ssl)
-{
-	artik_ssl_config *dest = NULL;
-
-	if (!ssl)
-		return NULL;
-
-	dest = malloc(sizeof(artik_ssl_config));
-	if (!dest)
-		return NULL;
-
-	memset(dest, 0, sizeof(artik_ssl_config));
-	memcpy(&dest->se_config, &ssl->se_config, sizeof(artik_ssl_se_config));
-
-	if (ssl->ca_cert.data) {
-		dest->ca_cert.data = strndup(ssl->ca_cert.data, ssl->ca_cert.len);
-		dest->ca_cert.len = ssl->ca_cert.len;
-	}
-
-	if (ssl->client_cert.data) {
-		dest->client_cert.data = strndup(ssl->client_cert.data, ssl->client_cert.len);
-		dest->client_cert.len = ssl->client_cert.len;
-	}
-
-	if (ssl->client_key.data) {
-		dest->client_key.data = strndup(ssl->client_key.data, ssl->client_key.len);
-		dest->client_key.len = ssl->client_key.len;
-	}
-
-	dest->verify_cert = ssl->verify_cert;
-
-	return dest;
-}
 
 static void mutex_lock(void)
 {
@@ -644,7 +611,17 @@ artik_error os_http_get_stream_async(const char *url,
 	interface->stream_cb_params.user_data = user_data;
 	interface->response_cb_params.callback = response_callback;
 	interface->response_cb_params.user_data = user_data;
-	interface->ssl = copy_ssl_config(ssl);
+
+	if (ssl) {
+		interface->ssl = copy_ssl_config(ssl);
+		if (!interface->ssl) {
+			if (interface->headers)
+				free(interface->headers);
+
+			free(interface);
+			return E_NO_MEM;
+		}
+	}
 
 	if (loop->add_idle_callback(&interface->loop_process_id,
 		os_http_process_get_stream, (void *)interface) != S_OK)

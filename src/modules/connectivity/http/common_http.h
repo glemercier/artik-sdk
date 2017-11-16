@@ -16,14 +16,15 @@
  *
  */
 
-#ifndef __TINYARA_HTTP_H__
-#define __TINYARA_HTTP_H__
+#ifndef HTTP_COMMON_H
+#define HTTP_COMMON_H
 
-typedef void (*wget_callback_stream_t)(FAR char **buffer, int offset,
-				int datend, FAR int *buflen, FAR void *arg);
+#include <artik_http.h>
+#include <artik_ssl.h>
 
-int wget(FAR const char *url, int *status, FAR char *buffer, int buflen,
-		wget_callback_stream_t callback, FAR void *arg, int with_tls,
-		void *tls_conf);
+artik_ssl_config *copy_ssl_config(artik_ssl_config *from);
+artik_http_headers *copy_http_headers(artik_http_headers *from);
+void free_ssl_config(artik_ssl_config *ssl);
+void free_http_headers(artik_http_headers *headers);
 
-#endif /* __TINYARA_HTTP_H__ */
+#endif /* HTTP_COMMON_H */

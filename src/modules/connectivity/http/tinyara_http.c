@@ -32,60 +32,17 @@
 #include <apps/netutils/netlib.h>
 #include <apps/netutils/webclient.h>
 
+#include "common_http.h"
 #include "os_http.h"
 #include "tls/see_api.h"
 #include "tinyara/tinyara_http.h"
 
-//#define	_USE_HTTP_PTHREAD
 #define ARTIK_HTTP_RESPONSE_MAX_SIZE	4096
 
 #define	_HTTP_PREFIX	"http"
 #define	_HTTPS_PREFIX	_HTTP_PREFIX"s"
 
-#define HTTP_API_ENTER()	{ \
-	int ret; \
-	ret = sem_wait(&sem_block); \
-	if (ret < 0) { \
-		log_err("%s %d: error has detected. can't get permit(%d).\n", \
-				__func__, __LINE__, ret); \
-		return E_TRY_AGAIN; \
-	} \
-}
-#define HTTP_API_EXIT() { \
-	sem_post(&sem_block); \
-}
-
-#ifdef CONFIG_ARTIK_SDK_HTTP_ASYNC
 #define _HTTP_API_TIMEOUT	10
-
-#define HTTP_API_WAIT_BEGIN() { \
-	int ret; \
-	ret = sem_init(&sem_waiter, 0, 0); \
-	if (ret < 0) { \
-		log_err("%s %d: error has detected while init semaphore(%d)\n", \
-				__func__, __LINE__, ret); \
-		HTTP_API_EXIT(); \
-		return E_TRY_AGAIN; \
-	} \
-}
-
-#define HTTP_API_WAIT_RESPONSE(time, ret_point) { \
-	int ret_code; struct timespec currtime = { 0, }; \
-	clock_gettime(CLOCK_REALTIME, &currtime); \
-	currtime.tv_sec += time; \
-	ret_code = sem_timedwait(&sem_waiter, &currtime); \
-	if (ret_code < 0) { \
-		log_err("%s %d: error has detected while wait response(%d)\n", \
-				__func__, __LINE__, errno); \
-		ret = (ret_code == ETIMEDOUT) ? E_TIMEOUT : E_INTERRUPTED; \
-		goto ret_point; \
-	} \
-}
-
-#define HTTP_API_NOTIFY() { \
-	sem_post(&sem_waiter); \
-}
-#endif
 
 struct _http_param {
 	char *url;
@@ -96,16 +53,9 @@ struct _http_param {
 	int *status;
 	artik_ssl_config *ssl;
 	artik_http_stream_callback stream_callback;
-	void *stream_callback_userdata;
+	artik_http_response_callback response_callback;
+	void *user_data;
 };
-
-#ifdef CONFIG_ARTIK_SDK_HTTP_ASYNC
-static void _artik_http_callback(struct http_client_response_t *response);
-
-static struct sem_s sem_waiter;
-static char *g_res;
-#endif
-static struct sem_s sem_block = {.semcount = 1, };
 
 static int see_generate_random_client(void *ctx, unsigned char *data, size_t len)
 {
@@ -125,8 +75,8 @@ static int see_generate_random_client(void *ctx, unsigned char *data, size_t len
 }
 
 static void http_tls_debug(void *ctx, int level, const char *file,
-                                int line,
-                                const char *str)
+						   int line,
+						   const char *str)
 {
 	log_dbg("%s:%04d: %s", file, line, str);
 }
@@ -159,9 +109,8 @@ static void release_http_ssl_config(struct http_ssl_config_t *http_ssl_config)
 		mbedtls_x509_crt_free(http_ssl_config->cert);
 		free(http_ssl_config->cert);
 	}
-	if (http_ssl_config->ssl->tls_conf) {
+	if (http_ssl_config->ssl->tls_conf)
 		free(http_ssl_config->ssl->tls_conf);
-	}
 	if (http_ssl_config->ssl->dev_cert)
 		free(http_ssl_config->ssl->dev_cert);
 	if (http_ssl_config->ssl->private_key)
@@ -371,7 +320,9 @@ static artik_error init_client_ssl_config(
 				goto exit;
 			}
 
-			ret = mbedtls_ssl_conf_own_cert(http_ssl_config->ssl->tls_conf, http_ssl_config->cert, http_ssl_config->pkey);
+			ret = mbedtls_ssl_conf_own_cert(http_ssl_config->ssl->tls_conf,
+											http_ssl_config->cert,
+											http_ssl_config->pkey);
 			if (ret) {
 				log_err("Failed to configure device cert/key (err=%d)", ret);
 				ret = E_BAD_ARGS;
@@ -403,7 +354,7 @@ static artik_error init_client_ssl_config(
 		}
 	}
 
-	switch(a_ssl_config->verify_cert) {
+	switch (a_ssl_config->verify_cert) {
 	case ARTIK_SSL_VERIFY_NONE:
 		mbedtls_ssl_conf_authmode(http_ssl_config->ssl->tls_conf, MBEDTLS_SSL_VERIFY_NONE);
 		break;
@@ -432,7 +383,7 @@ static void wget_callback(char **buffer, int offset, int datend, int *buflen, vo
 {
 	struct _http_param *param = (struct _http_param *) user_data;
 
-	param->stream_callback(*buffer + offset, datend - offset, param->stream_callback_userdata);
+	param->stream_callback(*buffer + offset, datend - offset, param->user_data);
 }
 
 static pthread_addr_t _http_method_stream(void *arg)
@@ -443,6 +394,7 @@ static pthread_addr_t _http_method_stream(void *arg)
 	struct http_client_ssl_config_t *ssl = NULL;
 	struct _http_param *param = (struct _http_param *)arg;
 	char *buf = NULL;
+	int status = 0;
 	int ret = 0;
 
 	log_dbg("");
@@ -450,9 +402,9 @@ static pthread_addr_t _http_method_stream(void *arg)
 	if (param->ssl) {
 #ifdef CONFIG_NET_SECURITY_TLS
 		ret = init_client_ssl_config(&http_ssl_config, param->ssl);
-		if (ret != S_OK) {
+		if (ret != S_OK)
 			goto exit;
-		}
+
 		ssl = http_ssl_config->ssl;
 #else
 		ret = E_NOT_SUPPORTED;
@@ -466,25 +418,29 @@ static pthread_addr_t _http_method_stream(void *arg)
 		goto exit;
 	}
 
-	ret = wget(param->url, buf, 4096, wget_callback, param, param->ssl != NULL, ssl->tls_conf);
+	ret = wget(param->url, &status, buf, 4096, wget_callback, param,
+			param->ssl != NULL, ssl->tls_conf);
 	if (ret < 0) {
 		log_err("error has detected while http process(ret: %d)\n", ret);
 		free(buf);
+		buf = NULL;
 		ret = E_HTTP_ERROR;
 		goto exit;
 	}
 
-	free(buf);
 	ret = S_OK;
+	free(buf);
 
 exit:
-//	http_keyvalue_list_release(&headers);
 #ifdef CONFIG_NET_SECURITY_TLS
 	if (http_ssl_config) {
 		release_http_ssl_config(http_ssl_config);
 		free(http_ssl_config);
 	}
 #endif
+
+	if (param->response_callback)
+		param->response_callback(ret, status, NULL, param->user_data);
 
 	return (pthread_addr_t)ret;
 }
@@ -511,8 +467,13 @@ static pthread_addr_t _http_method(void *arg)
 	request.entity = (char *)param->body;
 
 	ret = http_keyvalue_list_init(&headers);
-	if (ret < 0)
+	if (ret < 0) {
+		log_err("Failed to initialize http_keyvalue_list_t");
+		if (param->response_callback)
+			param->response_callback(E_NO_MEM, 0, NULL, param->user_data);
+
 		return (pthread_addr_t)E_NO_MEM;
+	}
 
 	for (i = 0; i < param->headers->num_fields; i++)
 		http_keyvalue_list_add(&headers, param->headers->fields[i].name,
@@ -523,9 +484,9 @@ static pthread_addr_t _http_method(void *arg)
 	if (param->ssl) {
 #ifdef CONFIG_NET_SECURITY_TLS
 		ret = init_client_ssl_config(&http_ssl_config, param->ssl);
-		if (ret != S_OK) {
+		if (ret != S_OK)
 			goto exit;
-		}
+
 		ssl = http_ssl_config->ssl;
 #else
 		ret = E_NOT_SUPPORTED;
@@ -533,7 +494,6 @@ static pthread_addr_t _http_method(void *arg)
 #endif
 	}
 
-#ifndef CONFIG_ARTIK_SDK_HTTP_ASYNC
 	ret = http_client_response_init(&response);
 	if (ret < 0) {
 		log_err("error has detected while initializing response (ret: %d\n", ret);
@@ -549,48 +509,45 @@ static pthread_addr_t _http_method(void *arg)
 		ret = E_HTTP_ERROR;
 		goto exit;
 	}
-#else
-	ret = http_client_send_request_async(&request, ssl,
-			(wget_callback_t) _artik_http_callback);
-	if (ret < 0) {
-		log_err("error has detected while http process(ret: %d)\n", ret);
-		ret = E_HTTP_ERROR;
-		goto exit;
+
+	if (param->response_callback) {
+		char *entity = (char *)malloc(response.entity_len + 1);
+
+		if (*param->response == NULL) {
+			log_err("error has detected while memory allocation\n");
+			http_client_response_release(&response);
+			ret = E_NO_MEM;
+			goto exit;
+		}
+
+		/* Copy response */
+		memset(entity, 0, response.entity_len);
+		memcpy(entity, response.entity, response.entity_len);
+		entity[response.entity_len] = '\0';
+
+		param->response_callback(ret, response.status, entity, param->user_data);
+
+		free(entity);
+	} else {
+		*param->response = (char *)malloc(response.entity_len + 1);
+		if (*param->response == NULL) {
+			log_err("error has detected while memory allocation\n");
+			http_client_response_release(&response);
+			ret = E_NO_MEM;
+			goto exit;
+		}
+
+		/* Copy response */
+		memset(*param->response, 0, response.entity_len);
+		memcpy(*param->response, response.entity, response.entity_len);
+		(*param->response)[response.entity_len] = '\0';
+
+		/* Copy status if pointer was provided */
+		if (param->status)
+			*param->status = response.status;
 	}
-
-	HTTP_API_WAIT_RESPONSE(_HTTP_API_TIMEOUT, http_res_release);
-	if (g_res == NULL) {
-		ret = E_HTTP_ERROR;
-		goto exit;
-	}
-#endif
-
-#ifndef CONFIG_ARTIK_SDK_HTTP_ASYNC
-	*param->response = (char *)malloc(response.entity_len + 1);
-	if (*param->response == NULL) {
-		log_err("error has detected while memory allocation\n");
-		ret = E_NO_MEM;
-		goto exit;
-	}
-
-	/* Copy response */
-	memset(*param->response, 0, response.entity_len);
-	memcpy(*param->response, response.entity, response.entity_len);
-	(*param->response)[response.entity_len] = '\0';
-
-	/* Copy status if pointer was provided */
-	if (param->status)
-		*param->status = response.status;
 
 	http_client_response_release(&response);
-
-#else
-	*param->response = g_res;
-	g_res = NULL;
-#endif
-
-	ret = S_OK;
-
 exit:
 	http_keyvalue_list_release(&headers);
 #ifdef CONFIG_NET_SECURITY_TLS
@@ -600,26 +557,48 @@ exit:
 	}
 #endif
 
+	if (ret != S_OK && param->response_callback)
+		param->response_callback(ret, 0, NULL, param->user_data);
+
 	return (pthread_addr_t)ret;
+}
+
+static pthread_addr_t _http_method_async(void *arg)
+{
+	struct _http_param *param = (struct _http_param *)arg;
+	pthread_addr_t ret;
+
+	if (param->stream_callback)
+		ret = _http_method_stream(arg);
+	else
+		ret = _http_method(arg);
+
+	if (param->body)
+		free(param->body);
+
+	if (param->ssl)
+		free_ssl_config(param->ssl);
+
+	free_http_headers(param->headers);
+	free(param);
+
+	return ret;
 }
 
 static artik_error _http_method_thread(struct _http_param *arg)
 {
-#define WEBCLIENT_STACK_SIZE   20480
+#define WEBCLIENT_STACK_SIZE   4096
 #define WEBCLIENT_SCHED_PRI    100
 #define WEBCLIENT_SCHED_POLICY SCHED_RR
 	pthread_attr_t attr;
 	int status;
 	struct sched_param sparam;
 	pthread_t tid;
-	pthread_addr_t exit_code;
-
-	HTTP_API_ENTER();
+	struct _http_param *thread_arg = NULL;
 
 	status = pthread_attr_init(&attr);
 	if (status != 0) {
 		log_err("failed to start\n");
-		HTTP_API_EXIT();
 		return E_HTTP_ERROR;
 	}
 
@@ -628,21 +607,64 @@ static artik_error _http_method_thread(struct _http_param *arg)
 	(void)pthread_attr_setschedpolicy(&attr, WEBCLIENT_SCHED_POLICY);
 	(void)pthread_attr_setstacksize(&attr, WEBCLIENT_STACK_SIZE);
 
-	status = pthread_create(&tid, &attr, _http_method, arg);
+	thread_arg = malloc(sizeof(struct _http_param));
+	if (!thread_arg)
+		return E_NO_MEM;
+
+	memset(thread_arg, 0, sizeof(struct _http_param));
+	thread_arg->url = strdup(arg->url);
+
+	if (arg->body) {
+		thread_arg->body = strdup(arg->body);
+		if (!thread_arg->body) {
+			free(thread_arg);
+			return E_NO_MEM;
+		}
+	}
+
+	thread_arg->method = arg->method;
+	thread_arg->headers = copy_http_headers(arg->headers);
+	if (!thread_arg->headers) {
+		if (thread_arg->body)
+			free(thread_arg->body);
+
+		free(thread_arg);
+		return E_NO_MEM;
+	}
+
+	if (arg->ssl) {
+		thread_arg->ssl = copy_ssl_config(arg->ssl);
+		if (!thread_arg->ssl) {
+			if (thread_arg->body)
+				free(thread_arg->body);
+
+			free_http_headers(thread_arg->headers);
+			free(thread_arg);
+		}
+	}
+
+	thread_arg->stream_callback = arg->stream_callback;
+	thread_arg->response_callback = arg->response_callback;
+	thread_arg->user_data = arg->user_data;
+
+	status = pthread_create(&tid, &attr, _http_method_async, thread_arg);
+
 	if (status < 0) {
-		HTTP_API_EXIT();
+		if (thread_arg->body)
+			free(thread_arg->body);
+
+		if (thread_arg->ssl)
+			free_ssl_config(thread_arg->ssl);
+
+		free_http_headers(thread_arg->headers);
+		free(thread_arg);
 		return (status == ENOMEM) ? E_NO_MEM : E_HTTP_ERROR;
 	}
 
 	pthread_setname_np(tid, __func__);
+	pthread_detach(tid);
 
-	status = pthread_join(tid, &exit_code);
-	if (status < 0)
-		exit_code = (pthread_addr_t) E_HTTP_ERROR;
-
-	HTTP_API_EXIT();
-
-	return (artik_error) exit_code;
+	return S_OK;
 
 #undef WEBCLIENT_STACK_SIZE
 #undef WEBCLIENT_SCHED_PRI
@@ -655,7 +677,7 @@ artik_error os_http_get_stream(const char *url, artik_http_headers *headers,
 {
 	struct _http_param args = {
 			(char *) url, (char *) NULL, WGET_MODE_GET,
-			headers, NULL, status, ssl, callback, user_data
+			headers, NULL, status, ssl, callback, NULL, user_data
 	};
 
 
@@ -667,14 +689,10 @@ artik_error os_http_get(const char *url, artik_http_headers *headers,
 {
 	struct _http_param args = {
 			(char *) url, (char *) NULL, WGET_MODE_GET,
-			headers, response, status, ssl, NULL, NULL
+			headers, response, status, ssl, NULL, NULL, NULL
 	};
 
-#ifndef _USE_HTTP_PTHREAD
 	return (artik_error)_http_method(&args);
-#else
-	return _http_method_thread(&args);
-#endif
 }
 
 artik_error os_http_post(const char *url, artik_http_headers *headers,
@@ -685,11 +703,7 @@ artik_error os_http_post(const char *url, artik_http_headers *headers,
 			headers, response, status, ssl, NULL, NULL
 	};
 
-#ifndef _USE_HTTP_PTHREAD
 	return (artik_error)_http_method(&args);
-#else
-	return _http_method_thread(&args);
-#endif
 }
 
 artik_error os_http_put(const char *url, artik_http_headers *headers,
@@ -700,11 +714,7 @@ artik_error os_http_put(const char *url, artik_http_headers *headers,
 			headers, response, status, ssl, NULL, NULL
 	};
 
-#ifndef _USE_HTTP_PTHREAD
 	return (artik_error)_http_method(&args);
-#else
-	return _http_method_thread(&args);
-#endif
 }
 
 artik_error os_http_delete(const char *url, artik_http_headers *headers,
@@ -715,68 +725,67 @@ artik_error os_http_delete(const char *url, artik_http_headers *headers,
 			headers, response, status, ssl, NULL, NULL
 	};
 
-#ifndef _USE_HTTP_PTHREAD
 	return (artik_error)_http_method(&args);
-#else
-	return _http_method_thread(&args);
-#endif
 }
-
-#ifdef CONFIG_ARTIK_SDK_HTTP_ASYNC
-static void _artik_http_callback(FAR struct http_client_response_t *response)
-{
-	if (response->entity_len <= 0) {
-		log_err("error has detected while http process(len: %d)\n",
-				response->entity_len);
-		HTTP_API_NOTIFY();
-		return;
-	}
-
-	g_res = (char *) malloc(res.entity_len);
-	if (g_res == NULL) {
-		log_err("error has detected while memory allocate\n");
-		HTTP_API_NOTIFY();
-		return;
-	}
-
-	memcpy(g_res, response->entity, response->entity_len);
-
-	HTTP_API_NOTIFY();
-}
-#endif
 
 artik_error os_http_get_stream_async(const char *url,
 		artik_http_headers *headers, artik_http_stream_callback stream_callback,
 		artik_http_response_callback response_callback, void *user_data,
 		artik_ssl_config *ssl)
 {
-	return E_NOT_SUPPORTED;
+	struct _http_param args = {
+		(char *) url, (char *) NULL, WGET_MODE_GET,
+		headers, NULL, NULL, ssl, stream_callback, response_callback,
+		user_data
+	};
+
+	return _http_method_thread(&args);
 }
 
 artik_error os_http_get_async(const char *url, artik_http_headers *headers,
 		artik_http_response_callback callback, void *user_data,
 		artik_ssl_config *ssl)
 {
-	return E_NOT_SUPPORTED;
+	struct _http_param args = {
+			(char *) url, (char *) NULL, WGET_MODE_GET,
+			headers, NULL, NULL, ssl, NULL, callback, user_data
+	};
+
+	return _http_method_thread(&args);
 }
 
 artik_error os_http_post_async(const char *url, artik_http_headers *headers,
 		const char *body, artik_http_response_callback callback,
 		void *user_data, artik_ssl_config *ssl)
 {
-	return E_NOT_SUPPORTED;
+	struct _http_param args = {
+			(char *) url, (char *) body, WGET_MODE_GET,
+			headers, NULL, NULL, ssl, NULL, callback, user_data
+	};
+
+	return _http_method_thread(&args);
 }
 
 artik_error os_http_put_async(const char *url, artik_http_headers *headers,
 		const char *body, artik_http_response_callback callback,
 		void *user_data, artik_ssl_config *ssl)
 {
-	return E_NOT_SUPPORTED;
+	struct _http_param args = {
+			(char *) url, (char *) body, WGET_MODE_GET,
+			headers, NULL, NULL, ssl, NULL, callback, user_data
+	};
+
+	return _http_method_thread(&args);
 }
 
 artik_error os_http_delete_async(const char *url, artik_http_headers *headers,
 		artik_http_response_callback callback, void *user_data,
 		artik_ssl_config *ssl)
 {
-	return E_NOT_SUPPORTED;
+	struct _http_param args = {
+		(char *) url, (char *) NULL, WGET_MODE_GET,
+		headers, NULL, NULL, ssl, NULL, callback, user_data
+	};
+
+	return _http_method_thread(&args);
 }

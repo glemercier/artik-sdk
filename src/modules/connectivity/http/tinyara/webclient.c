@@ -181,6 +181,20 @@ struct wget_s {
 	void *conn;
 };
 
+
+struct wget_request {
+	FAR const char *url;
+	FAR char *buffer;
+	int buflen;
+	wget_callback_stream_t callback;
+	FAR void *user_data;
+	FAR const char *posts;
+	uint8_t mode;
+	int with_tls;
+	void *tls_conf;
+	int status;
+};
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -255,12 +269,10 @@ static char *wget_urlencode_strcpy(char *dest, const char *src)
 
 static inline int wget_parsestatus(struct wget_s *ws)
 {
-	int offset;
-	int ndx;
 	char *dest;
-
-	offset = ws->offset;
-	ndx    = ws->ndx;
+	char status_code[4] = {0, };
+	int offset = ws->offset;
+	int ndx    = ws->ndx;
 
 	while (offset < ws->datend) {
 		ws->line[ndx] = ws->buffer[offset];
@@ -272,22 +284,8 @@ static inline int wget_parsestatus(struct wget_s *ws)
 				dest = &(ws->line[9]);
 				ws->httpstatus = HTTPSTATUS_NONE;
 
-				/* Check for 200 OK */
-
-				if (strncmp(dest, g_http200,
-						strlen(g_http200)) == 0)
-					ws->httpstatus = HTTPSTATUS_OK;
-
-				/* Check for 301 Moved permanently or 302 Found.
-				 * Location: header line will contain the new
-				 * location.
-				 */
-
-				else if (strncmp(dest, g_http301,
-					strlen(g_http301)) == 0 || strncmp(dest,
-					g_http302, strlen(g_http302)) == 0)
-
-					ws->httpstatus = HTTPSTATUS_MOVED;
+				strncpy(status_code, dest, 4);
+				ws->httpstatus = atoi(status_code);
 			} else
 				return -ECONNABORTED;
 
@@ -309,17 +307,14 @@ static inline int wget_parsestatus(struct wget_s *ws)
 }
 
 /****************************************************************************
- * Name: wget_parsestatus
+ * Name: wget_parseheaders
  ****************************************************************************/
 
 static inline int wget_parseheaders(struct wget_s *ws)
 {
-	int offset;
-	int ndx;
+	int offset = ws->offset;
+	int ndx    = ws->ndx;
 
-	offset = ws->offset;
-	ndx    = ws->ndx;
-	// printf("324:parser: ws->close = %p\n", ws->close);
 	while (offset < ws->datend) {
 		ws->line[ndx] = ws->buffer[offset];
 		if (ws->line[ndx] == ISO_nl) {
@@ -380,7 +375,7 @@ static inline int wget_parseheaders(struct wget_s *ws)
 						ws->filename,
 						CONFIG_WEBCLIENT_MAXFILENAME);
 
-						printf("New hostname='%s' filename='%s'\n",
+						log_dbg("New hostname='%s' filename='%s'\n",
 							ws->hostname,
 							ws->filename);
 					}
@@ -701,10 +696,7 @@ errout:
 	return ret;
 }
 
-static int wget_base(FAR const char *url, FAR char *buffer, int buflen,
-	wget_callback_stream_t callback, FAR void *arg,
-	FAR const char *posts, uint8_t mode, int with_tls,
-	void *tls_conf)
+static int wget_base(FAR struct wget_request *request)
 {
 	struct wget_s ws;
 #ifdef CONFIG_NET_SECURITY_TLS
@@ -718,16 +710,16 @@ static int wget_base(FAR const char *url, FAR char *buffer, int buflen,
 	/* Initialize the state structure */
 
 	memset(&ws, 0, sizeof(struct wget_s));
-	ws.buffer = buffer;
-	ws.buflen = buflen;
+	ws.buffer = request->buffer;
+	ws.buflen = request->buflen;
 	ws.port   = 80;
-	tls.tls_conf = tls_conf;
+	tls.tls_conf = request->tls_conf;
 
 	/* Parse the hostname (with optional port number) and filename
 	 * from the URL
 	 */
 
-	ret = netlib_parsehttpurl(url, &ws.port,
+	ret = netlib_parsehttpurl(request->url, &ws.port,
 		ws.hostname, CONFIG_WEBCLIENT_MAXHOSTNAME,
 		ws.filename, CONFIG_WEBCLIENT_MAXFILENAME);
 	if (ret != 0) {
@@ -736,7 +728,7 @@ static int wget_base(FAR const char *url, FAR char *buffer, int buflen,
 		return ERROR;
 	}
 
-	printf("with_tls='%d', hostname='%s' filename='%s'\n", with_tls,
+	log_dbg("with_tls='%d', hostname='%s' filename='%s'\n", request->with_tls,
 		ws.hostname, ws.filename);
 
 	/* The following sequence may repeat indefinitely if we are redirected
@@ -754,18 +746,15 @@ static int wget_base(FAR const char *url, FAR char *buffer, int buflen,
 		ws.ndx        = 0;
 
 		/* Create a socket */
-		ret = wget_connect(&ws, with_tls, &tls);
+		ret = wget_connect(&ws, request->with_tls, &tls);
 		if (ret != 0) {
 			log_dbg("ERROR: connection failed\n");
 			return ERROR;
 		}
 
-	//      printf("ssl_close %p\n", ssl_close);
-	//      printf("ws.close %p\n", ws.close);
 		/* Send the GET request */
-
 		dest = ws.buffer;
-		if (mode == WGET_MODE_POST)
+		if (request->mode == WGET_MODE_POST)
 			dest = wget_strcpy(dest, g_httppost);
 		else
 			dest = wget_strcpy(dest, g_httpget);
@@ -784,26 +773,26 @@ static int wget_base(FAR const char *url, FAR char *buffer, int buflen,
 		dest = wget_strcpy(dest, ws.hostname);
 		dest = wget_strcpy(dest, g_httpcrnl);
 
-		if (mode == WGET_MODE_POST) {
+		if (request->mode == WGET_MODE_POST) {
 			dest = wget_strcpy(dest, g_httpform);
 			dest = wget_strcpy(dest, g_httpcrnl);
 			dest = wget_strcpy(dest, g_httpcontsize);
 
 			/* Post content size */
 
-			post_len = strlen((char *)posts);
+			post_len = strlen((char *)request->posts);
 			sprintf(post_size, "%d", post_len);
 			dest = wget_strcpy(dest, post_size);
 			dest = wget_strcpy(dest, g_httpcrnl);
 		}
 
 		dest = wget_strcpy(dest, g_httpuseragentfields);
-		if (mode == WGET_MODE_POST)
-			dest = wget_strcpy(dest, (char *)posts);
+		if (request->mode == WGET_MODE_POST)
+			dest = wget_strcpy(dest, (char *)request->posts);
 
-		len = dest - buffer;
+		len = dest - ws.buffer;
 
-		ret = ws.send(ws.conn, (unsigned char *)buffer, len);
+		ret = ws.send(ws.conn, (unsigned char *)ws.buffer, len);
 		if (ret < 0) {
 			log_dbg("ERROR: send failed: %d\n", errno);
 			goto errout;
@@ -818,7 +807,6 @@ static int wget_base(FAR const char *url, FAR char *buffer, int buflen,
 		ws.state   = WEBCLIENT_STATE_STATUSLINE;
 		redirected = false;
 		for (;;) {
-			// printf("801: ws.close %p\n", ws.close);
 			ws.datend = ws.recv(ws.conn, (unsigned char *)ws.buffer,
 								ws.buflen);
 			if (ws.datend < 0) {
@@ -832,49 +820,44 @@ static int wget_base(FAR const char *url, FAR char *buffer, int buflen,
 			}
 
 			/* Handle initial parsing of the status line */
-			// printf("817: ws.close %p\n", ws.close);
 			ws.offset = 0;
 			if (ws.state == WEBCLIENT_STATE_STATUSLINE) {
 				ret = wget_parsestatus(&ws);
 				if (ret < 0) {
-					// printf("Parse status failed [%d]\n",
-					// ret);
-					goto errout_with_errno;
-				}
-			}
-
-			/* Parse the HTTP data */
-			// printf("829: ws.close %p\n", ws.close);
-			if (ws.state == WEBCLIENT_STATE_HEADERS) {
-				ret = wget_parseheaders(&ws);
-				if (ret < 0) {
-					printf("Parse headers failed [%d]\n",
+					log_err("Parse status failed [%d]\n",
 						ret);
 					goto errout_with_errno;
 				}
 			}
-			// printf("838: ws.close %p\n", ws.close);
+
+			if (ws.state == WEBCLIENT_STATE_HEADERS) {
+				ret = wget_parseheaders(&ws);
+				if (ret < 0) {
+					log_err("Parse headers failed [%d]\n",
+						ret);
+					goto errout_with_errno;
+				}
+			}
+
 			/* Dispose of the data payload */
 
 			if (ws.state == WEBCLIENT_STATE_DATA) {
-				if (ws.httpstatus != HTTPSTATUS_MOVED)
+				if (ws.httpstatus != 301 || ws.httpstatus != 302)
 				/* Let the client decide what to do with the
 				 * received file
 				 */
 
-					callback(&ws.buffer, ws.offset,
-						ws.datend, &buflen, arg);
+					request->callback(&ws.buffer, ws.offset,
+						ws.datend, &request->buflen, request->user_data);
 				else {
 					redirected = true;
-					// printf("852: ws.close %p\n",
-					// ws.close);
 					ws.close(ws.conn);
-					// ssl_close(ws.conn);
 					break;
 				}
 			}
 		}
 	} while (redirected);
+	request->status = ws.httpstatus;
 
 	return OK;
 
@@ -990,24 +973,34 @@ int web_posts_strlen(FAR char **name, FAR char **value, int len)
  *
  ****************************************************************************/
 
-int wget(FAR const char *url, FAR char *buffer, int buflen,
+int wget(FAR const char *url, int *status, FAR char *buffer, int buflen,
 	wget_callback_stream_t callback, FAR void *arg, int with_tls,
 	void *tls_conf)
 {
-	log_dbg("Get url %s", url);
-	return wget_base(url, buffer, buflen, callback, arg, NULL,
-		WGET_MODE_GET, with_tls, tls_conf);
+	struct wget_request req = { url, buffer, buflen, callback, arg, NULL,
+		WGET_MODE_GET, with_tls, tls_conf, 0 };
+	int ret = wget_base(&req);
+
+	if (status)
+		*status = req.status;
+
+	return ret;
 }
 
 /****************************************************************************
  * Name: wget_post
  ****************************************************************************/
 
-int wget_post(FAR const char *url, FAR const char *posts, FAR char *buffer,
-	int buflen, wget_callback_stream_t callback, FAR void *arg,
-	int with_tls, void *tls_conf)
+int wget_post(FAR const char *url, FAR const char *posts, FAR int *status,
+	FAR char *buffer, int buflen, wget_callback_stream_t callback,
+	FAR void *arg, int with_tls, void *tls_conf)
 {
-	return wget_base(url, buffer, buflen, callback, arg, posts,
-		WGET_MODE_POST, with_tls, tls_conf);
-}
+	struct wget_request req = {url, buffer, buflen, callback, arg, posts,
+		WGET_MODE_POST, with_tls, tls_conf, 0};
+	int ret = wget_base(&req);
 
+	if (status)
+		*status = req.status;
+
+	return ret;
+}
