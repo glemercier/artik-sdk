@@ -42,6 +42,7 @@ This package contains development files for building programs against the ATIK S
 %package base
 Group: Development/Libraries
 Requires: glib2
+Requires: artiksee = 0.6-1
 Provides: %{name}-base.so.%{version}
 Provides: %{name}-base.so.1
 Summary: Base package needed by all the other packages of the SDK
@@ -79,7 +80,6 @@ Requires: %{name}-base = %{version}-%{release}
 Requires: libwebsockets >= 1.7
 Requires: libcurl
 Requires: openssl-libs
-Requires: artiksee = 0.6
 Provides: %{name}-connectivity.so.%{version}
 Provides: %{name}-connectivity.so.1
 Summary: Connectivity package containing APIs for communicating over HTTP, websockets, etc...

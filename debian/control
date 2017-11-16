@@ -21,7 +21,8 @@ Homepage: https://artik.io
 Package: libartik-sdk-base
 Architecture: any-arm arm64
 Depends: ${shlibs:Depends}, ${misc:Depends}
-	libglib2.0-0
+	libglib2.0-0,
+	artiksee (= 0.6-1),
 Description: Base package needed by all the other packages of the SDK
 
 Package: libartik-sdk-base-dev
@@ -47,7 +48,6 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
 	libartik-sdk-base,
 	libwebsockets7 (>= 1.7),
 	libcurl3,
-	artiksee (= 0.6),
 Description: Connectivity package containing APIs for communicating over HTTP, websockets, etc...
 
 Package: libartik-sdk-connectivity-dev
