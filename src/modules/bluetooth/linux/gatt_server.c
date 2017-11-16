@@ -1072,7 +1072,7 @@ artik_error bt_gatt_req_set_value(artik_bt_gatt_req request, int len,
 	memcpy(*val, value, len);
 
 	_send_request(handle, len, value);
-	free(handle);
+
 	return S_OK;
 }
 
