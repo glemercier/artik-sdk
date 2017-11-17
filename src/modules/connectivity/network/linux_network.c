@@ -102,7 +102,7 @@ static int check_dhcp_server_config(artik_network_dhcp_server_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->ip_addr.address, "")) {
+	if (strcmp(config->ip_addr.address, "")) {
 		match = regexec(&preg,
 			config->ip_addr.address,
 			nmatch, pmatch, 0);
@@ -118,7 +118,7 @@ static int check_dhcp_server_config(artik_network_dhcp_server_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->netmask.address, "")) {
+	if (strcmp(config->netmask.address, "")) {
 		match = regexec(&preg,
 			config->netmask.address,
 			nmatch, pmatch, 0);
@@ -134,7 +134,7 @@ static int check_dhcp_server_config(artik_network_dhcp_server_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->gw_addr.address, "")) {
+	if (strcmp(config->gw_addr.address, "")) {
 		match = regexec(&preg,
 			config->gw_addr.address,
 			nmatch, pmatch, 0);
@@ -150,7 +150,7 @@ static int check_dhcp_server_config(artik_network_dhcp_server_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->dns_addr[0].address, "")) {
+	if (strcmp(config->dns_addr[0].address, "")) {
 		match = regexec(&preg,
 			config->dns_addr[0].address,
 			nmatch, pmatch, 0);
@@ -166,7 +166,7 @@ static int check_dhcp_server_config(artik_network_dhcp_server_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->dns_addr[1].address, "")) {
+	if (strcmp(config->dns_addr[1].address, "")) {
 		match = regexec(&preg,
 			config->dns_addr[1].address,
 			nmatch, pmatch, 0);
@@ -178,7 +178,7 @@ static int check_dhcp_server_config(artik_network_dhcp_server_config *config)
 		}
 	}
 
-	if (!strcmp(config->start_addr.address, "")) {
+	if (strcmp(config->start_addr.address, "")) {
 		match = regexec(&preg,
 			config->start_addr.address,
 			nmatch, pmatch, 0);
@@ -218,7 +218,7 @@ static int check_network_config(artik_network_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->ip_addr.address, "")) {
+	if (strcmp(config->ip_addr.address, "")) {
 		match = regexec(&preg,
 			config->ip_addr.address,
 			nmatch, pmatch, 0);
@@ -234,7 +234,7 @@ static int check_network_config(artik_network_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->netmask.address, "")) {
+	if (strcmp(config->netmask.address, "")) {
 		match = regexec(&preg,
 			config->netmask.address,
 			nmatch, pmatch, 0);
@@ -250,7 +250,7 @@ static int check_network_config(artik_network_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->gw_addr.address, "")) {
+	if (strcmp(config->gw_addr.address, "")) {
 		match = regexec(&preg,
 			config->gw_addr.address,
 			nmatch, pmatch, 0);
@@ -266,7 +266,7 @@ static int check_network_config(artik_network_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->dns_addr[0].address, "")) {
+	if (strcmp(config->dns_addr[0].address, "")) {
 		match = regexec(&preg,
 			config->dns_addr[0].address,
 			nmatch, pmatch, 0);
@@ -282,7 +282,7 @@ static int check_network_config(artik_network_config *config)
 		goto exit;
 	}
 
-	if (!strcmp(config->dns_addr[1].address, "")) {
+	if (strcmp(config->dns_addr[1].address, "")) {
 		match = regexec(&preg,
 			config->dns_addr[1].address,
 			nmatch, pmatch, 0);
@@ -960,7 +960,7 @@ artik_error os_set_network_config(artik_network_config *config,
 
 		bool append = i == 0 ? false : true;
 
-		if (strcmp(config->dns_addr[i].address, "") != 0) {
+		if (strcmp(config->dns_addr[i].address, "")) {
 			if (inet_aton(config->dns_addr[i].address,
 							&addr) == 0) {
 				log_err("Error inet_aton dns_addr");
