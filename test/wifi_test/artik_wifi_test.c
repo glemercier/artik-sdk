@@ -70,7 +70,6 @@ static void on_scan_result(void *result, void *user_data)
 
 	get_scan_result();
 
-	wifi->deinit();
 	loop->quit();
 
 	artik_release_api_module(loop);
@@ -88,7 +87,6 @@ static void on_scan_timeout(void *user_data)
 
 	get_scan_result();
 
-	wifi->deinit();
 	loop->quit();
 
 	artik_release_api_module(loop);
@@ -119,6 +117,8 @@ artik_error test_wifi_scan(void)
 	loop->add_timeout_callback(&timeout_id, 10 * 1000, on_scan_timeout,
 				   NULL);
 	loop->run();
+
+	wifi->deinit();
 
 exit:
 	fprintf(stdout, "TEST: %s %s\n", __func__,
@@ -181,7 +181,6 @@ static void on_connect(void *result, void *user_data)
 	fprintf(stdout, "%s - err=%d, connected=%s\n", __func__, info->error,
 		info->connected ? "true" : "false");
 
-	wifi->deinit();
 	loop->quit();
 
 	artik_release_api_module(loop);
@@ -209,6 +208,7 @@ artik_error test_wifi_connect(void)
 		goto exit;
 
 	loop->run();
+	wifi->deinit();
 
 exit:
 	fprintf(stdout, "TEST: %s %s\n", __func__,
