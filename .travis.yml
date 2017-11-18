@@ -1,0 +1,21 @@
+language: c
+sudo: required
+dist: trusty
+os: linux
+
+services:
+    - docker
+
+env:
+    - DOCKER_TAG=xenial-armhf ARCH=armhf ARCH_QEMU=arm
+    - DOCKER_TAG=xenial-arm64 ARCH=arm64 ARCH_QEMU=aarch64
+
+before_install:
+    - docker run --rm --privileged multiarch/qemu-user-static:register
+
+script:
+    - cd .travis/${DOCKER_TAG}/
+    - wget -N https://partner-images.canonical.com/core/xenial/current/ubuntu-xenial-core-cloudimg-${ARCH}-root.tar.gz
+    - wget -N https://github.com/multiarch/qemu-user-static/releases/download/v2.7.0/x86_64_qemu-${ARCH_QEMU}-static.tar.gz
+    - docker build -t ${DOCKER_TAG} .
+    - docker run -v ${TRAVIS_BUILD_DIR}:/root/src/artik-sdk -w /root/src/artik-sdk ${DOCKER_TAG} bash -c "dpkg-buildpackage -d -uc -us -a ${ARCH} --target-arch ${ARCH}"
