@@ -159,7 +159,7 @@ static void prv_connect(char *buffer, void *user_data)
 	artik_error error = S_OK;
 	char *address = malloc(strlen(buffer));
 
-	strncpy(address, buffer, strlen(buffer));
+	strncpy(address, buffer, strlen(buffer) - 1);
 	address[strlen(buffer) - 1] = '\0';
 
 	printf("Invoke connect to device [%s]...\n", address);
@@ -179,7 +179,7 @@ static void prv_disconnect(char *buffer, void *user_data)
 	artik_error error = S_OK;
 	char *address = malloc(strlen(buffer));
 
-	strncpy(address, buffer, strlen(buffer));
+	strncpy(address, buffer, strlen(buffer) - 1);
 	address[strlen(buffer) - 1] = '\0';
 
 	printf("Invoke disconnect to device [%s]...\n", address);
@@ -208,6 +208,7 @@ static void prv_list_items(char *buffer, void *user_data)
 		start_item = strtol(argv[0], NULL, 10);
 		end_item = strtol(argv[1], NULL, 10);
 		g_strfreev(argv);
+		free(arg);
 	}
 
 	artik_bt_avrcp_item *item_list, *node;
@@ -247,7 +248,7 @@ static void prv_change_folder(char *buffer, void *user_data)
 	char *index = malloc(strlen(buffer));
 	int i = -1;
 
-	strncpy(index, buffer, strlen(buffer));
+	strncpy(index, buffer, strlen(buffer) - 1);
 	index[strlen(buffer) - 1] = '\0';
 
 	i = index_to_int(index);
@@ -289,7 +290,7 @@ static void prv_set_repeat_mode(char *buffer, void *user_data)
 	int repeat;
 	char *repeat_mode = malloc(strlen(buffer));
 
-	strncpy(repeat_mode, buffer, strlen(buffer));
+	strncpy(repeat_mode, buffer, strlen(buffer) - 1);
 	repeat_mode[strlen(buffer) - 1] = '\0';
 	if (strcmp(repeat_mode, "single") == 0) {
 		repeat = 0;
@@ -319,7 +320,7 @@ static void prv_play_item(char *buffer, void *user_data)
 	char *index = malloc(strlen(buffer));
 	int i = -1;
 
-	strncpy(index, buffer, strlen(buffer));
+	strncpy(index, buffer, strlen(buffer) - 1);
 	index[strlen(buffer) - 1] = '\0';
 	i = index_to_int(index);
 	free(index);
@@ -341,7 +342,7 @@ static void prv_add_to_playing(char *buffer, void *user_data)
 	char *index = malloc(strlen(buffer));
 	int i = -1;
 
-	strncpy(index, buffer, strlen(buffer));
+	strncpy(index, buffer, strlen(buffer) - 1);
 	index[strlen(buffer) - 1] = '\0';
 	i = index_to_int(index);
 	free(index);
@@ -404,6 +405,7 @@ static void prv_get_metadata(char *buffer, void *user_data)
 		ret = bt->avrcp_controller_free_metadata(&m_metadata);
 	}
 }
+
 static void prv_quit(char *buffer, void *user_data)
 {
 	g_quit = 1;

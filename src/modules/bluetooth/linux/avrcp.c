@@ -33,6 +33,11 @@
 GSList *items;
 static bool is_latest_item;
 
+static void list_free_func(gpointer data)
+{
+	g_free(data);
+}
+
 static char *_get_item_from_index(int index)
 {
 	GSList *l;
@@ -167,8 +172,7 @@ static artik_error _get_player_path(char **path)
 			g_variant_unref(v);
 			*path = (char *) malloc(strlen(player_path) + 1);
 			if (*path) {
-				memcpy(*path, player_path, strlen(player_path));
-				(*path)[strlen(player_path)] = '\0';
+				memcpy(*path, player_path, strlen(player_path) + 1);
 				log_dbg("player_interface_path[%s]", *path);
 				return S_OK;
 			}
@@ -222,7 +226,7 @@ artik_error bt_avrcp_controller_change_folder(int index)
 				NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &g_error);
 		free(player_path);
 		if (g_error) {
-			log_dbg("AVRCP Change folder failed :%s\n", g_error->message);
+			log_err("AVRCP Change folder failed :%s\n", g_error->message);
 			g_clear_error(&g_error);
 			return E_BT_ERROR;
 		}
@@ -233,12 +237,13 @@ artik_error bt_avrcp_controller_change_folder(int index)
 	return E_BT_ERROR;
 }
 
-artik_bt_avrcp_item *_parse_list(GVariant *result)
+static artik_bt_avrcp_item *_parse_list(GVariant *result)
 {
 	GVariant *ar1, *ar2;
 	GVariantIter *iter1, *iter2;
 	gchar *path, *key;
 	int index = 1;
+	char *obj_path = NULL;
 
 	g_variant_get(result, "(a{oa{sv}})", &iter1);
 
@@ -246,7 +251,7 @@ artik_bt_avrcp_item *_parse_list(GVariant *result)
 	artik_bt_avrcp_item *head_item = NULL;
 
 	if (items) {
-		g_slist_free(items);
+		g_slist_free_full(items, list_free_func);
 		items = NULL;
 	}
 
@@ -256,11 +261,12 @@ artik_bt_avrcp_item *_parse_list(GVariant *result)
 				sizeof(artik_bt_avrcp_item));
 		if (avrcp_item) {
 			avrcp_item->index = index;
-			avrcp_item->item_obj_path = (char *) malloc(strlen(path) + 1);
-			strncpy(avrcp_item->item_obj_path, path, strlen(path));
+			obj_path = (char *) malloc(strlen(path) + 1);
+			strncpy(obj_path, path, strlen(path) + 1);
+			items = g_slist_append(items, obj_path);
+			avrcp_item->item_obj_path = obj_path;
 			avrcp_item->property = NULL;
 			avrcp_item->next_item = NULL;
-			items = g_slist_append(items, avrcp_item->item_obj_path);
 		} else {
 			return NULL;
 		}
@@ -349,7 +355,7 @@ artik_error bt_avrcp_controller_list_item(int start_item, int end_item,
 
 	free(player_path);
 	if (g_error) {
-		log_dbg("AVRCP list item failed :%s\n", g_error->message);
+		log_err("AVRCP list item failed :%s\n", g_error->message);
 		g_clear_error(&g_error);
 		return E_BT_ERROR;
 	}
@@ -382,7 +388,7 @@ artik_error bt_avrcp_controller_set_repeat(const char *repeat_mode)
 				G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &g_error);
 		free(player_path);
 		if (g_error) {
-			log_dbg("AVRCP set repeat failed :%s\n", g_error->message);
+			log_err("AVRCP set repeat failed :%s\n", g_error->message);
 			g_clear_error(&g_error);
 			return E_BT_ERROR;
 		}
@@ -427,10 +433,8 @@ bool bt_avrcp_controller_is_connected(void)
 		e = _get_property(control_path,
 			DBUS_IF_MEDIA_CONTROL1, "Connected", &v);
 		free(control_path);
-		if (e == S_OK && v) {
+		if (e == S_OK && v)
 			g_variant_get(v, "b", &connected);
-			g_variant_unref(v);
-		}
 	}
 	return connected;
 }
@@ -452,7 +456,7 @@ static artik_error _invoke_remote_control(const char *command)
 				G_MAXINT, NULL, &error);
 		free(player_path);
 		if (error) {
-			log_dbg("Remote control failed: %s\n", error->message);
+			log_err("Remote control failed: %s\n", error->message);
 			g_clear_error(&error);
 			return E_BT_ERROR;
 		}
@@ -679,7 +683,7 @@ artik_error bt_avrcp_controller_play_item(int index)
 			G_MAXINT, NULL, &error);
 
 	if (error) {
-		log_dbg("AVRCP Play failed :%s\n", error->message);
+		log_err("AVRCP Play failed :%s\n", error->message);
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}
@@ -716,7 +720,7 @@ artik_error bt_avrcp_controller_add_to_playing(int index)
 			G_MAXINT, NULL, &error);
 
 	if (error) {
-		log_dbg("AVRCP AddtoNowPlaying failed :%s\n", error->message);
+		log_err("AVRCP AddtoNowPlaying failed :%s\n", error->message);
 		g_clear_error(&error);
 		return E_BT_ERROR;
 	}
@@ -732,9 +736,6 @@ artik_error bt_avrcp_controller_get_name(char **name)
 	GVariant *v = NULL;
 
 	e = _get_player_path(&name_path);
-	printf("out namepath\n");
-	if (name_path)
-		printf("get namepath:%s\n", name_path);
 	if (e == S_OK && name_path) {
 		e = _get_property(name_path,
 			DBUS_IF_MEDIA_PLAYER1, "Name", &v);
@@ -820,10 +821,8 @@ bool bt_avrcp_controller_is_browsable(void)
 		e = _get_property(browsable_path,
 			DBUS_IF_MEDIA_PLAYER1, "Browsable", &v);
 		free(browsable_path);
-		if (e == S_OK && v) {
+		if (e == S_OK && v)
 			g_variant_get(v, "b", &browsable);
-			g_variant_unref(v);
-		}
 	}
 	return browsable;
 }

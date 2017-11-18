@@ -80,19 +80,23 @@ void handle_command(command_desc_t *command_array, char *buffer)
 {
 	command_desc_t *cmd_p;
 	int length;
+	int buffer_size = strlen(buffer);
 
 	length = 0;
-	while (buffer[length] != 0 && !isspace(buffer[length] & 0xFF))
+	while (length < buffer_size && buffer[length] != 0
+			&& !isspace(buffer[length] & 0xFF))
 		length++;
 
 	cmd_p = prv_find_command(command_array, buffer, length);
 	if (cmd_p != NULL) {
-		while (buffer[length] != 0 && isspace(buffer[length] & 0xFF))
+		while (length < buffer_size && buffer[length] != 0
+				&& isspace(buffer[length] & 0xFF))
 			length++;
 		cmd_p->call_back(buffer + length, cmd_p->user_data);
 	} else {
 		if (!strncmp(buffer, HELP_COMMAND, length)) {
-			while (buffer[length] != 0 && isspace(buffer[length] & 0xFF))
+			while (length < buffer_size && buffer[length] != 0
+					&& isspace(buffer[length] & 0xFF))
 				length++;
 			prv_display_help(command_array, buffer + length);
 		} else {

@@ -77,48 +77,30 @@ static void disconnect(void)
 	int ret = 0;
 
 	ret = bt->disconnect(remote_mac_addr);
-	artik_release_api_module(bt);
 	if (ret == S_OK)
 		printf("Disconnect to device [%s] success\n", remote_mac_addr);
 	else
 		printf("Disconnect to device [%s] failed\n", remote_mac_addr);
 }
 
-static int list_item(void)
+static int check_connceted(void)
 {
 	int ret = 0;
-	char any_key = 0;
-	int start_item = -1;
-	int end_item = -1;
-	int num = 0;
-	artik_bt_avrcp_item *item_list, *node;
+	char any_key[16] = {0};
+	bool connected = false;
 
-	fprintf(stdout, "press any key to list item");
-	ret = fscanf(stdin, "%c", &any_key);
+	fprintf(stdout, "press any key to check connect status");
+	ret = fscanf(stdin, "%s", any_key);
 	if (ret < 0)
 		return -1;
 
-	printf("%c\n", any_key);
+	printf("%s\n", any_key);
 
-	ret = bt->avrcp_controller_list_item(start_item, end_item, &item_list);
+	connected = bt->avrcp_controller_is_connected();
 
-	if (ret != S_OK) {
-		printf("avrcp list item failed !\n");
+	if (!connected) {
+		printf("avrcp controller not connected !\n");
 		return -1;
-	}
-
-	node = item_list;
-	while (node != NULL) {
-		artik_bt_avrcp_item_property *property = node->property;
-
-		if (property != NULL) {
-			printf("Item object path : %s\n", node->item_obj_path);
-			printf("#%d  Name: %s\t\t", num, property->name);
-			printf("Type: %s\t\t", property->type);
-			printf("Playable: %d\n", property->playable);
-		}
-		node = node->next_item;
-		num++;
 	}
 
 	return 0;
@@ -128,8 +110,12 @@ static int init_suite1(void)
 {
 	artik_error ret = S_OK;
 
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
+	bt->init();
+
 	printf("%s\n", __func__);
 	ret = remote_info_get();
+
 	if (ret != S_OK) {
 		fprintf(stdout, "remote info get error!\n");
 		return -1;
@@ -140,8 +126,8 @@ static int init_suite1(void)
 		return -1;
 	}
 
-	if (list_item() != 0) {
-		fprintf(stdout, "list_item error!\n");
+	if (check_connceted() != 0) {
+		fprintf(stdout, "Controller not connected!\n");
 		goto error;
 	}
 
@@ -155,6 +141,8 @@ static int clean_suite1(void)
 {
 	printf("\nclean_suite1\n");
 	disconnect();
+	bt->deinit();
+	artik_release_api_module(bt);
 	return 0;
 }
 
@@ -641,9 +629,6 @@ int main(void)
 		goto loop_quit;
 	}
 
-	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
-	bt->init();
-
 	ret = cunit_init(&pSuite);
 	if (ret != S_OK) {
 		fprintf(stdout, "cunit init error!\n");
@@ -653,13 +638,8 @@ int main(void)
 
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();
-	ret = bt->disconnect(remote_mac_addr);
-	if (ret != S_OK)
-		fprintf(stdout, "disconnect error!\n");
 
 loop_quit:
-	bt->deinit();
-
 	CU_cleanup_registry();
 	return S_OK;
 }
