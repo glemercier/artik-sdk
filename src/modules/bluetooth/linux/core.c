@@ -22,6 +22,7 @@
 #include "assigned_numbers.h"
 #include "helper.h"
 #include "device.h"
+#include "adapter.h"
 #include <inttypes.h>
 
 bt_handler hci = {0};
@@ -815,10 +816,12 @@ void _on_interface_added(const gchar *sender_name,
 	g_variant_get(device_array, "a{sa{sv}}", &iter);
 	while (g_variant_iter_loop(iter, "{&s@a{sv}}", &interface, &prop_array)) {
 		if (g_strcmp0(interface, DBUS_IF_DEVICE1) == 0) {
-			device = (artik_bt_device *)malloc(sizeof(artik_bt_device));
-			_get_device_properties(prop_array, device);
-			_user_callback(BT_EVENT_SCAN, device);
-			bt_free_device(device);
+			if (bt_is_scanning()) {
+				device = (artik_bt_device *)malloc(sizeof(artik_bt_device));
+				_get_device_properties(prop_array, device);
+				_user_callback(BT_EVENT_SCAN, device);
+				bt_free_device(device);
+			}
 		} else if (g_strcmp0(interface, DBUS_IF_GATTSERVICE1) == 0) {
 
 			_process_gatt_service(path);
