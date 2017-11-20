@@ -459,10 +459,13 @@ int dhcpc_request(void *handle, struct dhcpc_state *presult,
 	errno = 0;
 
 	/* Save the currently assigned IP address (should be INADDR_ANY) */
-	oldaddr.s_addr = 0;
+	oldaddr.s_addr = INADDR_ANY;
 	if (get_ipv4addr(interface, &oldaddr) < 0) {
-		log_err("Get IPv4 address failed: %s", strerror(errno));
-		return ERROR;
+		/*
+		 * It's OK to fail here, maybe the IP address has not been
+		 * configured yet
+		 */
+		log_dbg("Get IPv4 address failed: %s", strerror(errno));
 	}
 
 	/* Loop until we receive the lease (or an error occurs) */
