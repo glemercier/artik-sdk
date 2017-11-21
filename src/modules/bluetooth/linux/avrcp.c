@@ -90,7 +90,7 @@ static artik_error _get_property(char *_path, char *_interface, char *_property,
 			"Get",
 			g_variant_new("(ss)", _interface, _property),
 			G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE,
-			G_MAXINT, NULL, &error);
+			BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_err("Get property failed: %s\n", error->message);
@@ -223,7 +223,8 @@ artik_error bt_avrcp_controller_change_folder(int index)
 				player_path,
 				DBUS_IF_MEDIA_FOLDER1, "ChangeFolder",
 				g_variant_new("(o)", folder),
-				NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &g_error);
+				NULL, G_DBUS_CALL_FLAGS_NONE,
+				BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &g_error);
 		free(player_path);
 		if (g_error) {
 			log_err("AVRCP Change folder failed :%s\n", g_error->message);
@@ -351,7 +352,8 @@ artik_error bt_avrcp_controller_list_item(int start_item, int end_item,
 
 	result = g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS, player_path,
 			DBUS_IF_MEDIA_FOLDER1, "ListItems", g_variant_new("(a{sv})", builder), NULL,
-			G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &g_error);
+			G_DBUS_CALL_FLAGS_NONE,
+			BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &g_error);
 
 	free(player_path);
 	if (g_error) {
@@ -385,7 +387,8 @@ artik_error bt_avrcp_controller_set_repeat(const char *repeat_mode)
 				DBUS_IF_PROPERTIES, "Set",
 				g_variant_new("(ssv)", DBUS_IF_MEDIA_PLAYER1, "Repeat",
 						g_variant_new_string(repeat_mode)), NULL,
-				G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &g_error);
+				G_DBUS_CALL_FLAGS_NONE,
+				BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &g_error);
 		free(player_path);
 		if (g_error) {
 			log_err("AVRCP set repeat failed :%s\n", g_error->message);
@@ -453,7 +456,7 @@ static artik_error _invoke_remote_control(const char *command)
 				player_path,
 				DBUS_IF_MEDIA_PLAYER1, command, NULL,
 				NULL, G_DBUS_CALL_FLAGS_NONE,
-				G_MAXINT, NULL, &error);
+				BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 		free(player_path);
 		if (error) {
 			log_err("Remote control failed: %s\n", error->message);
@@ -680,7 +683,7 @@ artik_error bt_avrcp_controller_play_item(int index)
 			NULL,
 			NULL,
 			G_DBUS_CALL_FLAGS_NONE,
-			G_MAXINT, NULL, &error);
+			BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_err("AVRCP Play failed :%s\n", error->message);
@@ -717,7 +720,7 @@ artik_error bt_avrcp_controller_add_to_playing(int index)
 			NULL,
 			NULL,
 			G_DBUS_CALL_FLAGS_NONE,
-			G_MAXINT, NULL, &error);
+			BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_err("AVRCP AddtoNowPlaying failed :%s\n", error->message);

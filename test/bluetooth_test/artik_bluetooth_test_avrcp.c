@@ -20,10 +20,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-#include <gio/gio.h>
-#pragma GCC diagnostic pop
 #include <stdbool.h>
 #include <errno.h>
 
@@ -152,7 +148,7 @@ static void prv_start_scan(char *buffer, void *user_data)
 
 static void prv_connect(char *buffer, void *user_data)
 {
-	if (buffer == NULL) {
+	if (strlen(buffer) == 0) {
 		printf("Please input device mac address you want to connect!\n");
 		return;
 	}
@@ -172,7 +168,7 @@ static void prv_connect(char *buffer, void *user_data)
 
 static void prv_disconnect(char *buffer, void *user_data)
 {
-	if (buffer == NULL) {
+	if (strlen(buffer) == 0) {
 		printf("\nPlease input device mac address you want to disconnect!\n");
 		return;
 	}
@@ -199,16 +195,18 @@ static void prv_list_items(char *buffer, void *user_data)
 	printf("Invoke list item...\n");
 
 	if (strlen(buffer) > 0) {
-		char **argv = NULL;
+		char *argv = NULL;
 		char *arg = malloc(strlen(buffer));
 
 		strncpy(arg, buffer, strlen(buffer) - 1);
 		arg[strlen(buffer) - 1] = '\0';
-		argv = g_strsplit(arg, " ", -1);
-		start_item = strtol(argv[0], NULL, 10);
-		end_item = strtol(argv[1], NULL, 10);
-		g_strfreev(argv);
-		free(arg);
+
+		argv = strtok(arg, " ");
+		start_item = strtol(argv, NULL, 10);
+		argv = strtok(NULL, " ");
+		end_item = strtol(argv, NULL, 10);
+		if (arg)
+			free(arg);
 	}
 
 	artik_bt_avrcp_item *item_list, *node;
@@ -244,6 +242,11 @@ static void prv_list_items(char *buffer, void *user_data)
 
 static void prv_change_folder(char *buffer, void *user_data)
 {
+	if (strlen(buffer) == 0) {
+		printf("Please input index of folder!\n");
+		return;
+	}
+
 	artik_error ret = S_OK;
 	char *index = malloc(strlen(buffer));
 	int i = -1;
@@ -252,7 +255,8 @@ static void prv_change_folder(char *buffer, void *user_data)
 	index[strlen(buffer) - 1] = '\0';
 
 	i = index_to_int(index);
-	free(index);
+	if (index)
+		free(index);
 	if (i >= 0) {
 		printf("Invoke change folder...%d\n", i);
 		ret = bt->avrcp_controller_change_folder(i);
@@ -286,6 +290,11 @@ static void prv_get_repeat_mode(char *buffer, void *user_data)
 
 static void prv_set_repeat_mode(char *buffer, void *user_data)
 {
+	if (strlen(buffer) == 0) {
+		printf("Please input repeat mode!\n");
+		return;
+	}
+
 	artik_error ret = S_OK;
 	int repeat;
 	char *repeat_mode = malloc(strlen(buffer));
@@ -301,12 +310,14 @@ static void prv_set_repeat_mode(char *buffer, void *user_data)
 	} else if (strcmp(repeat_mode, "off") == 0) {
 		repeat = 3;
 	} else {
-		free(repeat_mode);
+		if (repeat_mode)
+			free(repeat_mode);
 		printf("invalid repeat mode\n");
 		return;
 	}
 
-	free(repeat_mode);
+	if (repeat_mode)
+		free(repeat_mode);
 
 	ret = bt->avrcp_controller_set_repeat_mode(repeat);
 
@@ -316,6 +327,11 @@ static void prv_set_repeat_mode(char *buffer, void *user_data)
 
 static void prv_play_item(char *buffer, void *user_data)
 {
+	if (strlen(buffer) == 0) {
+		printf("Please input index of media item!\n");
+		return;
+	}
+
 	artik_error ret = S_OK;
 	char *index = malloc(strlen(buffer));
 	int i = -1;
@@ -323,7 +339,8 @@ static void prv_play_item(char *buffer, void *user_data)
 	strncpy(index, buffer, strlen(buffer) - 1);
 	index[strlen(buffer) - 1] = '\0';
 	i = index_to_int(index);
-	free(index);
+	if (index)
+		free(index);
 	if (i > 0) {
 		ret = bt->avrcp_controller_play_item(i);
 		if (ret == E_NOT_SUPPORTED) {
@@ -338,6 +355,11 @@ static void prv_play_item(char *buffer, void *user_data)
 
 static void prv_add_to_playing(char *buffer, void *user_data)
 {
+	if (strlen(buffer) == 0) {
+		printf("Please input index of media item!\n");
+		return;
+	}
+
 	artik_error ret = S_OK;
 	char *index = malloc(strlen(buffer));
 	int i = -1;
@@ -345,7 +367,8 @@ static void prv_add_to_playing(char *buffer, void *user_data)
 	strncpy(index, buffer, strlen(buffer) - 1);
 	index[strlen(buffer) - 1] = '\0';
 	i = index_to_int(index);
-	free(index);
+	if (index)
+		free(index);
 	if (i > 0) {
 		printf("add to playing item:%d\n", i);
 		ret = bt->avrcp_controller_add_to_playing(i);

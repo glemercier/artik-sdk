@@ -74,8 +74,6 @@ static artik_error _call_exe(const char *cmd)
 	if (obexd_buf_len <= 0)
 		log_dbg("get obexd check stream failed!\n");
 
-	pclose(obexd_check_stream);
-
 	if (_obexd_start_check(obexd_buf, OBEXD_CMD) == S_OK) {
 		obexed_is_used = TRUE;
 		log_dbg("obexd is already started!\n");
@@ -91,6 +89,8 @@ static artik_error _call_exe(const char *cmd)
 			err = S_OK;
 	} else
 		err = S_OK;
+
+	pclose(obexd_check_stream);
 
 	return err;
 }
@@ -134,8 +134,8 @@ static void _change_property_status(const char *status)
 	if (transfer_property.status)
 		free(transfer_property.status);
 	transfer_property.status = (char *) malloc(strlen(status) + 1);
-	strncpy(transfer_property.status, status, strlen(status));
-	transfer_property.status[strlen(status)] = '\0';
+	if (transfer_property.status)
+		strncpy(transfer_property.status, status, strlen(status) + 1);
 }
 
 void _ftp_internal_callback(artik_bt_event event, void *data, void *user_data)
@@ -188,7 +188,8 @@ artik_error bt_ftp_create_session(char *dest_addr)
 		DBUS_IF_OBEX_CLIENT,
 		"CreateSession",
 		g_variant_new("(sa{sv})", dest_addr, args),	NULL,
-		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		G_DBUS_CALL_FLAGS_NONE,
+		BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	g_variant_builder_unref(args);
 
@@ -218,7 +219,8 @@ artik_error bt_ftp_remove_session(void)
 		DBUS_BLUEZ_OBEX_PATH,
 		DBUS_IF_OBEX_CLIENT, "RemoveSession",
 		g_variant_new("(o)", session_path),
-		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT,
+		NULL, G_DBUS_CALL_FLAGS_NONE,
+		BT_DBUS_CALL_TIMEOUT_MSEC,
 		NULL, &error);
 
 	if (error) {
@@ -262,7 +264,8 @@ artik_error bt_ftp_change_folder(char *folder)
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "ChangeFolder",
 		g_variant_new("(s)", folder), NULL,
-		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		G_DBUS_CALL_FLAGS_NONE,
+		BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_dbg("Change folder failed :%s\n", error->message);
@@ -296,7 +299,8 @@ artik_error bt_ftp_create_folder(char *folder)
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "CreateFolder",
 		g_variant_new("(s)", folder), NULL,
-		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		G_DBUS_CALL_FLAGS_NONE,
+		BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_dbg("Create folder failed :%s\n", error->message);
@@ -330,7 +334,8 @@ artik_error bt_ftp_delete_file(char *file)
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "Delete",
 		g_variant_new("(s)", file), NULL,
-		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		G_DBUS_CALL_FLAGS_NONE,
+		BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_dbg("Delete file failed :%s\n", error->message);
@@ -366,17 +371,13 @@ static artik_bt_ftp_file *_parse_list(GVariant *result)
 				if (g_strcmp0(key, "Type") == 0) {
 					g_variant_get(value, "s", &type);
 					file_item->file_type = (char *) malloc(strlen(type) + 1);
-					if (file_item->file_type) {
-						strncpy(file_item->file_type, type, strlen(type));
-						file_item->file_type[strlen(type)] = '\0';
-					}
+					if (file_item->file_type)
+						strncpy(file_item->file_type, type, strlen(type) + 1);
 				} else if (g_strcmp0(key, "Name") == 0) {
 					g_variant_get(value, "s", &name);
 					file_item->file_name = (char *) malloc(strlen(name) + 1);
-					if (file_item->file_name) {
-						strncpy(file_item->file_name, name, strlen(name));
-						file_item->file_name[strlen(name)] = '\0';
-					}
+					if (file_item->file_name)
+						strncpy(file_item->file_name, name, strlen(name) + 1);
 				} else if (g_strcmp0(key, "Size") == 0) {
 					g_variant_get(value, "t", &size);
 					file_item->size = size;
@@ -441,8 +442,8 @@ artik_error bt_ftp_list_folder(artik_bt_ftp_file **file_list)
 	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "ListFolder",
-		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT,
-		NULL, &error);
+		NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+		BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_dbg("List folder failed :%s\n", error->message);
@@ -490,7 +491,8 @@ artik_error bt_ftp_get_file(char *target_file, char *source_file)
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "GetFile",
 		g_variant_new("(ss)", target_file, source_file), NULL,
-		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		G_DBUS_CALL_FLAGS_NONE,
+		BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_dbg("Get file failed :%s\n", error->message);
@@ -527,7 +529,8 @@ artik_error bt_ftp_put_file(char *source_file, char *target_file)
 		DBUS_BLUEZ_OBEX_BUS, session_path,
 		DBUS_IF_OBEX_FILE_TRANSFER, "PutFile",
 		g_variant_new("(ss)", source_file, target_file), NULL,
-		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
+		G_DBUS_CALL_FLAGS_NONE,
+		BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &error);
 
 	if (error) {
 		log_dbg("Put file failed :%s\n", error->message);

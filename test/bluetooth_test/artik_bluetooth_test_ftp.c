@@ -41,6 +41,8 @@
 
 static artik_loop_module *loop_main;
 static artik_bluetooth_module *bt;
+static int watch_id;
+static int signal_id;
 
 static int uninit(void *user_data)
 {
@@ -100,6 +102,7 @@ static void prv_get(char *buffer, void *user_data)
 		strncpy(arg, buffer, strlen(buffer) - 1);
 		arg[strlen(buffer) - 1] = '\0';
 		argv = g_strsplit(arg, " ", -1);
+		free(arg);
 	}
 	if (argv == NULL)
 		goto quit;
@@ -131,6 +134,7 @@ static void prv_put(char *buffer, void *user_data)
 		strncpy(arg, buffer, strlen(buffer) - 1);
 		arg[strlen(buffer) - 1] = '\0';
 		argv = g_strsplit(arg, " ", -1);
+		free(arg);
 	}
 	if (argv == NULL)
 		goto quit;
@@ -160,7 +164,7 @@ static void prv_change(char *buffer, void *user_data)
 	folder = (char *)malloc(strlen(buffer));
 	if (folder == NULL)
 		goto quit;
-	strncpy(folder, buffer, strlen(buffer));
+	strncpy(folder, buffer, strlen(buffer) - 1);
 	folder[strlen(buffer) - 1] = '\0';
 
 	fprintf(stdout, "Start testing change folder to %s...\n", folder);
@@ -184,7 +188,7 @@ static void prv_create(char *buffer, void *user_data)
 	folder = (char *)malloc(strlen(buffer));
 	if (folder == NULL)
 		goto quit;
-	strncpy(folder, buffer, strlen(buffer));
+	strncpy(folder, buffer, strlen(buffer) - 1);
 	folder[strlen(buffer) - 1] = '\0';
 
 	fprintf(stdout, "Start testing create folder %s...\n", folder);
@@ -212,6 +216,8 @@ static void prv_quit(char *buffer, void *user_data)
 	ret = artik_release_api_module(bt);
 	if (ret != S_OK)
 		fprintf(stdout, "<FTP>: release bt module error!\n");
+	loop_main->remove_fd_watch(watch_id);
+	loop_main->remove_signal_watch(signal_id);
 	loop_main->quit();
 }
 
@@ -241,7 +247,7 @@ static void prv_delete(char *buffer, void *user_data)
 	file = (char *)malloc(strlen(buffer));
 	if (file == NULL)
 		goto quit;
-	strncpy(file, buffer, strlen(buffer));
+	strncpy(file, buffer, strlen(buffer) - 1);
 	file[strlen(buffer) - 1] = '\0';
 
 	fprintf(stdout, "Start testing delete file %s...\n", file);
@@ -324,7 +330,7 @@ static void on_bond(void *data, void *user_data)
 			loop_main->add_fd_watch(STDIN_FILENO,
 				(WATCH_IO_IN | WATCH_IO_ERR | WATCH_IO_HUP
 				| WATCH_IO_NVAL),
-				on_keyboard_received, NULL, NULL);
+				on_keyboard_received, NULL, &watch_id);
 			fprintf(stdout, "<FTP>: call creat session success!\n");
 		} else {
 			fprintf(stdout, "<FTP>: call creat session error!\n");
@@ -394,7 +400,7 @@ exit:
 	return ret;
 }
 
-artik_error get_addr(char *remote_addr)
+static artik_error get_addr(char *remote_addr)
 {
 	char mac_other[2] = "";
 	artik_error ret = S_OK;
@@ -418,11 +424,6 @@ static artik_error set_callback(char *remote_addr)
 	if (ret != S_OK)
 		return ret;
 
-	ret = bt->set_callback(BT_EVENT_CONNECT, user_callback,
-			     (void *)remote_addr);
-	if (ret != S_OK)
-		return ret;
-
 	ret = bt->set_callback(BT_EVENT_FTP, prop_callback, NULL);
 	if (ret != S_OK)
 		return ret;
@@ -430,25 +431,10 @@ static artik_error set_callback(char *remote_addr)
 	return ret;
 }
 
-static artik_error agent_register(void)
-{
-	artik_error ret = S_OK;
-
-	artik_bt_agent_capability g_capa = BT_CAPA_KEYBOARDDISPLAY;
-
-	bt->set_discoverable(true);
-
-	printf("Invoke register...\n");
-	bt->agent_register_capability(g_capa);
-	bt->agent_set_default();
-
-	return ret;
-}
-
 int main(int argc, char *argv[])
 {
 	artik_error ret = S_OK;
-	char remote_address[MAX_BDADDR_LEN] = "";
+	char remote_address[MAX_BDADDR_LEN + 1] = "";
 
 	if (!artik_is_module_available(ARTIK_MODULE_BLUETOOTH)) {
 		fprintf(stdout,
@@ -468,13 +454,6 @@ int main(int argc, char *argv[])
 
 	bt->init();
 
-	ret = agent_register();
-	if (ret != S_OK) {
-		fprintf(stdout, "<FTP>: Agent register error!\n");
-		goto loop_quit;
-	}
-	fprintf(stdout, "<FTP>: Agent register success!\n");
-
 	ret = bluetooth_scan();
 	if (ret != S_OK) {
 		fprintf(stdout, "<FTP>: Bluetooth scan error!\n");
@@ -493,8 +472,12 @@ int main(int argc, char *argv[])
 		goto loop_quit;
 	}
 
-	bt->start_bond(remote_address);
-	loop_main->add_signal_watch(SIGINT, uninit, NULL, NULL);
+	ret = bt->start_bond(remote_address);
+	if (ret != S_OK) {
+		fprintf(stdout, "<FTP>: Pair remote server error!\n");
+		goto loop_quit;
+	}
+	loop_main->add_signal_watch(SIGINT, uninit, NULL, &signal_id);
 	loop_main->run();
 
 loop_quit:

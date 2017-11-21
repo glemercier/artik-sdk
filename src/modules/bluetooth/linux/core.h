@@ -88,6 +88,7 @@ extern "C" {
 #define BT_UUID_LENGHT			32
 #define BT_DEVICE_OBJECT_PATH	38
 #define SESSION_PATH_LEN		43
+#define BT_DBUS_CALL_TIMEOUT_MSEC	5000
 
 #define error_list(x)	{x, bt_error_message[x]},
 
