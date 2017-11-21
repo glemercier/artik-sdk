@@ -35,14 +35,17 @@
 #include <artik_bluetooth.h>
 
 #define MAX_PACKET_SIZE 1024
+#define DISCOVERABLE_TIMEOUT 120
 
-artik_bluetooth_module *bt;
-artik_loop_module *loop;
+static artik_bluetooth_module *bt;
+static artik_loop_module *loop;
 static char buffer[MAX_PACKET_SIZE];
+static int watch_id;
 
 static int uninit(void *user_data)
 {
 	fprintf(stdout, "SPP loop quit\n");
+	loop->remove_fd_watch(watch_id);
 	loop->quit();
 	return true;
 }
@@ -84,7 +87,7 @@ static void callback_on_spp_connect(artik_bt_event event,
 
 	loop->add_fd_watch(spp_property->fd,
 			WATCH_IO_IN | WATCH_IO_ERR | WATCH_IO_HUP | WATCH_IO_NVAL,
-			on_socket, NULL, NULL);
+			on_socket, NULL, &watch_id);
 }
 
 static void callback_on_spp_release(artik_bt_event event,
@@ -203,6 +206,7 @@ static artik_error agent_register(void)
 	artik_error ret = S_OK;
 	artik_bt_agent_capability g_capa = BT_CAPA_KEYBOARDDISPLAY;
 
+	bt->set_discoverableTimeout(DISCOVERABLE_TIMEOUT);
 	ret = bt->set_discoverable(true);
 	if (ret != S_OK)
 		return ret;
@@ -249,8 +253,8 @@ static artik_error spp_profile_register(void)
 	profile_option.role = "server";
 	profile_option.channel = 22;
 	profile_option.PSM = 3;
-	profile_option.require_authentication = TRUE;
-	profile_option.auto_connect = TRUE;
+	profile_option.require_authentication = true;
+	profile_option.auto_connect = true;
 	profile_option.version = 10;
 	profile_option.features = 20;
 
@@ -265,6 +269,10 @@ int main(int argc, char *argv[])
 
 	if (!artik_is_module_available(ARTIK_MODULE_BLUETOOTH)) {
 		printf("<SPP>: Bluetooth module is not available\n");
+		return -1;
+	}
+	if (!artik_is_module_available(ARTIK_MODULE_LOOP)) {
+		printf("<SPP>: Loop module is not available\n");
 		return -1;
 	}
 
