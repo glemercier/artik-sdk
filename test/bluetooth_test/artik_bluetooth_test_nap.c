@@ -42,6 +42,16 @@ typedef void (*signal_fuc)(int);
 static artik_bluetooth_module *bt;
 static artik_loop_module *loop;
 static artik_error err;
+static int signal_id;
+
+static char buffer[PROC_BUFFER_SIZE];
+
+static void ask(char *prompt)
+{
+	printf("%s\n", prompt);
+	if (fgets(buffer, PROC_BUFFER_SIZE, stdin)  == NULL)
+		fprintf(stdout, "\ncmd fgets error\n");
+}
 
 static char *interface_name_cut(char *buf, char **name)
 {
@@ -107,13 +117,117 @@ static artik_error test_bluetooth_nap(char *bridge)
 	printf("Invoke pan register...\n");
 	ret = bt->pan_register("nap", bridge);
 
-	if (ret == S_OK) {
-		bt->set_discoverableTimeout(DISCOVERABLE_TIMEOUT);
-		bt->set_discoverable(true);
-	} else {
+	if (ret != S_OK) {
 		printf("register pan failed\n");
 		return ret;
 	}
+	return ret;
+}
+
+void on_agent_request_pincode(artik_bt_event event,
+	void *data, void *user_data)
+{
+	artik_bt_agent_request_property *request_property =
+		(artik_bt_agent_request_property *)data;
+
+	fprintf(stdout, "<AGENT>: Request pincode (%s)\n",
+		request_property->device);
+	ask("Enter PIN Code: ");
+
+	bt->agent_send_pincode(request_property->handle, buffer);
+}
+
+void on_agent_request_passkey(artik_bt_event event,
+	void *data, void *user_data)
+{
+	unsigned long passkey;
+	artik_bt_agent_request_property *request_property =
+		(artik_bt_agent_request_property *)data;
+
+	fprintf(stdout, "<AGENT>: Request passkey (%s)\n",
+		request_property->device);
+	ask("Enter passkey (1~999999): ");
+	passkey = strtoul(buffer, NULL, 10);
+	if ((passkey > 0) && (passkey < 999999))
+		bt->agent_send_passkey(request_property->handle, (unsigned int)passkey);
+	else
+		fprintf(stdout, "<AGENT>: get passkey error\n");
+}
+
+void on_agent_confirmation(artik_bt_event event,
+	void *data, void *user_data)
+{
+	artik_bt_agent_confirmation_property *confirmation_property =
+		(artik_bt_agent_confirmation_property *)data;
+
+	fprintf(stdout, "<AGENT>: Request confirmation (%s)\nPasskey: %06u\n",
+		confirmation_property->device, confirmation_property->passkey);
+
+	ask("Confirm passkey? (yes/no): ");
+	if (!strncmp(buffer, "yes", 3))
+		bt->agent_send_empty_response(confirmation_property->handle);
+	else
+		bt->agent_send_error(confirmation_property->handle,
+			BT_AGENT_REQUEST_REJECTED, "");
+}
+
+void on_agent_authorization(artik_bt_event event,
+	void *data, void *user_data)
+{
+	artik_bt_agent_request_property *request_property =
+		(artik_bt_agent_request_property *)data;
+
+	fprintf(stdout, "<AGENT>: Request authorization (%s)\n",
+		request_property->device);
+	ask("Authorize? (yes/no): ");
+	if (!strncmp(buffer, "yes", 3))
+		bt->agent_send_empty_response(request_property->handle);
+	else
+		bt->agent_send_error(request_property->handle,
+			BT_AGENT_REQUEST_REJECTED, "");
+}
+
+void on_agent_authorize_service(artik_bt_event event,
+	void *data, void *user_data)
+{
+	artik_bt_agent_authorize_property *authorize_property =
+		(artik_bt_agent_authorize_property *)data;
+
+	fprintf(stdout, "<AGENT>: Authorize Service (%s, %s)\n",
+		authorize_property->device, authorize_property->uuid);
+	ask("Authorize connection? (yes/no): ");
+	if (!strncmp(buffer, "yes", 3))
+		bt->agent_send_empty_response(authorize_property->handle);
+	else
+		bt->agent_send_error(authorize_property->handle,
+			BT_AGENT_REQUEST_REJECTED, "");
+}
+
+static artik_error agent_register(void)
+{
+	artik_error ret = S_OK;
+	artik_bt_agent_capability g_capa = BT_CAPA_KEYBOARDDISPLAY;
+
+	bt->set_discoverableTimeout(DISCOVERABLE_TIMEOUT);
+	ret = bt->set_discoverable(true);
+	if (ret != S_OK)
+		return ret;
+
+	ret = bt->agent_register_capability(g_capa);
+	if (ret != S_OK)
+		return ret;
+
+	artik_bt_callback_property callback_property[] = {
+		{BT_EVENT_AGENT_REQUEST_PINCODE, on_agent_request_pincode, NULL},
+		{BT_EVENT_AGENT_REQUEST_PASSKEY, on_agent_request_passkey, NULL},
+		{BT_EVENT_AGENT_CONFIRM, on_agent_confirmation, NULL},
+		{BT_EVENT_AGENT_AUTHORIZE, on_agent_authorization, NULL},
+		{BT_EVENT_AGENT_AUTHORIZE_SERVICE, on_agent_authorize_service, NULL}
+	};
+
+	ret = bt->set_callbacks(callback_property, 5);
+
+	ret = bt->agent_set_default();
 
 	return ret;
 }
@@ -125,7 +239,9 @@ static int uninit(void *user_data)
 		printf("Unregister Error:%d!\r\n", err);
 	else
 		printf("Unregister OK!\r\n");
+	err = bt->agent_unregister();
 
+	loop->remove_signal_watch(signal_id);
 	loop->quit();
 
 	return true;
@@ -256,6 +372,13 @@ int main(int argc, char *argv[])
 
 	bt->init();
 
+	err = agent_register();
+	if (err != S_OK) {
+		fprintf(stdout, "<PANU>: Agent register error!\n");
+		goto out;
+	}
+	fprintf(stdout, "<PANU>: Agent register success!\n");
+
 	err = test_bluetooth_nap(bridge);
 	if (err != S_OK) {
 		printf("Register return with error: %d!\r\n", err);
@@ -264,7 +387,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	printf("<NAP> Rgister return is OK:%d!\r\n", err);
-	loop->add_signal_watch(SIGINT, uninit, NULL, NULL);
+	loop->add_signal_watch(SIGINT, uninit, NULL, &signal_id);
 	sleep(1);
 
 	loop->run();
@@ -291,11 +414,11 @@ out:
 		return -1;
 	}
 	strncpy(buf, "iptables -t nat -D POSTROUTING -s 10.0.0.1/255.255.255.0 "
-		"-j MASQUERADE", CMD_LENGTH - 1);
+		"-j MASQUERADE", CMD_LENGTH);
 	if (system(buf) < 0) {
 		printf("cmd system error\n");
 		return -1;
 	}
 
-	return -1;
+	return 0;
 }
