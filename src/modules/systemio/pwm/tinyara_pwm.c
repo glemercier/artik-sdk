@@ -27,6 +27,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include "artik_log.h"
 #include "artik_pwm.h"
 #include "os_pwm.h"
 
@@ -34,45 +35,54 @@
 
 #define MAX_SIZE	32
 
-#define TINYARA_PWM_ENABLE	1
-#define TINYARA_PWM_DISABLE	0
-
 artik_error os_pwm_request(artik_pwm_config *config)
 {
+#ifdef CONFIG_PWM
 	int fd;
 	char devname[MAX_SIZE];
-
-	artik_error res = S_OK;
 
 	snprintf(devname, MAX_SIZE, "/dev/pwm%d", config->pin_num);
 	fd = open(devname, O_RDWR);
 	if (fd < 0) {
-		fprintf(stderr, "Failed to open %s (%d)\n", devname, errno);
+		log_err("Failed to open %s (%d)", devname, errno);
 		return E_ACCESS_DENIED;
 	}
 	config->user_data = (void *)fd;
 
-	return res;
+	return S_OK;
+#else
+	return E_NOT_SUPPORTED;
+#endif
 }
 
 artik_error os_pwm_release(artik_pwm_config *config)
 {
-	/*TODO : DISABLE*/
+#ifdef CONFIG_PWM
+	artik_error res = S_OK;
 
-	artik_error res = os_pwm_enable(config, TINYARA_PWM_DISABLE);
-
+	res = os_pwm_enable(config, TINYARA_PWM_DISABLE);
 	close((int)config->user_data);
 	config->user_data = NULL;
 
 	return res;
+#else
+	return E_NOT_SUPPORTED;
+#endif
 }
 
-artik_error os_pwm_enable(artik_pwm_config *config, char value)
+artik_error os_pwm_enable(artik_pwm_config *config, bool state)
 {
 #ifdef CONFIG_PWM
-	return ioctl((int) config->user_data,
-			value == TINYARA_PWM_ENABLE ?
-						PWMIOC_START : PWMIOC_STOP, 0);
+	int ret = 0;
+
+	ret = ioctl((int) config->user_data, state ? PWMIOC_START : PWMIOC_STOP, 0);
+
+	if (ret < 0) {
+		log_err("Failed to %s PWM (err=%d)", state ? "enable" : "disable", ret);
+		return E_ACCESS_DENIED;
+	}
+
+	return S_OK;
 #else
 	return E_NOT_SUPPORTED;
 #endif
@@ -102,7 +112,7 @@ artik_error os_pwm_set_period(artik_pwm_config *config, unsigned int value)
 artik_error os_pwm_set_polarity(artik_pwm_config *config,
 		artik_pwm_polarity_t value)
 {
-	return S_OK;
+	return E_NOT_SUPPORTED;
 }
 
 artik_error os_pwm_set_duty_cycle(artik_pwm_config *config, unsigned int value)

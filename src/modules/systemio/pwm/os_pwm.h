@@ -23,7 +23,7 @@
 
 artik_error os_pwm_request(artik_pwm_config *config);
 artik_error os_pwm_release(artik_pwm_config *config);
-artik_error os_pwm_enable(artik_pwm_config *config, char value);
+artik_error os_pwm_enable(artik_pwm_config *config, bool state);
 artik_error os_pwm_set_period(artik_pwm_config *config, unsigned int value);
 artik_error os_pwm_set_polarity(artik_pwm_config *config,
 				artik_pwm_polarity_t value);

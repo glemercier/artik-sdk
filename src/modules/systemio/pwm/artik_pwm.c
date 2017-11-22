@@ -111,7 +111,7 @@ artik_error artik_pwm_enable(artik_pwm_handle handle)
 	if (!node)
 		return E_BAD_ARGS;
 
-	return os_pwm_enable(&node->config, '1');
+	return os_pwm_enable(&node->config, true);
 }
 
 artik_error artik_pwm_disable(artik_pwm_handle handle)
@@ -122,7 +122,7 @@ artik_error artik_pwm_disable(artik_pwm_handle handle)
 	if (!node)
 		return E_BAD_ARGS;
 
-	return os_pwm_enable(&node->config, '0');
+	return os_pwm_enable(&node->config, false);
 }
 
 artik_error artik_pwm_set_period(artik_pwm_handle handle, unsigned int value)

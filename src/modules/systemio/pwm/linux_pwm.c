@@ -284,9 +284,13 @@ exit:
 	return res;
 }
 
-artik_error os_pwm_enable(artik_pwm_config *config, char value)
+artik_error os_pwm_enable(artik_pwm_config *config, bool state)
 {
+	char value;
+
 	log_dbg("");
+
+	value = state ? '1' : '0';
 
 	return os_pwm_ioctl(config->user_data, ARTIK_PWM_ENB, &value);
 }
