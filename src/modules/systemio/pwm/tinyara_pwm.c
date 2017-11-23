@@ -60,7 +60,7 @@ artik_error os_pwm_release(artik_pwm_config *config)
 #ifdef CONFIG_PWM
 	artik_error res = S_OK;
 
-	res = os_pwm_enable(config, TINYARA_PWM_DISABLE);
+	res = os_pwm_enable(config, false);
 	close((int)config->user_data);
 	config->user_data = NULL;
 
