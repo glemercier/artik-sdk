@@ -4,6 +4,9 @@ artik_ssl_config *copy_ssl_config(artik_ssl_config *from)
 {
 	artik_ssl_config *to = NULL;
 
+	if (!from)
+		return NULL;
+
 	to = malloc(sizeof(artik_ssl_config));
 	if (!to)
 		return NULL;
