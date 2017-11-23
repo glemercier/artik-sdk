@@ -3,6 +3,59 @@
  * This page details the changes operated on the SDK API between consecutive
  * releases.
  *
+ * \section one_six_to_one_seven Version 1.6 to 1.7
+ *
+ * \subsection one_six_to_one_seven_a305_platform A305 Platform
+ *
+ * Add support for new ARTIK 305s module.
+ *
+ * \subsection one_six_to_one_seven_security Security
+ *
+ * Add support for the post-provisioned manufacturer certificate in the
+ * Secure Element. Modify artik_ssl_config to allow the application to choose
+ * between the ARTIK and manufacturer certificates when doing TLS handshake.
+ *
+ * The \b security module has been moved from the \b connectivity library
+ * to the \b base library.
+ *
+ * \subsection one_six_to_one_seven_bluetooth Bluetooth
+ *
+ * Add new APIs:
+ * - \ref artik_bluetooth_module::init
+ * - \ref artik_bluetooth_module::deinit
+ * - \ref artik_bluetooth_module::gatt_remove_service
+ * - \ref artik_bluetooth_module::gatt_remove_characteristic
+ * - \ref artik_bluetooth_module::gatt_remove_descriptor
+ * - \ref artik_bluetooth_module::avrcp_controller_free_property
+ * - \ref artik_bluetooth_module::avrcp_controller_get_metadata
+ * - \ref artik_bluetooth_module::avrcp_controller_free_metadata
+ *
+ * The \ref artik_bluetooth_module::init must be called priori to calling
+ * any other API in order to initialize the Bluetooth subsystem. When the
+ * module is longer used, the application must call
+ * \ref artik_bluetooth_module::deinit to release associated resources. Note
+ * that this is not needed when calling the C++ Bluetooth API, since it is
+ * already handled by the constructor and destructor of the artik::Bluetooth
+ * object.
+ *
+ * The GATT related functions allow a better dynamic control of allocated
+ * resources, by providing functions to easily release resources allocated
+ * by other functions.
+ *
+ * The AVRCP functions provide a way to easily release the resources allocated
+ * when retrieving properties, and add a new API to retrieve the metadata of
+ * the currently playing track, along with another function used to release
+ * the created resources when no longer used.
+ *
+ * \subsection one_six_to_one_seven_serial Serial
+ *
+ * Add support for higher baudrates, from 230400 baud to 4 Mbaud.
+ *
+ * \subsection one_six_to_one_seven_wifi Wi-Fi
+ *
+ * Add new artik_wifi_module::get_info API to retrieve information about the
+ * current state of the Wi-Fi connection.
+ *
  * \section one_five_to_one_six Version 1.5 to 1.6
  *
  * \subsection one_five_to_one_six_time Time
