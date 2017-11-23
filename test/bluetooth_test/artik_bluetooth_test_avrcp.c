@@ -198,6 +198,9 @@ static void prv_list_items(char *buffer, void *user_data)
 		char *argv = NULL;
 		char *arg = malloc(strlen(buffer));
 
+		if (!arg)
+			return;
+
 		strncpy(arg, buffer, strlen(buffer) - 1);
 		arg[strlen(buffer) - 1] = '\0';
 
@@ -251,6 +254,9 @@ static void prv_change_folder(char *buffer, void *user_data)
 	char *index = malloc(strlen(buffer));
 	int i = -1;
 
+	if (!index)
+		return;
+
 	strncpy(index, buffer, strlen(buffer) - 1);
 	index[strlen(buffer) - 1] = '\0';
 
@@ -299,6 +305,9 @@ static void prv_set_repeat_mode(char *buffer, void *user_data)
 	int repeat;
 	char *repeat_mode = malloc(strlen(buffer));
 
+	if (!repeat_mode)
+		return;
+
 	strncpy(repeat_mode, buffer, strlen(buffer) - 1);
 	repeat_mode[strlen(buffer) - 1] = '\0';
 	if (strcmp(repeat_mode, "single") == 0) {
@@ -336,6 +345,9 @@ static void prv_play_item(char *buffer, void *user_data)
 	char *index = malloc(strlen(buffer));
 	int i = -1;
 
+	if (!index)
+		return;
+
 	strncpy(index, buffer, strlen(buffer) - 1);
 	index[strlen(buffer) - 1] = '\0';
 	i = index_to_int(index);
@@ -363,6 +375,9 @@ static void prv_add_to_playing(char *buffer, void *user_data)
 	artik_error ret = S_OK;
 	char *index = malloc(strlen(buffer));
 	int i = -1;
+
+	if (!index)
+		return;
 
 	strncpy(index, buffer, strlen(buffer) - 1);
 	index[strlen(buffer) - 1] = '\0';

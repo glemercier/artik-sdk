@@ -83,15 +83,13 @@ static void disconnect(void)
 		printf("Disconnect to device [%s] failed\n", remote_mac_addr);
 }
 
-static int check_connceted(void)
+static int check_connected(void)
 {
-	int ret = 0;
-	char any_key[16] = {0};
+	char any_key[16];
 	bool connected = false;
 
 	fprintf(stdout, "press any key to check connect status");
-	ret = fscanf(stdin, "%s", any_key);
-	if (ret < 0)
+	if (fgets(any_key, 16, stdin) == NULL)
 		return -1;
 
 	printf("%s\n", any_key);
@@ -126,7 +124,7 @@ static int init_suite1(void)
 		return -1;
 	}
 
-	if (check_connceted() != 0) {
+	if (check_connected() != 0) {
 		fprintf(stdout, "Controller not connected!\n");
 		goto error;
 	}

@@ -59,7 +59,7 @@ typedef struct {
 
 typedef struct {
 	int loop_process_id;
-	const char *url;
+	char *url;
 	artik_http_headers *headers;
 	const char *body;
 	char *response;
@@ -617,7 +617,7 @@ artik_error os_http_get_stream_async(const char *url,
 		if (!interface->ssl) {
 			if (interface->headers)
 				free(interface->headers);
-
+			free(interface->url);
 			free(interface);
 			return E_NO_MEM;
 		}
