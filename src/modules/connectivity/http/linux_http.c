@@ -806,9 +806,13 @@ artik_error os_http_get_async(const char *url, artik_http_headers *headers,
 
 	interface->url = strdup(url);
 	if (headers) {
-		interface->headers = malloc(sizeof(artik_http_headers));
-		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+		interface->headers = copy_http_headers(headers);
+		if (!interface->headers) {
+			log_err("Failed to allocate memory");
+			return E_NO_MEM;
+		}
 	}
+
 	interface->response_cb_params.callback = callback;
 	interface->response_cb_params.user_data = user_data;
 	interface->ssl = copy_ssl_config(ssl);
@@ -1004,9 +1008,13 @@ artik_error os_http_post_async(const char *url, artik_http_headers *headers,
 
 	interface->url = strdup(url);
 	if (headers) {
-		interface->headers = malloc(sizeof(artik_http_headers));
-		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+		interface->headers = copy_http_headers(headers);
+		if (!interface->headers) {
+			log_err("Failed to allocate memory");
+			return E_NO_MEM;
+		}
 	}
+
 	interface->body = body;
 	interface->response_cb_params.callback = callback;
 	interface->response_cb_params.user_data = user_data;
@@ -1199,8 +1207,11 @@ artik_error os_http_put_async(const char *url, artik_http_headers *headers,
 
 	interface->url = strdup(url);
 	if (headers) {
-		interface->headers = malloc(sizeof(artik_http_headers));
-		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+		interface->headers = copy_http_headers(headers);
+		if (!interface->headers) {
+			log_err("Failed to allocate memory");
+			return E_NO_MEM;
+		}
 	}
 	interface->body = body;
 	interface->response_cb_params.callback = callback;
@@ -1391,8 +1402,11 @@ artik_error os_http_delete_async(const char *url, artik_http_headers *headers,
 
 	interface->url = strdup(url);
 	if (headers) {
-		interface->headers = malloc(sizeof(artik_http_headers));
-		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+		interface->headers = copy_http_headers(headers);
+		if (!interface->headers) {
+			log_err("Failed to allocate memory");
+			return E_NO_MEM;
+		}
 	}
 	interface->response_cb_params.callback = callback;
 	interface->response_cb_params.user_data = user_data;
