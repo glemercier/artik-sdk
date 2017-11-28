@@ -181,7 +181,7 @@ static artik_error os_pwm_init(artik_pwm_config *config,
 
 static artik_error os_pwm_clean(artik_pwm_user_data_t *user_data)
 {
-	int len = TAB_SIZE(tab_value_path) - 1;
+	int len = TAB_SIZE(tab_value_path);
 	int i = ARTIK_PWM_ENB;
 
 	if (user_data) {
