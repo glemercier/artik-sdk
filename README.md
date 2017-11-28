@@ -1,4 +1,9 @@
-# ARTIK SDK Documentation
+# ARTIK SDK
+
+[![License](https://img.shields.io/github/license/SamsungARTIK/artik-sdk.svg)](LICENSE)
+[![Github Release](https://img.shields.io/github/release/SamsungARTIK/artik-sdk.svg)](https://github.com/SamsungARTIK/artik-sdk/releases)
+[![GitHub Release Date](https://img.shields.io/github/release-date/SamsungARTIK/artik-sdk.svg)](https://github.com/SamsungARTIK/artik-sdk/releases)
+[![Build Status](https://travis-ci.org/SamsungARTIK/artik-sdk.svg)](https://travis-ci.org/SamsungARTIK/artik-sdk)
 
 ## Introduction
 
