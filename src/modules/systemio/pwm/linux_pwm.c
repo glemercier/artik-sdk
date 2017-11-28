@@ -67,8 +67,6 @@ static char *const tab_value_path[] = {
 #define TAB_SIZE(x) (sizeof(x)/sizeof(*x))
 
 #define MAX_SIZE	128
-#define OS_PWM_ON	'1'
-#define OS_PWM_OFF	'0'
 
 static char *itoa(int n, char *s)
 {
@@ -201,7 +199,7 @@ exit:
 
 static artik_error os_pwm_clean(artik_pwm_user_data_t *user_data)
 {
-	int len = TAB_SIZE(tab_value_path) - 1;
+	int len = TAB_SIZE(tab_value_path);
 	int i = ARTIK_PWM_ENB;
 
 	log_dbg("");
@@ -235,7 +233,7 @@ artik_error os_pwm_request(artik_pwm_config *config)
 	if (res != S_OK)
 		return res;
 
-	res = os_pwm_enable(config, OS_PWM_ON);
+	res = os_pwm_enable(config, true);
 	if (res != S_OK)
 		goto exit;
 
@@ -268,7 +266,7 @@ artik_error os_pwm_release(artik_pwm_config *config)
 	if (res != S_OK)
 		goto exit;
 
-	res = os_pwm_enable(config, OS_PWM_OFF);
+	res = os_pwm_enable(config, false);
 	if (res != S_OK)
 		goto exit;
 
@@ -302,7 +300,7 @@ artik_error os_pwm_set_period(artik_pwm_config *config, unsigned int value)
 
 	log_dbg("");
 
-	res = os_pwm_enable(config, OS_PWM_OFF);
+	res = os_pwm_enable(config, false);
 	if (res != S_OK)
 		goto exit;
 
@@ -310,7 +308,7 @@ artik_error os_pwm_set_period(artik_pwm_config *config, unsigned int value)
 	if (res != S_OK)
 		goto exit;
 
-	res = os_pwm_enable(config, OS_PWM_ON);
+	res = os_pwm_enable(config, true);
 	if (res != S_OK)
 		goto exit;
 
@@ -328,7 +326,7 @@ artik_error os_pwm_set_polarity(artik_pwm_config *config,
 	if ((value != ARTIK_PWM_POLR_NORMAL) && (value != ARTIK_PWM_POLR_INVERT))
 		return E_BAD_ARGS;
 
-	res = os_pwm_enable(config, OS_PWM_OFF);
+	res = os_pwm_enable(config, false);
 	if (res != S_OK)
 		goto exit;
 
@@ -337,7 +335,7 @@ artik_error os_pwm_set_polarity(artik_pwm_config *config,
 	if (res != S_OK)
 		goto exit;
 
-	res = os_pwm_enable(config, OS_PWM_ON);
+	res = os_pwm_enable(config, true);
 	if (res != S_OK)
 		goto exit;
 
@@ -352,7 +350,7 @@ artik_error os_pwm_set_duty_cycle(artik_pwm_config *config, unsigned int value)
 
 	log_dbg("");
 
-	res = os_pwm_enable(config, OS_PWM_OFF);
+	res = os_pwm_enable(config, false);
 	if (res != S_OK)
 		goto exit;
 
@@ -360,7 +358,7 @@ artik_error os_pwm_set_duty_cycle(artik_pwm_config *config, unsigned int value)
 	if (res != S_OK)
 		goto exit;
 
-	res = os_pwm_enable(config, OS_PWM_ON);
+	res = os_pwm_enable(config, true);
 	if (res != S_OK)
 		goto exit;
 
