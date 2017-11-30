@@ -72,7 +72,7 @@ static int websocket_parse_uri(const char *uri, char **host, char **path,
 	tmp = strchr(uri + idx, ':');
 	if (tmp) {
 		char *end = NULL;
-		unsigned long p = strtoul(tmp, &end, 10);
+		unsigned long p = strtoul(tmp + 1, &end, 10);
 
 		if (p > 0)
 			*port = (int)p;
