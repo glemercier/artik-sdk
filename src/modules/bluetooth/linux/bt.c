@@ -27,12 +27,13 @@ artik_error bt_init(void)
 
 	log_dbg("%s", __func__);
 
-	if (hci.conn)
+	if (hci.refcnt++)
 		return S_OK;
 
 	hci.conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &e);
 	if (e != NULL) {
 		log_err("%s", e->message);
+		hci.refcnt = 0;
 		g_error_free(e);
 		return E_BT_ERROR;
 	}
@@ -72,6 +73,9 @@ artik_error bt_deinit(void)
 	GError *e = NULL;
 
 	log_dbg("%s", __func__);
+
+	if (!hci.refcnt || --hci.refcnt)
+		return S_OK;
 
 	g_dbus_connection_signal_unsubscribe(hci.conn,
 		GPOINTER_TO_INT(g_hash_table_lookup(hci.subscribe_ids,

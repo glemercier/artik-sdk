@@ -211,6 +211,7 @@ typedef struct {
 	GSource *source;
 	bt_device_state state;
 	prop_change_callback prop_callback;
+	int refcnt;
 } bt_handler;
 
 extern bt_handler hci;
