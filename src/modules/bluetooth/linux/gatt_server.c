@@ -844,23 +844,7 @@ exit:
 
 artik_error bt_gatt_remove_service(int sid)
 {
-	bt_gatt_service *svc = NULL;
-
-	log_dbg("%s sid: %d", __func__, sid);
-
-	svc = _find_svc_list_by_id(sid);
-	if (!svc)
-		return E_BT_ERROR;
-
-	hci.gatt_services = g_slist_remove(hci.gatt_services, svc);
-	g_dbus_connection_unregister_object(hci.conn, svc->reg_id);
-
-	g_free(svc->serv_path);
-	g_free(svc->service_uuid);
-	g_free(svc);
-
-	if (g_slist_length(hci.gatt_services) == 0)
-		g_dbus_node_info_unref(service_node_info);
+	/* see bt_gatt_unregister_service() */
 
 	return S_OK;
 }
@@ -1044,6 +1028,48 @@ int bt_gatt_register_service(int sid)
 	return S_OK;
 }
 
+int bt_gatt_unregister_service(int sid)
+{
+	GError *e = NULL;
+	GVariant *v;
+	bt_gatt_service *svc = NULL;
+
+	svc = _find_svc_list_by_id(sid);
+	if (!svc)
+		return E_BT_ERROR;
+
+	log_dbg("%s sid:%d, path: %s", __func__, sid, svc->serv_path);
+
+	v = g_dbus_connection_call_sync(
+		hci.conn,
+		DBUS_BLUEZ_BUS,
+		DBUS_BLUEZ_OBJECT_PATH_HCI0,
+		DBUS_IF_GATTMANAGER1,
+		"UnregisterApplication",
+		g_variant_new("(o)", svc->serv_path, NULL),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	if (e) {
+		log_err(e->message);
+		g_error_free(e);
+		return E_BT_ERROR;
+	}
+
+	hci.gatt_services = g_slist_remove(hci.gatt_services, svc);
+	g_dbus_connection_unregister_object(hci.conn, svc->reg_id);
+
+	g_free(svc->serv_path);
+	g_free(svc->service_uuid);
+	g_free(svc);
+
+	if (g_slist_length(hci.gatt_services) == 0)
+		g_dbus_node_info_unref(service_node_info);
+
+	g_variant_unref(v);
+
+	return S_OK;
+}
+
 artik_error bt_gatt_req_set_value(artik_bt_gatt_req request, int len,
 		const unsigned char *value)
 {
@@ -1149,28 +1175,6 @@ artik_error bt_gatt_req_set_result(artik_bt_gatt_req request,
 
 	if (state != BT_GATT_REQ_STATE_TYPE_OK && handle->value)
 		free(handle->value);
-
-	return S_OK;
-}
-
-int bt_gatt_unregister_service(int id)
-{
-	bt_gatt_service *svc = NULL;
-
-	svc = _find_svc_list_by_id(id);
-	if (!svc)
-		return E_BT_ERROR;
-
-	log_dbg("%s sid:%d, path: %s", __func__, id, svc->serv_path);
-
-	g_dbus_connection_call(
-		hci.conn,
-		DBUS_BLUEZ_BUS,
-		DBUS_BLUEZ_OBJECT_PATH_HCI0,
-		DBUS_IF_GATTMANAGER1,
-		"UnregisterApplication",
-		g_variant_new("(o)", svc->serv_path, NULL),
-		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL, NULL);
 
 	return S_OK;
 }
