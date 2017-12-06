@@ -725,7 +725,7 @@ void _process_connection_cb(const gchar *path, artik_bt_event e)
 		g_variant_unref(v1);
 		g_variant_unref(v2);
 	} else {
-		log_err("can not find device %s", path);
+		log_dbg("can not find device %s", path);
 	}
 }
 
