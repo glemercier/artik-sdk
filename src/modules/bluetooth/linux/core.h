@@ -134,6 +134,7 @@ typedef struct {
 	GSList *char_data;
 	gboolean is_svc_registered;
 	gboolean is_svc_primary;
+	guint reg_id;
 } bt_gatt_service;
 
 typedef struct {
@@ -152,6 +153,7 @@ typedef struct {
 	guint value_length;
 	guint flags_length;
 	GSList *desc_data;
+	guint reg_id;
 
 	artik_bt_gatt_req_read read_callback;
 	artik_bt_gatt_req_write write_callback;
@@ -170,6 +172,7 @@ typedef struct {
 	guint value_length;
 	GSList *desc_props;
 	bt_gatt_char *chr;
+	guint reg_id;
 
 	artik_bt_gatt_req_read read_callback;
 	artik_bt_gatt_req_write write_callback;
