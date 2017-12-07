@@ -139,12 +139,12 @@ static void on_gatt_property(artik_bt_event event, void *data, void *user_data)
 
 	fprintf(stdout, "Get heart rate measurement Properties\n");
 	prop = 0;
-	if (bt->gatt_get_char_properties(remote_address, HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT,
-			&prop) == 0) {
+	if (bt->gatt_get_char_properties(remote_address, HEART_RATE_SERVICE,
+			HEART_RATE_MEASUREMENT, &prop) == 0) {
 		print_property(prop);
 		if (prop & BT_GATT_CHAR_PROPERTY_NOTIFY) {
-			if (bt->gatt_start_notify(remote_address, HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT)
-					!= 0) {
+			if (bt->gatt_start_notify(remote_address, HEART_RATE_SERVICE,
+					HEART_RATE_MEASUREMENT) != 0) {
 				fprintf(stdout, "fail to start notify\n");
 			}
 		}
@@ -154,12 +154,14 @@ static void on_gatt_property(artik_bt_event event, void *data, void *user_data)
 
 	fprintf(stdout, "Get heart rate sensor location Properties\n");
 	prop = 0;
-	if (bt->gatt_get_char_properties(remote_address, HEART_RATE_SERVICE, HEART_RATE_SENSOR_LOCATION,
-			&prop) == 0) {
+	if (bt->gatt_get_char_properties(remote_address, HEART_RATE_SERVICE,
+			HEART_RATE_SENSOR_LOCATION, &prop) == 0) {
 		print_property(prop);
+
 		if (prop & BT_GATT_CHAR_PROPERTY_READ) {
 			if (bt->gatt_char_read_value(remote_address,
-					HEART_RATE_SERVICE, HEART_RATE_SENSOR_LOCATION, &byte, &byte_len) == 0) {
+					HEART_RATE_SERVICE, HEART_RATE_SENSOR_LOCATION, &byte,
+					&byte_len) == 0) {
 				if (byte) {
 					print_location(byte);
 					free(byte);
@@ -194,12 +196,6 @@ void set_user_callbacks(void)
 void on_timeout(void *user_data)
 {
 	fprintf(stdout, "%s\n", __func__);
-
-	if (bt->gatt_stop_notify(remote_address, HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT) != 0)
-		fprintf(stdout, "fail to stop notify\n");
-
-	/* removing filter */
-	bt->set_scan_filter(NULL);
 
 	loop->quit();
 }
@@ -248,6 +244,13 @@ int main(int argc, char *argv[])
 	loop->add_timeout_callback(&id, 50000, on_timeout, NULL);
 	loop->add_signal_watch(SIGINT, on_signal, NULL, NULL);
 	loop->run();
+
+	if (bt->gatt_stop_notify(remote_address, HEART_RATE_SERVICE,
+			HEART_RATE_MEASUREMENT) != 0)
+		fprintf(stdout, "fail to stop notify\n");
+
+	/* removing filter */
+	bt->set_scan_filter(NULL);
 
 	bt->deinit();
 
