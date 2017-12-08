@@ -164,6 +164,7 @@ static void prv_connect(char *buffer, void *user_data)
 		printf("Connect to device [%s] success\n", address);
 	else
 		printf("Connect to device [%s] failed\n", address);
+	free(address);
 }
 
 static void prv_disconnect(char *buffer, void *user_data)
@@ -184,6 +185,7 @@ static void prv_disconnect(char *buffer, void *user_data)
 		printf("Disconnect to device [%s] success\n", address);
 	else
 		printf("Disconnect to device [%s] failed\n", address);
+	free(address);
 }
 
 static void prv_list_items(char *buffer, void *user_data)

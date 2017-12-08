@@ -120,9 +120,7 @@ static artik_error _get_control_path(char **path)
 		g_variant_get(ar1, "a{sa{sv}}", &iter2);
 		while (g_variant_iter_loop(iter2, "{&s@a{sv}}", &itf, &ar2)) {
 			if (strncmp(itf, DBUS_IF_MEDIA_CONTROL1,
-					strlen(DBUS_IF_MEDIA_CONTROL1)) != 0)
-				continue;
-			else {
+					strlen(DBUS_IF_MEDIA_CONTROL1)) == 0) {
 				GVariant *v = NULL;
 				artik_error e = S_OK;
 
@@ -134,20 +132,15 @@ static artik_error _get_control_path(char **path)
 					if (is_connected) {
 						*path = strdup(dev_path);
 						is_find = true;
-						g_variant_unref(ar2);
-						break;
 					}
 				}
 			}
 		}
 		g_variant_iter_free(iter2);
-		if (is_find) {
-			g_variant_unref(ar1);
-			break;
-		}
 	}
 
 	g_variant_iter_free(iter1);
+	g_variant_unref(obj1);
 	if (is_find) {
 		log_dbg("control_interface_path[%s]\n", *path);
 		return S_OK;
@@ -158,7 +151,7 @@ static artik_error _get_control_path(char **path)
 
 static artik_error _get_player_path(char **path)
 {
-	char *control_path = NULL, *player_path = NULL;
+	char *control_path = NULL;
 	GVariant *v = NULL;
 	artik_error e = S_OK;
 
@@ -168,14 +161,10 @@ static artik_error _get_player_path(char **path)
 			DBUS_IF_MEDIA_CONTROL1, "Player", &v);
 		free(control_path);
 		if (e == S_OK && v) {
-			g_variant_get(v, "o", &player_path);
+			g_variant_get(v, "o", path);
 			g_variant_unref(v);
-			*path = (char *) malloc(strlen(player_path) + 1);
-			if (*path) {
-				memcpy(*path, player_path, strlen(player_path) + 1);
-				log_dbg("player_interface_path[%s]", *path);
-				return S_OK;
-			}
+			log_dbg("player_interface_path[%s]", *path);
+			return S_OK;
 		}
 	}
 	return E_BT_ERROR;
@@ -226,6 +215,8 @@ artik_error bt_avrcp_controller_change_folder(int index)
 				NULL, G_DBUS_CALL_FLAGS_NONE,
 				BT_DBUS_CALL_TIMEOUT_MSEC, NULL, &g_error);
 		free(player_path);
+		if (index == 0)
+			free(folder);
 		if (g_error) {
 			log_err("AVRCP Change folder failed :%s\n", g_error->message);
 			g_clear_error(&g_error);
@@ -233,6 +224,10 @@ artik_error bt_avrcp_controller_change_folder(int index)
 		}
 		g_variant_unref(result);
 		is_latest_item = false;
+		if (items) {
+			g_slist_free_full(items, list_free_func);
+			items = NULL;
+		}
 		return S_OK;
 	}
 	return E_BT_ERROR;
@@ -269,7 +264,8 @@ static artik_bt_avrcp_item *_parse_list(GVariant *result)
 			avrcp_item->property = NULL;
 			avrcp_item->next_item = NULL;
 		} else {
-			return NULL;
+			g_variant_unref(ar1);
+			goto exit;
 		}
 
 		if (current_item == NULL) {
@@ -284,8 +280,10 @@ static artik_bt_avrcp_item *_parse_list(GVariant *result)
 			= malloc(sizeof(artik_bt_avrcp_item_property));
 
 		if (!avrcp_current_property) {
+			head_item = NULL;
 			free(avrcp_item);
-			return NULL;
+			g_variant_unref(ar1);
+			goto exit;
 		}
 
 		avrcp_item->property = avrcp_current_property;
@@ -304,7 +302,8 @@ static artik_bt_avrcp_item *_parse_list(GVariant *result)
 				g_variant_get(ar2, "b", &(avrcp_current_property->playable));
 			else if (strcmp(key, "Metadata") == 0) {
 				if (avrcp_current_property->metadata)
-					continue;
+					bt_avrcp_controller_free_metadata(
+						&(avrcp_current_property->metadata));
 				avrcp_current_property->metadata = (artik_bt_avrcp_track_metadata *)
 					malloc(sizeof(artik_bt_avrcp_track_metadata));
 				memset(avrcp_current_property->metadata, 0,
@@ -316,6 +315,7 @@ static artik_bt_avrcp_item *_parse_list(GVariant *result)
 		index++;
 	}
 
+exit:
 	g_variant_iter_free(iter1);
 	return head_item;
 }
@@ -436,8 +436,10 @@ bool bt_avrcp_controller_is_connected(void)
 		e = _get_property(control_path,
 			DBUS_IF_MEDIA_CONTROL1, "Connected", &v);
 		free(control_path);
-		if (e == S_OK && v)
-			g_variant_get(v, "b", &connected);
+		if (e == S_OK && v) {
+			connected = g_variant_get_boolean(v);
+			g_variant_unref(v);
+		}
 	}
 	return connected;
 }
@@ -572,6 +574,7 @@ static void _fill_track_metadata(GVariant *metadata, artik_bt_avrcp_track_metada
 			g_variant_get(value, "u", &(property->duration));
 			log_dbg("Duration is: %d\n", property->duration);
 		}
+		g_variant_unref(value);
 		g_variant_unref(prop_dict);
 	}
 }
@@ -824,8 +827,10 @@ bool bt_avrcp_controller_is_browsable(void)
 		e = _get_property(browsable_path,
 			DBUS_IF_MEDIA_PLAYER1, "Browsable", &v);
 		free(browsable_path);
-		if (e == S_OK && v)
-			g_variant_get(v, "b", &browsable);
+		if (e == S_OK && v) {
+			browsable = g_variant_get_boolean(v);
+			g_variant_unref(v);
+		}
 	}
 	return browsable;
 }
