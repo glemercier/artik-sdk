@@ -74,6 +74,8 @@ artik_error bt_deinit(void)
 
 	log_dbg("%s", __func__);
 
+	_avrcp_deinit();
+
 	if (!hci.refcnt || --hci.refcnt)
 		return S_OK;
 

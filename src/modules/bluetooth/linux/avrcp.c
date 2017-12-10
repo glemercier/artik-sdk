@@ -189,6 +189,14 @@ char *_get_playlist(void)
 	return playlist;
 }
 
+void _avrcp_deinit(void)
+{
+	if (items) {
+		g_slist_free_full(items, list_free_func);
+		items = NULL;
+	}
+}
+
 artik_error bt_avrcp_controller_change_folder(int index)
 {
 	GVariant *result;

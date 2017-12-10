@@ -226,6 +226,8 @@ artik_error _bt_init_session(void);
 
 artik_error _bt_deinit_session(void);
 
+void _avrcp_deinit(void);
+
 void _user_callback(artik_bt_event event, void *data);
 
 void _get_adapter_properties(GVariant *prop_array, artik_bt_adapter *adapter);
