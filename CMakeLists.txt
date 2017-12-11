@@ -2,7 +2,7 @@ CMAKE_MINIMUM_REQUIRED ( VERSION 3.0 )
 
 SET ( LIB_VERSION_MAJOR 1 CACHE STRING "Library version major")
 SET ( LIB_VERSION_MINOR 7 CACHE STRING "Library version minor")
-SET ( LIB_VERSION_PATCH 0 CACHE STRING "Library version patch")
+SET ( LIB_VERSION_PATCH 1 CACHE STRING "Library version patch")
 
 SET ( MODULE "" CACHE STRING "Compile specific source module " )
 SET ( TEST_X "" CACHE STRING "Compile specific unit test " )
