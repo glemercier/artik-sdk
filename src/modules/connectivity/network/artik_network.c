@@ -79,6 +79,7 @@ artik_error artik_get_current_public_ip(artik_network_ip *ip)
 	char *point;
 	char *token = NULL;
 	char delimiter[] = "<>";
+	unsigned int size = 0;
 	artik_http_headers headers;
 	artik_http_header_field fields[] = {
 		{"user-agent", "Artik browser"},
@@ -98,9 +99,14 @@ artik_error artik_get_current_public_ip(artik_network_ip *ip)
 	point = strstr(response, "Your IP Address:");
 	if (point != NULL) {
 		token = strtok(point, delimiter);
-		for (i = 0; token != NULL && i < 2; i++)
+		for (i = 0; token != NULL && i < 2; i++) {
 			token = strtok(NULL, delimiter);
-		strncpy(ip->address, token, 15);
+			size = strlen(token);
+		}
+		if (size > 0 && size < MAX_IP_ADDRESS_LEN) {
+			strncpy(ip->address, token, size);
+			ip->address[size] = '\0';
+		}
 	}
 exit:
 	artik_release_api_module(http);
