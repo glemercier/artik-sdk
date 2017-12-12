@@ -142,18 +142,6 @@ static artik_error test_get_online_status(void)
 	return ret;
 }
 
-static void disconnect(void *user_data)
-{
-	if (system("ifconfig wlan0 down"))
-		fprintf(stdout, "Failed to bring down network interface\n");
-}
-
-static void reconnect(void *user_data)
-{
-	if (system("ifconfig wlan0 up; sleep 1; pkill dhclient;"\
-			" sleep 1; dhclient wlan0"))
-		fprintf(stdout, "Failed to bring up network interface\n");
-}
 
 static void quit(void *user_data)
 {
@@ -161,6 +149,34 @@ static void quit(void *user_data)
 					artik_request_api_module("loop");
 
 	loop->quit();
+}
+
+static void reconnect(void *user_data)
+{
+	artik_loop_module *loop = (artik_loop_module *)
+					artik_request_api_module("loop");
+	int timeout_quit_id;
+
+	if (system("ifconfig wlan0 up; sleep 1; pkill dhclient;"\
+			" sleep 1; dhclient wlan0"))
+		fprintf(stdout, "Failed to bring up network interface\n");
+
+	loop->add_timeout_callback(&timeout_quit_id, 4000, quit, NULL);
+	artik_release_api_module(loop);
+}
+
+static void disconnect(void *user_data)
+{
+	artik_loop_module *loop = (artik_loop_module *)
+					artik_request_api_module("loop");
+	int timeout_reconnect_id;
+
+	if (system("ifconfig wlan0 down"))
+		fprintf(stdout, "Failed to bring down network interface\n");
+
+	loop->add_timeout_callback(&timeout_reconnect_id, 2000, reconnect,
+									NULL);
+	artik_release_api_module(loop);
 }
 
 static void _callback(bool online_status, void *user_data)
@@ -179,7 +195,7 @@ static void _callback(bool online_status, void *user_data)
 static artik_error test_watch_online_status(void)
 {
 	artik_error ret = S_OK;
-	int timeout_disconnect_id, timeout_reconnect_id, timeout_quit_id;
+	int timeout_disconnect_id;
 	artik_network_module *network = (artik_network_module *)
 					artik_request_api_module("network");
 	artik_loop_module *loop = (artik_loop_module *)
@@ -193,11 +209,8 @@ static artik_error test_watch_online_status(void)
 	ret = network->add_watch_online_status(&handle, _callback, &data);
 	ret = network->add_watch_online_status(&handle2, _callback, &data2);
 
-	loop->add_timeout_callback(&timeout_disconnect_id, 1000, disconnect,
+	loop->add_timeout_callback(&timeout_disconnect_id, 10000, disconnect,
 									NULL);
-	loop->add_timeout_callback(&timeout_reconnect_id, 2000, reconnect,
-									NULL);
-	loop->add_timeout_callback(&timeout_quit_id, 4000, quit, NULL);
 
 	loop->run();
 
@@ -314,7 +327,6 @@ int main(int argc, char *argv[])
 
 		ret = test_get_network_config(interface);
 	}
-
 
 exit:
 	return (ret == S_OK) ? 0 : -1;

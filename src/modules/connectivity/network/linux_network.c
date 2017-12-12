@@ -351,12 +351,12 @@ static int network_connection(int fd, enum watch_io io, void *user_data)
 	if (watch_online_status->current_online_status != old_online_status) {
 		watch_online_node_t *node = (watch_online_node_t *)
 						watch_online_status->root;
-		do {
+		while (node) {
 			node->config.callback(
 				watch_online_status->current_online_status,
 				node->config.user_data);
 			node = (watch_online_node_t *)node->node.next;
-		} while (node);
+		}
 
 	}
 
@@ -442,8 +442,6 @@ artik_error os_network_add_watch_online_status(
 
 	node->config.callback = app_callback;
 	node->config.user_data = user_data;
-
-	artik_list_delete_node(&(watch_online_status->root), (artik_list *)node);
 
 	*handle = (watch_online_status_handle)node->node.handle;
 

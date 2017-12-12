@@ -119,9 +119,9 @@ artik_error artik_get_online_status(bool *online_status)
 	artik_network_ip current_ip;
 	artik_error ret = artik_get_current_public_ip(&current_ip);
 
-	if (ret == S_OK) {
+	if (ret == S_OK)
 		*online_status = true;
-	} else if (ret == E_HTTP_ERROR) {
+	else if (ret == E_HTTP_ERROR) {
 		*online_status = false;
 		ret = S_OK;
 	}
