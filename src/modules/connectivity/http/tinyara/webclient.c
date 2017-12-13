@@ -149,7 +149,7 @@ struct wget_s {
   /* Internal status */
 
 	uint8_t state;
-	uint8_t httpstatus;
+	uint16_t httpstatus;
 
 	uint16_t port; /* The port number to use in the connection */
 
@@ -541,7 +541,7 @@ static ssize_t ssl_recv(void *conn, unsigned char *buffer, int buflen)
 	int ret = mbedtls_ssl_read(&tls->tls_ssl, buffer, buflen);
 
 	if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ||
-	ret == MBEDTLS_ERR_SSL_CONN_EOF) {
+			ret == MBEDTLS_ERR_SSL_CONN_EOF) {
 		return 0;
 	}
 
@@ -723,7 +723,7 @@ static int wget_base(FAR struct wget_request *request)
 		ws.hostname, CONFIG_WEBCLIENT_MAXHOSTNAME,
 		ws.filename, CONFIG_WEBCLIENT_MAXFILENAME);
 	if (ret != 0) {
-		log_dbg("WARNING: Malformed HTTP URL: %s\n", url);
+		log_dbg("WARNING: Malformed HTTP URL: %s\n", request->url);
 		set_errno(-ret);
 		return ERROR;
 	}
@@ -840,16 +840,14 @@ static int wget_base(FAR struct wget_request *request)
 			}
 
 			/* Dispose of the data payload */
-
 			if (ws.state == WEBCLIENT_STATE_DATA) {
-				if (ws.httpstatus != 301 || ws.httpstatus != 302)
+				if ((ws.httpstatus != 301) && (ws.httpstatus != 302)) {
 				/* Let the client decide what to do with the
 				 * received file
 				 */
-
 					request->callback(&ws.buffer, ws.offset,
 						ws.datend, &request->buflen, request->user_data);
-				else {
+				} else {
 					redirected = true;
 					ws.close(ws.conn);
 					break;
