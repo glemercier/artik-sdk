@@ -2,6 +2,7 @@ Summary:            A SDK library for easing up development on Samsung's ARTIK I
 Name:               libartik-sdk
 Version:            1.7
 Release:            1%{?dist}
+Source:             %{name}-%{version}.tar.gz
 License:            Proprietary
 Group:              Development/Libraries
 URL:                http://www.artik.io
@@ -240,17 +241,21 @@ Summary: Test programs to validate the ARTIK SDK.
 This package contains unit tests for the functions exposed by the ARTIK SDK.
 
 %prep
-rm -rf %{_builddir}/*
-rm -rf %{buildroot}/*
+%setup -q
 
 %build
-cd %{_builddir}
-
 echo %{_host_cpu}
 %if %(echo %arm | egrep -c %{_host_cpu})
-cmake %{_srcdir} -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TEST=1
+cmake . -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_BUILD_TEST=1 \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
 %else
-cmake %{_srcdir} -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_TOOLCHAIN_FILE=%{_srcdir}/target/toolchain-cross-arm.cmake -DCMAKE_SYSROOT=%{_sysrootdir} -DCMAKE_BUILD_TEST=1
+cmake . -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_TOOLCHAIN_FILE=target/toolchain-cross-arm.cmake \
+        -DCMAKE_SYSROOT=%{_sysrootdir} \
+        -DCMAKE_BUILD_TEST=1 \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+%define __strip "arm-linux-gnueabihf-strip"
 %endif
 
 make %{?_smp_mflags}
@@ -260,6 +265,8 @@ make install DESTDIR=%{buildroot}
 
 %post
 /sbin/ldconfig
+
+%clean
 
 %files
 %defattr(-,root,root)
@@ -370,6 +377,8 @@ make install DESTDIR=%{buildroot}
 %files tests
 %defattr(-,root,root)
 %{_libdir}/artik-sdk/tests/*
+
+%debug_package
 
 %changelog
 * Tue Oct 25 2016 Gregory Lemercier <g.lemercier@ssi.samsung.com> 1.0-2
