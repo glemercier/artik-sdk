@@ -176,15 +176,17 @@ artik_mqtt_handle mqtt_create_client(artik_mqtt_config *config)
 
 	if (config->tls) {
 		memset(&mqtt_client->tls_config, 0, sizeof(mqtt_client->tls_config));
-		mqtt_client->tls_config.cert = (const unsigned char *)
-				config->tls->client_cert.data;
-		mqtt_client->tls_config.cert_len = config->tls->client_cert.len;
-		mqtt_client->tls_config.key = (const unsigned char *)
-				config->tls->client_key.data;
-		mqtt_client->tls_config.key_len = config->tls->client_key.len;
-		mqtt_client->tls_config.ca_cert = (const unsigned char *)
-				config->tls->ca_cert.data;
-		mqtt_client->tls_config.ca_cert_len = config->tls->ca_cert.len;
+		if (config->tls->verify_cert == ARTIK_SSL_VERIFY_REQUIRED) {
+			mqtt_client->tls_config.cert = (const unsigned char *)
+					config->tls->client_cert.data;
+			mqtt_client->tls_config.cert_len = config->tls->client_cert.len;
+			mqtt_client->tls_config.key = (const unsigned char *)
+					config->tls->client_key.data;
+			mqtt_client->tls_config.key_len = config->tls->client_key.len;
+			mqtt_client->tls_config.ca_cert = (const unsigned char *)
+					config->tls->ca_cert.data;
+			mqtt_client->tls_config.ca_cert_len = config->tls->ca_cert.len;
+		}
 		mqtt_client->client_config.tls = &mqtt_client->tls_config;
 	}
 
