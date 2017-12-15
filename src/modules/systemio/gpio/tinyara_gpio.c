@@ -17,6 +17,7 @@
  */
 
 #include <artik_gpio.h>
+#include <artik_log.h>
 #include "os_gpio.h"
 
 #include <stdio.h>
@@ -32,14 +33,25 @@
 
 #include <tinyara/fs/ioctl.h>
 
+/*
+ * Redefine struct/ioctl/enum from tinyara/gpio.h here since we cannot include
+ * it due to namespace conflict on the direction configuration structure.
+ * This should be taken care of in the next API-breaking release.
+ */
 #define GPIO_DIRECTION_OUT     1
 #define GPIO_DIRECTION_IN      2
 #define GPIO_DRIVE_PULLUP      1
 #define GPIO_DRIVE_PULLDOWN    2
 #define GPIO_CMD_SET_DIRECTION _GPIOIOC(0x0001)
+#define GPIOIOC_POLLEVENTS     _GPIOIOC(0x0003)
 #define GPIO_STACK_SIZE        2048
 #define GPIO_SCHED_PRI         100
 #define GPIO_SCHED_POLICY      SCHED_RR
+
+struct gpio_pollevents_s {
+	bool gp_rising;
+	bool gp_falling;
+};
 
 typedef struct {
 	int watch_id;
@@ -155,8 +167,9 @@ artik_error os_gpio_set_change_callback(artik_gpio_config *config,
 				artik_gpio_callback callback, void *user_data)
 {
 	os_gpio_data *data = (os_gpio_data *)config->user_data;
+	struct gpio_pollevents_s pollevents;
 	pthread_attr_t attr;
-	int status;
+	int status, ret;
 	struct sched_param sparam;
 	char thread_name[16];
 
@@ -169,6 +182,39 @@ artik_error os_gpio_set_change_callback(artik_gpio_config *config,
 	data->callback = callback;
 	data->user_data = user_data;
 	data->quit = false;
+
+	/* Configure edge */
+	switch (config->edge) {
+	case GPIO_EDGE_RISING:
+		pollevents.gp_rising  = true;
+		pollevents.gp_falling = false;
+		break;
+	case GPIO_EDGE_FALLING:
+		pollevents.gp_rising  = false;
+		pollevents.gp_falling = true;
+		break;
+	case GPIO_EDGE_BOTH:
+		pollevents.gp_rising  = true;
+		pollevents.gp_falling = true;
+		break;
+	default:
+		pollevents.gp_rising  = false;
+		pollevents.gp_falling = false;
+		break;
+	}
+
+	ret = ioctl(data->fd, GPIOIOC_POLLEVENTS, (unsigned long)&pollevents);
+	if (ret) {
+		log_err("Failed to configure interrupt edge\n");
+		switch (errno) {
+		case EPERM:
+			return E_NOT_SUPPORTED;
+		case EINVAL:
+			return E_BAD_ARGS;
+		default:
+			return E_ACCESS_DENIED;
+		}
+	}
 
 	status = pthread_attr_init(&attr);
 	if (status != 0)
