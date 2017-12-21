@@ -154,7 +154,7 @@ typedef struct {
 	artik_network_ip *dns_addr;
 } dns_addresses;
 
-static int add_nameserver(void *arg, struct sockaddr *addr, socklen_t addrlen)
+static bool add_nameserver(void *arg, struct sockaddr *addr, socklen_t addrlen)
 {
 	struct sockaddr_in *sin;
 	dns_addresses *dns = arg;
@@ -162,10 +162,10 @@ static int add_nameserver(void *arg, struct sockaddr *addr, socklen_t addrlen)
 
 	/* Ignore IPV6 address */
 	if (addr->sa_family != AF_INET)
-		return OK;
+		return true;
 
 	if (dns->count > MAX_DNS_ADDRESSES)
-		return OK;
+		return true;
 
 	sin = (struct sockaddr_in *) addr;
 	dns_addr->type = ARTIK_IPV4;
@@ -173,10 +173,10 @@ static int add_nameserver(void *arg, struct sockaddr *addr, socklen_t addrlen)
 	dns->count++;
 	if (!inet_ntop(AF_INET, &sin->sin_addr, dns_addr->address, MAX_IP_ADDRESS_LEN)) {
 		log_dbg("Failed to convert DNS ip address into a character string.");
-		return ERROR;
+		return false;
 	}
 
-	return OK;
+	return true;
 }
 
 artik_error os_get_network_config(
@@ -250,7 +250,7 @@ artik_error os_get_network_config(
 	dns.count = 0;
 	dns.dns_addr = config->dns_addr;
 	printf("config->dns_addr %p\n", config->dns_addr);
-	if (dns_foreach_nameserver(add_nameserver, &dns) != OK) {
+	if (!dns_foreach_nameserver(add_nameserver, &dns)) {
 		log_dbg("Failed to get DNS servers.");
 		return E_NETWORK_ERROR;
 	}
@@ -342,7 +342,7 @@ artik_error os_set_network_config(artik_network_config *config, artik_network_in
 		sockaddr_in.sin_family = AF_INET;
 		sockaddr_in.sin_port = 0;
 		sockaddr_in.sin_addr.s_addr = dns[i].s_addr;
-		if (dns_add_nameserver((struct sockaddr *)&sockaddr_in, sizeof(struct sockaddr_in)) == ERROR) {
+		if (!dns_add_nameserver((struct sockaddr *)&sockaddr_in, sizeof(struct sockaddr_in))) {
 			log_dbg("Failed to add new DNS.");
 			return E_NETWORK_ERROR;
 		}

@@ -85,6 +85,7 @@ CSRCS += $(ARTIK_SDK_DIR)/src/modules/systemio/serial/tinyara_serial.c
 
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/network/artik_network.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/network/tinyara_network.c
+CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/network/tinyara/dns_utils.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/http/artik_http.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/http/common_http.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/http/tinyara_http.c
