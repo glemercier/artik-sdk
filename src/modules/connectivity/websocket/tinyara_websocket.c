@@ -31,21 +31,12 @@
 
 #define MBED_DEBUG_LEVEL	0
 
-struct mbedtls_ctx {
-	mbedtls_ssl_config *conf;
-	mbedtls_x509_crt *cert;
-	mbedtls_pk_context *pkey;
-	mbedtls_entropy_context *entropy;
-	mbedtls_ctr_drbg_context *ctr_drbg;
-};
-
 struct websocket_priv {
 	websocket_t *cli;
 	artik_websocket_callback rx_cb;
 	void *rx_user_data;
 	artik_websocket_callback conn_cb;
 	void *conn_user_data;
-	struct mbedtls_ctx tls_ctx;
 };
 
 static int websocket_parse_uri(const char *uri, char **host, char **path,
@@ -107,7 +98,7 @@ static ssize_t websocket_recv_cb(websocket_context_ptr ctx, uint8_t *buf,
 
 retry:
 	if (info->data->tls_enabled) {
-		ret = mbedtls_ssl_read(info->data->tls_ssl, buf, len);
+		ret = TLSRecv(info->data->tls_ssl, buf, len);
 		if (!ret) {
 			websocket_set_error(info->data,
 						WEBSOCKET_ERR_CALLBACK_FAILURE);
@@ -154,7 +145,7 @@ ssize_t websocket_send_cb(websocket_context_ptr ctx, const uint8_t *buf,
 
 retry:
 	if (info->data->tls_enabled) {
-		ret = mbedtls_ssl_write(info->data->tls_ssl, buf, len);
+		ret = TLSSend(info->data->tls_ssl, buf, len);
 		if (!ret) {
 			websocket_set_error(info->data,
 						WEBSOCKET_ERR_CALLBACK_FAILURE);
@@ -245,7 +236,7 @@ void websocket_on_connectivity_change_callback(websocket_context_ptr ctx,
 				  (void *)artik_state);
 }
 
-static struct websocket_cb_t callbacks = {
+static websocket_cb_t callbacks = {
 	websocket_recv_cb,		/* recv callback */
 	websocket_send_cb,		/* send callback */
 	websocket_genmask_cb,		/* gen mask callback */
@@ -263,45 +254,28 @@ static void websocket_tls_debug(void *ctx, int level, const char *file,
 	log_dbg("%s:%04d: %s", file, line, str);
 }
 
-static void ssl_cleanup(struct websocket_priv *priv)
+static void ssl_cleanup(websocket_t *ws)
 {
-	websocket_t *ws = priv->cli;
-	struct mbedtls_ctx *ctx = &priv->tls_ctx;
-
 	log_dbg("");
 
-	if (ws->tls_ssl) {
-		free(ws->tls_ssl);
-		ws->tls_ssl = NULL;
-	}
+	if (ws->tls_cred)
+		free(ws->tls_cred);
 
-	if (ctx->ctr_drbg) {
-		mbedtls_ctr_drbg_free(ctx->ctr_drbg);
-		free(ctx->ctr_drbg);
-	}
+	if (ws->tls_opt)
+		free(ws->tls_opt);
 
-	if (ctx->entropy) {
-		mbedtls_entropy_free(ctx->entropy);
-		free(ctx->entropy);
-	}
+	if (ws->tls_cred->ca_cert)
+		free((unsigned char *)ws->tls_cred->ca_cert);
 
-	if (ctx->pkey) {
-		mbedtls_pk_free(ctx->pkey);
-		free(ctx->pkey);
-	}
+	if (ws->tls_cred->dev_cert)
+		free((unsigned char *)ws->tls_cred->dev_cert);
 
-	if (ctx->cert) {
-		mbedtls_x509_crt_free(ctx->cert);
-		free(ctx->cert);
-	}
-
-	if (ctx->conf) {
-		mbedtls_ssl_config_free(ctx->conf);
-		free(ctx->conf);
-	}
+	if (ws->tls_cred->dev_key)
+		free((unsigned char *)ws->tls_cred->dev_key);
 
 	/* Nullify everything */
-	memset(ctx, 0, sizeof(struct mbedtls_ctx));
+	memset(ws->tls_cred, 0, sizeof(tls_cred));
+	memset(ws->tls_opt, 0, sizeof(tls_opt));
 }
 
 static int see_generate_random_client(void *ctx, unsigned char *data,
@@ -323,11 +297,9 @@ static int see_generate_random_client(void *ctx, unsigned char *data,
 	return 0;
 }
 
-static artik_error ssl_setup(struct websocket_priv *priv,
-						artik_ssl_config *ssl_config)
-{
-	websocket_t *ws = priv->cli;
-	struct mbedtls_ctx *ctx = &priv->tls_ctx;
+static artik_error ssl_setup(websocket_t *ws,
+						artik_ssl_config *ssl_config){
+
 	int ret = 0;
 
 	log_dbg("");
@@ -335,251 +307,104 @@ static artik_error ssl_setup(struct websocket_priv *priv,
 	if (!ws->tls_enabled)
 		return S_OK;
 
-	ctx->conf = zalloc(sizeof(mbedtls_ssl_config));
-	if (!ctx->conf) {
-		ssl_cleanup(priv);
+	ws->tls_opt = NULL;
+
+	ws->tls_cred = zalloc(sizeof(tls_cred));
+	if (!ws->tls_cred) {
+		log_err("Failed to allocate tls_cred");
 		return E_NO_MEM;
 	}
 
-	ws->tls_ssl = malloc(sizeof(mbedtls_ssl_context));
-	if (!ws->tls_ssl) {
-		ssl_cleanup(priv);
-		return E_NO_MEM;
+	ws->tls_opt = zalloc(sizeof(tls_opt));
+	if (!ws->tls_opt) {
+		log_err("Failed to allocate tls_opt");
+		ret = E_NO_MEM;
+		goto exit;
 	}
 
-	ctx->entropy = zalloc(sizeof(mbedtls_entropy_context));
-	if (!ctx->entropy) {
-		ssl_cleanup(priv);
-		return E_NO_MEM;
+	memset(ws->tls_cred, 0, sizeof(tls_cred));
+	memset(ws->tls_opt, 0, sizeof(tls_opt));
+
+	if (ssl_config->ca_cert.data) {
+		log_dbg("duplicate CA Cert");
+		ws->tls_cred->ca_cert = (unsigned char *)strdup(ssl_config->ca_cert.data);
+		ws->tls_cred->ca_certlen = ssl_config->ca_cert.len;
+		if (!ws->tls_cred->ca_cert) {
+			log_err("Failed to allocate ca_cert");
+			ret = E_NO_MEM;
+			goto exit;
+		}
 	}
-
-	ctx->ctr_drbg = zalloc(sizeof(mbedtls_ctr_drbg_context));
-	if (!ctx->ctr_drbg) {
-		ssl_cleanup(priv);
-		return E_NO_MEM;
-	}
-
-	mbedtls_net_init(&(ws->tls_net));
-	mbedtls_ssl_init(ws->tls_ssl);
-	mbedtls_ssl_config_init(ctx->conf);
-	mbedtls_entropy_init(ctx->entropy);
-	mbedtls_ctr_drbg_init(ctx->ctr_drbg);
-#ifdef MBEDTLS_DEBUG_C
-	mbedtls_debug_set_threshold(MBED_DEBUG_LEVEL);
-#endif
-
-	/* Seed the Random Number Generator */
-	ret = mbedtls_ctr_drbg_seed(ctx->ctr_drbg, mbedtls_entropy_func,
-							ctx->entropy, NULL, 0);
-	if (ret) {
-		log_err("Failed to seed RNG (err=%d)", ret);
-		ssl_cleanup(priv);
-		return E_BAD_ARGS;
-	}
-
-	/* Setup default config */
-	ret = mbedtls_ssl_config_defaults(ctx->conf, MBEDTLS_SSL_IS_CLIENT,
-			MBEDTLS_SSL_TRANSPORT_STREAM,
-			MBEDTLS_SSL_PRESET_DEFAULT);
-	if (ret) {
-		log_err("Failed to set configuration defaults (err=%d)", ret);
-		ssl_cleanup(priv);
-		return E_BAD_ARGS;
-	}
-
-	mbedtls_ssl_conf_dbg(ctx->conf, websocket_tls_debug, stdout);
-	mbedtls_ssl_conf_rng(ctx->conf, mbedtls_ctr_drbg_random, ctx->ctr_drbg);
 
 	if (ssl_config->se_config.use_se) {
 		artik_security_module *security = (artik_security_module *)
-					artik_request_api_module("security");
+				artik_request_api_module("security");
 		artik_security_handle handle;
-		artik_error err = S_OK;
-		char *root_ca = NULL;
-		char *dev_cert = NULL;
-		const mbedtls_pk_info_t *pk_info;
+		ws->tls_cred->use_se = true;
 
-		if (!security) {
-			log_err("Failed to load security module");
-			ssl_cleanup(priv);
-			return E_NOT_SUPPORTED;
-		}
-
-		ctx->cert = zalloc(sizeof(mbedtls_x509_crt));
-		if (!ctx->cert) {
-			ssl_cleanup(priv);
-			return E_NO_MEM;
-		}
-
-		ctx->pkey = zalloc(sizeof(mbedtls_pk_context));
-		if (!ctx->pkey) {
-			ssl_cleanup(priv);
-			return E_NO_MEM;
-		}
-
-		err = security->request(&handle);
+		ret = security->request(&handle);
 		if (ret != S_OK) {
-			log_err("Failed to load security module (err=%d)", err);
-			ssl_cleanup(priv);
+			log_err("Failed to load security module (err=%d)", ret);
 			artik_release_api_module(handle);
-			return ret;
+			goto exit;
 		}
 
-		err = security->get_certificate(handle, CERT_ID_ARTIK, &dev_cert);
+		ret = security->get_certificate(handle, CERT_ID_ARTIK, (char **)&ws->tls_cred->dev_cert);
 		if (ret != S_OK) {
-			log_err("Failed to get device certificate (err=%d)",
-									err);
-			ssl_cleanup(priv);
+			log_err("Failed to get device certificate (err=%d)", ret);
 			artik_release_api_module(handle);
-			return ret;
+			goto exit;
 		}
 
 		security->release(handle);
 		artik_release_api_module(security);
 
-		mbedtls_ssl_conf_rng(ctx->conf, see_generate_random_client,
-								ctx->ctr_drbg);
-		mbedtls_x509_crt_init(ctx->cert);
-		mbedtls_pk_init(ctx->pkey);
-
-		ret = mbedtls_x509_crt_parse(ctx->cert,
-				(const unsigned char *)dev_cert,
-				strlen(dev_cert) + 1);
-		if (ret) {
-			log_err("Failed to parse device certificate (err=%d)",
-									ret);
-			ssl_cleanup(priv);
-			free(dev_cert);
-			free(root_ca);
-			return E_BAD_ARGS;
+		ws->tls_cred->dev_certlen = strlen((char *)ws->tls_cred->dev_cert);
+		ws->tls_cred->dev_key = NULL;
+	} else if (ssl_config->client_key.data && ssl_config->client_cert.data) {
+		ws->tls_cred->use_se = false;
+		ws->tls_cred->dev_cert = (unsigned char *)strdup(ssl_config->client_cert.data);
+		ws->tls_cred->dev_certlen = ssl_config->client_cert.len;
+		if (!ws->tls_cred->dev_cert) {
+			log_err("Failed to allocate device certificate");
+			ret = E_NO_MEM;
+			goto exit;
 		}
 
-		pk_info = mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY);
-		if (!pk_info) {
-			log_err("Failed to get private key info");
-			ssl_cleanup(priv);
-			free(dev_cert);
-			free(root_ca);
-			return E_BAD_ARGS;
-		}
-
-		ret = mbedtls_pk_setup(ctx->pkey, pk_info);
-		if (ret) {
-			log_err("Failed to setup private key info");
-			ssl_cleanup(priv);
-			free(dev_cert);
-			free(root_ca);
-			return E_BAD_ARGS;
-		}
-
-		((mbedtls_ecdsa_context *)(ctx->pkey->pk_ctx))->grp.id =
-						MBEDTLS_ECP_DP_SECP256R1;
-		((mbedtls_ecdsa_context *)(ctx->pkey->pk_ctx))->key_index =
-						FACTORYKEY_ARTIK_DEVICE;
-
-		ret = mbedtls_ssl_conf_own_cert(ctx->conf, ctx->cert,
-								ctx->pkey);
-		if (ret) {
-			log_err("Failed to configure device cert/key (err=%d)",
-									ret);
-			ssl_cleanup(priv);
-			free(dev_cert);
-			free(root_ca);
-			return E_BAD_ARGS;
-		}
-
-		ssl_config->ca_cert.data = NULL;
-		ssl_config->verify_cert = ARTIK_SSL_VERIFY_NONE;
-
-		free(dev_cert);
-		free(root_ca);
-	} else if (ssl_config->client_cert.data &&
-					ssl_config->client_key.data) {
-		ctx->cert = zalloc(sizeof(mbedtls_x509_crt));
-		if (!ctx->cert) {
-			ssl_cleanup(priv);
-			return E_NO_MEM;
-		}
-
-		ctx->pkey = zalloc(sizeof(mbedtls_pk_context));
-		if (!ctx->pkey) {
-			ssl_cleanup(priv);
-			return E_NO_MEM;
-		}
-
-		mbedtls_x509_crt_init(ctx->cert);
-		mbedtls_pk_init(ctx->pkey);
-
-		ret = mbedtls_x509_crt_parse(ctx->cert,
-			(const unsigned char *)ssl_config->client_cert.data,
-			ssl_config->client_cert.len);
-		if (ret) {
-			log_err("Failed to parse device certificate (err=%d)",
-									ret);
-			ssl_cleanup(priv);
-			return E_BAD_ARGS;
-		}
-
-		ret = mbedtls_pk_parse_key(ctx->pkey,
-			(const unsigned char *)ssl_config->client_key.data,
-			ssl_config->client_key.len, NULL, 0);
-		if (ret) {
-			log_err("Failed to parse device key (err=%d)", ret);
-			ssl_cleanup(priv);
-			return E_BAD_ARGS;
-		}
-
-		ret = mbedtls_ssl_conf_own_cert(ctx->conf, ctx->cert,
-								ctx->pkey);
-		if (ret) {
-			log_err("Failed to configure device cert/key (err=%d)",
-									ret);
-			ssl_cleanup(priv);
-			return E_BAD_ARGS;
+		ws->tls_cred->dev_key = (unsigned char *)strdup(ssl_config->client_key.data);
+		ws->tls_cred->dev_keylen = ssl_config->client_key.len;
+		if (!ws->tls_cred->dev_key) {
+			log_err("Failed to allocate device key");
+			ret = E_NO_MEM;
+			goto exit;
 		}
 	}
 
-	/* Load root CA if provided */
-	if (ssl_config->ca_cert.data) {
-		if (!ctx->cert) {
-			ctx->cert = zalloc(sizeof(mbedtls_x509_crt));
-			if (!ctx->cert) {
-				ssl_cleanup(priv);
-				return E_NO_MEM;
-			}
-		}
+	log_dbg("Translate auth_mode");
 
-		ret = mbedtls_x509_crt_parse(ctx->cert,
-				(const unsigned char *)ssl_config->ca_cert.data,
-				ssl_config->ca_cert.len);
-		if (ret) {
-			log_err("Failed to parse root CA certificate (err=%d)",
-									ret);
-			ssl_cleanup(priv);
-			return E_BAD_ARGS;
-		}
-
-		mbedtls_ssl_conf_ca_chain(ctx->conf, ctx->cert->next ?
-					ctx->cert->next : ctx->cert, NULL);
-	}
-
+	ws->tls_opt->server = MBEDTLS_SSL_IS_CLIENT;
+	ws->tls_opt->transport = MBEDTLS_SSL_TRANSPORT_STREAM;
 	switch (ssl_config->verify_cert) {
 	case ARTIK_SSL_VERIFY_NONE:
-		ws->auth_mode = MBEDTLS_SSL_VERIFY_NONE;
+		ws->tls_opt->auth_mode = MBEDTLS_SSL_VERIFY_NONE;
 		break;
 	case ARTIK_SSL_VERIFY_OPTIONAL:
-		ws->auth_mode = MBEDTLS_SSL_VERIFY_OPTIONAL;
+		ws->tls_opt->auth_mode = MBEDTLS_SSL_VERIFY_OPTIONAL;
 		break;
 	case ARTIK_SSL_VERIFY_REQUIRED:
-		ws->auth_mode = MBEDTLS_SSL_VERIFY_REQUIRED;
+		ws->tls_opt->auth_mode = MBEDTLS_SSL_VERIFY_REQUIRED;
 		break;
 	default:
 		break;
 	}
 
-	ws->tls_conf = ctx->conf;
+	log_dbg("Successfully create SSL config.");
 
 	return S_OK;
+
+exit:
+	ssl_cleanup(ws);
+	return ret;
 }
 
 artik_error os_websocket_open_stream(artik_websocket_config *config)
@@ -626,7 +451,7 @@ artik_error os_websocket_open_stream(artik_websocket_config *config)
 	priv->cli->user_data = (void *)priv;
 
 	/* Setup TLS configuration if applicable */
-	if (ssl_setup(priv, &(config->ssl_config)) != S_OK) {
+	if (ssl_setup(priv->cli, &(config->ssl_config)) != S_OK) {
 		log_err("Failed to configure SSL");
 		free(priv->cli);
 		free(priv);
@@ -696,7 +521,7 @@ artik_error os_websocket_set_connection_callback(artik_websocket_config *config,
 	priv->conn_user_data = user_data;
 
 	/* If we are already connected, trigger the connected callback */
-	if (priv->conn_cb && (priv->cli->state == WEBSOCKET_RUNNING))
+	if (priv->conn_cb && (priv->cli->state == WEBSOCKET_RUN_CLIENT))
 		priv->conn_cb(priv->conn_user_data,
 					(void *)ARTIK_WEBSOCKET_CONNECTED);
 
@@ -731,7 +556,7 @@ artik_error os_websocket_close_stream(artik_websocket_config *config)
 		return E_NOT_INITIALIZED;
 
 	websocket_queue_close(priv->cli, NULL);
-	ssl_cleanup(priv);
+	ssl_cleanup(priv->cli);
 	free(priv->cli);
 	free(priv);
 
