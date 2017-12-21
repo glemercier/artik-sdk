@@ -513,7 +513,7 @@ static pthread_addr_t _http_method(void *arg)
 	if (param->response_callback) {
 		char *entity = (char *)malloc(response.entity_len + 1);
 
-		if (*param->response == NULL) {
+		if (entity == NULL) {
 			log_err("error has detected while memory allocation\n");
 			http_client_response_release(&response);
 			ret = E_NO_MEM;
