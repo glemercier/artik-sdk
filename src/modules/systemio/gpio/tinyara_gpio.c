@@ -98,6 +98,7 @@ artik_error os_gpio_release(artik_gpio_config *config)
 	os_gpio_data *user_data = config->user_data;
 
 	close(user_data->fd);
+	free(user_data);
 
 	return S_OK;
 }
