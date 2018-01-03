@@ -359,7 +359,7 @@ static artik_error ssl_setup(websocket_t *ws,
 		security->release(handle);
 		artik_release_api_module(security);
 
-		ws->tls_cred->dev_certlen = strlen((char *)ws->tls_cred->dev_cert);
+		ws->tls_cred->dev_certlen = strlen((char *)ws->tls_cred->dev_cert) + 1;
 		ws->tls_cred->dev_key = NULL;
 	} else if (ssl_config->client_key.data && ssl_config->client_cert.data) {
 		ws->tls_cred->use_se = false;
@@ -382,6 +382,7 @@ static artik_error ssl_setup(websocket_t *ws,
 
 	log_dbg("Translate auth_mode");
 
+	ws->tls_opt->debug_mode = MBED_DEBUG_LEVEL;
 	ws->tls_opt->server = MBEDTLS_SSL_IS_CLIENT;
 	ws->tls_opt->transport = MBEDTLS_SSL_TRANSPORT_STREAM;
 	switch (ssl_config->verify_cert) {
