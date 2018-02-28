@@ -118,14 +118,24 @@ retry:
 			websocket_set_error(info->data,
 						WEBSOCKET_ERR_CALLBACK_FAILURE);
 		} else if (ret > 0) {
-			if ((errno == EAGAIN) || (errno == EBUSY)) {
-				if (!retry_cnt) {
+			switch (errno) {
+				case ENOTCONN:
 					websocket_set_error(info->data,
-						WEBSOCKET_ERR_CALLBACK_FAILURE);
+							WEBSOCKET_ERR_CALLBACK_FAILURE);
 					return ret;
-				}
-				retry_cnt--;
-				goto retry;
+
+				case EAGAIN:
+				case EBUSY:
+					if (!retry_cnt) {
+						websocket_set_error(info->data,
+								WEBSOCKET_ERR_CALLBACK_FAILURE);
+						return ret;
+					}
+					retry_cnt--;
+					goto retry;
+
+				default:
+					break;
 			}
 		}
 	}
@@ -162,14 +172,24 @@ retry:
 	} else {
 		ret = send(fd, buf, len, flags);
 		if (ret < 0) {
-			if ((errno == EAGAIN) || (errno == EBUSY)) {
-				if (!retry_cnt) {
+			switch (errno) {
+				case ENOTCONN:
 					websocket_set_error(info->data,
-						WEBSOCKET_ERR_CALLBACK_FAILURE);
+							WEBSOCKET_ERR_CALLBACK_FAILURE);
 					return ret;
-				}
-				retry_cnt--;
-				goto retry;
+
+				case EAGAIN:
+				case EBUSY:
+					if (!retry_cnt) {
+						websocket_set_error(info->data,
+								WEBSOCKET_ERR_CALLBACK_FAILURE);
+						return ret;
+					}
+					retry_cnt--;
+					goto retry;
+
+				default:
+					break;
 			}
 		}
 	}
